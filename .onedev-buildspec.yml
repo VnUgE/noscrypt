@@ -1,0 +1,44 @@
+version: 17
+jobs:
+- name: GitHub Push
+  steps:
+  - !PushRepository
+    name: Github push sync
+    remoteUrl: https://github.com/VnUgE/noscrypt.git
+    userName: VnUgE
+    passwordSecret: github-access-token
+    withLfs: false
+    force: false
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !TagCreateTrigger
+    projects: noscrypt
+  - !BranchUpdateTrigger
+    projects: noscrypt
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  cpuRequirement: 250
+  memoryRequirement: 256
+  timeout: 3600
+- name: GitHub Pull
+  steps:
+  - !PullRepository
+    name: GitHub sync pull
+    remoteUrl: https://github.com/VnUgE/noscrypt.git
+    userName: VnUgE
+    passwordSecret: github-access-token
+    refs: refs/heads/* refs/tags/*
+    withLfs: false
+    force: false
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !ScheduleTrigger
+    cronExpression: 0 15 10 ? * *
+    projects: noscrypt
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  cpuRequirement: 250
+  memoryRequirement: 256
+  timeout: 3600
