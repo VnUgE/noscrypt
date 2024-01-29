@@ -1,0 +1,78 @@
+# https://taskfile.dev
+
+#Called by the vnbuild system to produce builds for my website
+#https://www.vaughnnugent.com/resources/software
+
+#This taskfile performs the build operations for a module, it handles
+#git code updates, msbuild on solutions, and sleet NuGet feed pushes.
+
+#this file must be in the same directory as the solution file
+
+#NOTES: Since CI project is pulled from the module root, MODULE_DIR is used instead of PROJECT_DIR
+
+version: '3'
+
+tasks:
+
+  default:
+    desc: "Build the library for your system"
+    cmds:
+      - cmake -S . -B./build/ -DCMAKE_BUILD_TYPE=Release
+      - cmake --build build/ --config Release
+      - cmd: echo "Build complete your files can be found in the build/ directory"
+        silent: true
+
+  #called by build pipeline to build module
+  build:
+    cmds:
+     - echo "building project {{.PROJECT_NAME}}" 
+     - cmd: powershell -Command "mkdir bin/ -Force"
+       ignore_error: true
+  
+     #build windows x64
+     - task: build_win_x64
+
+     #pack source
+     - task: pack_source
+
+  clean:
+    desc: "Cleans the artifact directory"
+    cmds:
+    - cmd: powershell -Command "rm -r bin/ -Force"
+      ignore_error:
+
+  build_win_x64:
+    internal: true
+    vars:
+      TARGET_DLL: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-win64.tgz'
+      DLL_FILES: '{{.PROJECT_NAME}}.dll {{.PROJECT_NAME}}.lib license.txt'
+      TARGET_STATIC: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-win64-static.tgz'
+      STATIC_FILES: '{{.PROJECT_NAME}}_static.lib license.txt'
+      BUILD_DIR: 'out/build/win-x64'
+    
+    cmds:
+      #invoke cmake build 
+     - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+     - cmake --build {{.BUILD_DIR}} --config Release  
+    
+    #copy license to build dir
+     - powershell -Command "cp license {{.BUILD_DIR}}/Release/license.txt"
+
+    #tar up the binaries
+     - cd {{.BUILD_DIR}}/Release &&  tar -czf "{{.TARGET_DLL}}" {{.DLL_FILES}}
+
+    #tar up static libs
+     - cd {{.BUILD_DIR}}/Release &&  tar -czf "{{.TARGET_STATIC}}" {{.STATIC_FILES}}
+
+
+  pack_source:
+    internal: true
+    desc: "Packs up the project source code and creates a tarball in the builds binary directory"
+    vars:
+      TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-source.tgz'
+      SOURCE_FILES: 'CMakeLists.txt src include license tests Taskfile.yaml'
+
+    cmds:
+      #tar up the source
+     - tar -czf "{{.TARGET_SOURCE}}" {{.SOURCE_FILES}}  
+ 
