@@ -44,14 +44,10 @@ if(MSVC)
 		
 		$<$<CONFIG:Debug>:/FC>				#show full path in diagnostics
 		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build	
-	)
 
-	#only target our project
-	target_compile_options(
-		${CMAKE_PROJECT_NAME}
-		PRIVATE
-
+		
 		$<$<CONFIG:Debug>:/wd4820>	#disable warnings for struct padding and spectre mitigation wuen WX is enabled
+		$<$<CONFIG:Debug>:/wd5045>	#disable warnings for spectre mitigation insertion
 
 		#for debug configs
 		$<$<CONFIG:Debug>:/options:strict>
@@ -78,12 +74,6 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 		$<$<CONFIG:Debug>:-Og>
 		$<$<CONFIG:Debug>:-Wall>
 		$<$<CONFIG:Debug>:-Werror>
-	)
-
-	#only target our project if building other 3rd party libs in current build
-    target_compile_options(
-		${CMAKE_PROJECT_NAME}
-		PRIVATE
 		$<$<CONFIG:Debug>:-Wall>
 		$<$<CONFIG:Debug>:-pedantic>
 	)

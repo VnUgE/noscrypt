@@ -178,7 +178,8 @@ static NCResult _computeSharedSecret(
 	//Clean up sensitive data
 	ZERO_FILL(&pubKey, sizeof(secp256k1_pubkey));
 
-	return (NCResult)result;
+	//Result should be 1 on success
+	return result > 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 static inline const mbedtls_md_info_t* _getSha256MdInfo(void)
@@ -198,14 +199,15 @@ static inline NCResult _computeConversationKey(
 	struct conversation_key* ck 
 )
 {
+	int opResult;
 	//Validate internal args
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(sharedSecret != NULL, "Expected a valid shared-point")
 	DEBUG_ASSERT2(mdInfo != NULL, "Expected valid md context")
 	DEBUG_ASSERT2(ck != NULL, "Expected a valid conversation key")
 	
-	//Derive the encryption key (returns 0 on success so it can be cast to an NCResult)
-	return (NCResult)mbedtls_hkdf_extract(
+	//Derive the encryption key
+	opResult = mbedtls_hkdf_extract(
 		mdInfo,
 		Nip44ConstantSalt,
 		sizeof(Nip44ConstantSalt),
@@ -213,6 +215,9 @@ static inline NCResult _computeConversationKey(
 		NC_SHARED_SEC_SIZE,
 		(uint8_t*)ck					//Output produces a conversation key
 	);
+
+	//Return success if the hkdf operation was successful
+	return opResult == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 
@@ -224,6 +229,7 @@ static inline void _expandKeysFromHkdf(const struct message_key* hkdf, struct nc
 	uint8_t* hkdfBytes;
 
 	DEBUG_ASSERT2(hkdf != NULL, "Expected valid hkdf")
+	DEBUG_ASSERT2(keys != NULL, "Expected valid key expand structure")
 
 	hkdfBytes = (uint8_t*)hkdf;
 	
@@ -233,16 +239,20 @@ static inline void _expandKeysFromHkdf(const struct message_key* hkdf, struct nc
 		hkdfBytes, 
 		CHACHA_KEY_SIZE
 	);
+
+	hkdfBytes += CHACHA_KEY_SIZE;	//Offset by key size
 	
 	MEMMOV(
 		keys->chacha_nonce, 
-		(hkdfBytes + CHACHA_KEY_SIZE), 
+		hkdfBytes,
 		CHACHA_NONCE_SIZE
 	);
 
+	hkdfBytes += CHACHA_NONCE_SIZE;	//Offset by nonce size
+
 	MEMMOV(
 		keys->hamc_key, 
-		(hkdfBytes + CHACHA_KEY_SIZE + CHACHA_NONCE_SIZE),
+		hkdfBytes,
 		HMAC_KEY_SIZE
 	);
 }
@@ -254,7 +264,6 @@ static int _chachaEncipher(const struct nc_expand_keys* keys, NCCryptoData* args
 
 	DEBUG_ASSERT2(keys != NULL, "Expected valid keys")
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args")
-	DEBUG_ASSERT2(sizeof(keys->chacha_nonce) == 12, "Chacha nonce must be 12 exactly bytes in length")
 
 	//Init the chacha context
 	mbedtls_chacha20_init(&chachaCtx);
@@ -284,21 +293,24 @@ static inline NCResult _getMessageKey(
 	struct message_key* messageKey
 )
 {
+	int result;
 	DEBUG_ASSERT2(mdInfo != NULL, "Expected valid md context")
 	DEBUG_ASSERT2(nonce != NULL, "Expected valid nonce buffer")
 	DEBUG_ASSERT2(converstationKey != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(messageKey != NULL, "Expected valid message key buffer")
 
 	//Another HKDF to derive the message key with nonce
-	return (NCResult)mbedtls_hkdf_expand(
+	result = mbedtls_hkdf_expand(
 		mdInfo,
 		(uint8_t*)converstationKey,			//Conversation key is the input key
 		NC_CONV_KEY_SIZE,
 		nonce,
 		nonceSize,
-		(uint8_t*)messageKey,				//Output produces a message key
+		(uint8_t*)messageKey,				//Output produces a message key (write it directly to struct memory)
 		NC_MESSAGE_KEY_SIZE
 	);
+
+	return result == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 static inline NCResult _encryptEx(
@@ -564,7 +576,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	uint8_t digest[32];
 
 	CHECK_NULL_ARG(data, 2)
-	//CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 3)
+	CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 3)
 
 	//Compute sha256 of the data before signing
 	if(_computeSha256Digest(data, dataSize, digest) != 0)
@@ -620,7 +632,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	uint8_t digest[32];
 
 	CHECK_NULL_ARG(data, 2)
-	//CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 3)
+	CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 3)
 
 	//Compute sha256 of the data before verifying
 	if (_computeSha256Digest(data, dataSize, digest) != 0)

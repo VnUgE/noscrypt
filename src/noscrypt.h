@@ -121,6 +121,7 @@ static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d
 #define E_INVALID_ARG -2
 #define E_INVALID_CONTEXT -3
 #define E_ARGUMENT_OUT_OF_RANGE -4
+#define E_OPERATION_FAILED -5
 
 /*
 * Validation macros
