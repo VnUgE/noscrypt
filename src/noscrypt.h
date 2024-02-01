@@ -123,27 +123,6 @@ static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d
 #define E_ARGUMENT_OUT_OF_RANGE -4
 #define E_OPERATION_FAILED -5
 
-/*
-* Validation macros
-*/
-
-#define CHECK_NULL_PTR(ptr) if(ptr == NULL) return E_NULL_PTR;
-#define CHECK_INVALID_ARG(x) if(x == NULL) return E_INVALID_ARG;
-#define CHECK_NULL_ARG(x, argPos) if(x == NULL) return NCResultWithArgPosition(E_NULL_PTR, argPos);
-#define CHECK_ARG_RANGE(x, min, max, argPos) if(x < min || x > max) return NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, argPos);
-
-#ifdef DEBUG
-
-//Must include assert.h for assertions
-#include <assert.h>
-
-#define DEBUG_ASSERT(x) assert(x);
-#define DEBUG_ASSERT2(x, message) assert(x && message);
-#else
-#define DEBUG_ASSERT(x)
-#define DEBUG_ASSERT2(x, message)
-#endif
-
 /* A compressed resul/return value, negative values 
 are failure, 0 is success and positive values are 
 defined by the operation. 

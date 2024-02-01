@@ -24,15 +24,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../src/noscrypt.h"
-#include "../include/mbedtls/sha256.h"
-#include "../include/mbedtls/platform_util.h"
+#include <noscrypt.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/platform_util.h>
 
 #if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
 	#define IS_WINDOWS
 #endif
 
 #ifdef IS_WINDOWS
+    #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 	#include <wincrypt.h>
 #endif
@@ -41,14 +42,14 @@
 
     //Prints a string literal to the console
 	#define PRINTL(x) printf(x); printf("\r\n");
-    #define TEST(x) printf("Testing %s\n", #x); if(!(x)) { printf("Test failed!\n"); return 1; } else { printf("Test passed\n\n"); }
+    #define TEST(x) printf("\tTesting %s\n", #x); if(!(x)) { printf("TEST FAILED!\n"); return 1; } else { printf("\tTest passed\n\n"); }
     #define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s.\n Aborting tests...\n", #x); ExitProcess(1); }
-    #define ENSURE(x) if(!(x)) { printf("Assumption failed!\n"); return 1; } 
+    #define ENSURE(x) if(!(x)) { printf("Assumption failed! %s\n", #x); return 1; } 
 #else
 
     //Prints a string literal to the console
 	#define PRINTL(x) printf(x); printf("\n");
-	#define TEST(x) printf("Testing %s\n", #x); if(!(x)) { printf("Test failed!\n"); return 1; } else { printf("Test passed\n\n"); }
+	#define TEST(x) printf("\tTesting %s\n", #x); if(!(x)) { printf("TEST FAILED!\n"); return 1; } else { printf("\tTest passed\n\n"); }
 	#define TASSERT(x) if(!(x)) { printf("Internal assumption failed: %s\n", #x); exit(1); }
     #define ENSURE(x) if(!(x)) { printf("Assumption failed!\n"); return 1; } 
 #endif
@@ -59,13 +60,19 @@
 	#define ZERO_FILL(x, size) memset(x, 0, size)
 #endif
 
-static void FillRandomData(uint8_t* pbBuffer, size_t length);
-static int TestEcdsa(NCContext* context);
+static void FillRandomData(void* pbBuffer, size_t length);
+static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
+static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
 
-int main(char* argv[], int argc)
+static const uint8_t zero32[32] = { 0 };
+static const uint8_t zero64[64] = { 0 };
+
+int main(void)
 {
     NCContext ctx;
     uint8_t ctxRandom[32];
+    NCSecretKey secKey;
+    NCPublicKey pubKey;
 
     PRINTL("Begining basic noscrypt tests\n")
 
@@ -75,8 +82,13 @@ int main(char* argv[], int argc)
     TEST(NCGetContextStructSize() == sizeof(NCContext))  
 
     TEST(NCInitContext(&ctx, ctxRandom) == NC_SUCCESS)
+
+    if (InitKepair(&ctx, &secKey, &pubKey) != 0)
+	{
+		return 1;
+	}
 	
-    if (TestEcdsa(&ctx) != 0)
+    if (TestEcdsa(&ctx, &secKey, &pubKey) != 0)
     {
         return 1;
     }
@@ -99,50 +111,44 @@ static void _sha256(const uint8_t* data, size_t length, uint8_t digest[32])
 }
 
 static const char* message = "Test message to sign";
-static const uint8_t zero32[32] = { 0 };
-static const uint8_t zero64[64] = { 0 };
 
-static int TestEcdsa(NCContext* context) 
+static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
 {
-    
-    uint8_t secretKey[NC_SEC_KEY_SIZE];
-    uint8_t publicKey[NC_PUBKEY_SIZE];
+    PRINTL("TEST: Keypair")
+
+    //Get random private key
+    FillRandomData(secKey, sizeof(NCSecretKey));
+
+    //Ensure not empty
+    ENSURE(memcmp(zero32, secKey, 32) != 0);
+
+    //Ensure the key is valid
+    TEST(NCValidateSecretKey(context, secKey) == NC_SUCCESS);
+
+    //Generate a public key from the secret key
+    TEST(NCGetPublicKey(context, secKey, pubKey) == NC_SUCCESS);
+
+    return 0;
+}
+
+static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
+{   
     uint8_t digestToSign[32];
     uint8_t sigEntropy[32];
     uint8_t invalidSig[64];
-    NCSecretKey* secKey;
-    NCPublicKey* pubKey;
 
-    PRINTL("Begining basic Nostr ECDSA tests")
-
-    //Convert to internal key structs
-    secKey = NCToSecKey(secretKey);
-    pubKey = NCToPubKey(publicKey);
-
-    TEST((&secKey->key) == &secretKey);
+    PRINTL("TEST: Ecdsa")
 
     //Init a new secret key with random data
-    FillRandomData(secretKey, sizeof(secretKey));
     FillRandomData(invalidSig, sizeof(invalidSig));
     FillRandomData(sigEntropy, sizeof(sigEntropy));
 
     //compute sha256 of the test string
     _sha256((uint8_t*)message, strlen(message), digestToSign);
 
-    //Verify that the secret key is valid for the curve
-    TEST(NCValidateSecretKey(context, secKey) == NC_SUCCESS);
-
-    //Generate a public key from the secret key
-    TEST(NCGetPublicKey(context, secKey, pubKey) == NC_SUCCESS);
-
-    //Ensure not empty
-    TEST(memcmp(zero32, secretKey, 32) != 0);
-    TEST(memcmp(zero32, publicKey, 32) != 0);
-
     //Sign and verify digest
     {
 		uint8_t sig[64];
-
         TEST(NCSignDigest(context, secKey, sigEntropy, digestToSign, sig) == NC_SUCCESS);
 		TEST(NCVerifyDigest(context, pubKey, digestToSign, sig) == NC_SUCCESS);
     }
@@ -190,14 +196,7 @@ static int TestEcdsa(NCContext* context)
 	return 0;
 }
 
-static const char* encMessage = "Test message to encrypt";
-
-static int TestEcdh(NCContext* ctx)
-{
-    PRINTL("Begining basic Nostr Encryption tests")
-}
-
-static void FillRandomData(uint8_t* pbBuffer, size_t length)
+static void FillRandomData(void* pbBuffer, size_t length)
 {
 
 #ifdef IS_WINDOWS

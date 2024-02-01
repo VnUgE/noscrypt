@@ -44,6 +44,35 @@
 #include <string.h>
 #define MEMMOV(dst, src, size) memmove(dst, src, size)
 
+/*
+* Validation macros
+*/
+
+#ifdef NC_INPUT_VALIDATION_OFF
+	#define CHECK_NULL_PTR(ptr) if(ptr == NULL) return E_NULL_PTR;
+	#define CHECK_INVALID_ARG(x) if(x == NULL) return E_INVALID_ARG;
+	#define CHECK_NULL_ARG(x, argPos) if(x == NULL) return NCResultWithArgPosition(E_NULL_PTR, argPos);
+	#define CHECK_ARG_RANGE(x, min, max, argPos) if(x < min || x > max) return NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, argPos);
+#else
+	//empty macros 
+	#define CHECK_NULL_PTR(ptr)
+	#define CHECK_INVALID_ARG(x)
+	#define CHECK_NULL_ARG(x, argPos) 
+	#define CHECK_ARG_RANGE(x, min, max, argPos) 
+#endif // !NC_DISABLE_INPUT_VALIDATION
+
+
+#ifdef DEBUG
+	/* Must include assert.h for assertions */
+	#include <assert.h> 
+	#define DEBUG_ASSERT(x) assert(x);
+	#define DEBUG_ASSERT2(x, message) assert(x && message);
+#else
+	#define DEBUG_ASSERT(x)
+	#define DEBUG_ASSERT2(x, message)
+#endif
+
+
 struct nc_expand_keys {
 	uint8_t chacha_key[CHACHA_KEY_SIZE];
 	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];

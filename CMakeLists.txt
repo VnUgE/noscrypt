@@ -122,6 +122,7 @@ add_executable(nctest tests/test.c)
 target_link_libraries(nctest ${CMAKE_PROJECT_NAME})
 #link mbedtls crypto sahred library
 target_link_libraries(nctest ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
+target_include_directories(nctest PRIVATE "src")
 
 endif()
 
