@@ -543,7 +543,7 @@ NC_EXPORT NCResult NC_CC NCValidateSecretKey(
 	CHECK_INVALID_ARG(ctx->secpCtx)
 
 	//Validate the secret key
-	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key) ? NC_SUCCESS : E_INVALID_ARG;
+	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key);
 }
 
 //Ecdsa Functions
