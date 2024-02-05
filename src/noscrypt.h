@@ -33,12 +33,12 @@
 #include <stddef.h>
 
 #if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
-	#define IS_WINDOWS
+	#define _NC_IS_WINDOWS
 #endif
 
 //Set api export calling convention (allow used to override)
 #ifndef NC_CC
-	#ifdef IS_WINDOWS
+	#ifdef _NC_IS_WINDOWS
 		//STD for importing to other languages such as .NET
 		#define NC_CC __stdcall
 	#else
@@ -48,31 +48,19 @@
 
 #ifndef NC_EXPORT	//Allow users to disable the export/impoty macro if using source code directly
 	#ifdef NOSCRYPT_EXPORTING
-		#ifdef IS_WINDOWS
+		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllexport)
 		#else
 			#define NC_EXPORT __attribute__((visibility("default")))
-		#endif // IS_WINDOWS
+		#endif // _NC_IS_WINDOWS
 	#else
-		#ifdef IS_WINDOWS
+		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllimport)
 		#else
 			#define NC_EXPORT
-		#endif // IS_WINDOWS
+		#endif // _NC_IS_WINDOWS
 	#endif // !NOSCRYPT_EXPORTING
 #endif // !NC_EXPORT
-
-
-#ifndef IS_WINDOWS
-	#ifndef inline
-		#define inline __inline__
-	#endif // !inline
-#endif // !IS_WINDOWS
-
-//NULL
-#ifndef NULL
-	#define NULL ((void*)0)
-#endif // !NULL
 
 /*
 * CONSTANTS
@@ -112,7 +100,7 @@ static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d
 * operations that return a value count.
 */
 
-#define ARG_POSITION_OFFSET 8
+#define NC_ARG_POSITION_OFFSET 8
 #define NC_ERROR_CODE_MASK 0xFF
 
 #define NC_SUCCESS 0
@@ -196,8 +184,7 @@ static inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
 
 static inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition) 
 {
-	//Store the error code in the lower 8 bits and the argument position in the upper 24 bits
-	return (err & NC_ERROR_CODE_MASK) | (((uint32_t)argPosition) << ARG_POSITION_OFFSET);
+	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
 }
 
 /*
@@ -207,11 +194,14 @@ that caused the error.
 * @param code A pointer to the error code to write to
 * @param argPosition A pointer to the argument position to write to
 */
-NC_EXPORT void NC_CC NCParseErrorCode(NCResult result, int* code, int* argPosition)
+NC_EXPORT void NC_CC NCParseErrorCode(NCResult result, int* code, uint8_t* argPosition)
 {
+	//convert result to a positive value
+	NCResult asPositive = -result;
+
 	//Get the error code from the lower 8 bits and the argument position from the upper 8 bits
-	*code = result & NC_ERROR_CODE_MASK;
-	*argPosition = (result >> ARG_POSITION_OFFSET) & 0xFF;
+	*code = -(asPositive & NC_ERROR_CODE_MASK);
+	*argPosition = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
 }
 
 /*--------------------------------------
@@ -317,7 +307,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	const NCPublicKey* pk,
 	const uint8_t* data,
 	const size_t dataSize,
-	uint8_t sig64[64]
+	const uint8_t sig64[64]
 );
 
 /*--------------------------------------
