@@ -87,7 +87,7 @@ This will produce the `nctests` executable file in the build directory. This wil
 There are currently 2 branches I use because of my build process. `develop` and `master`. All changes happen in develop, then are merged to master when I feel like they are stable enough. After some testing and time, a tag and release will become available.   
 
 ## License
-The software in this repository is licensed to you under the GNU GPL v2.0 or later. `SPDX-License-Identifier: GPL-2.0-or-later` see the [LICENSE](LICENSE) file for more details. I prefer GNU/FSF licenses and it allows compatibility with with mbedTls.   
+The software in this repository is licensed to you under the GNU Lesser GPL v2.1 or later. `SPDX-License-Identifier: LGPL-2.1-or-later` see the [LICENSE](LICENSE) file for more details.    
 
 ## Donations
 If you feel so inclined to support me an this project, donations are welcome and much appreciated.   
