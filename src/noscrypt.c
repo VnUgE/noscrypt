@@ -42,7 +42,6 @@
 
 #define CHACHA_NONCE_SIZE 12	//Size of 12 is set by the cipher spec
 #define CHACHA_KEY_SIZE 32		
-#define HMAC_KEY_SIZE 32		
 
 /*
 * Local macro for secure zero buffer fill
@@ -83,7 +82,7 @@
 struct nc_expand_keys {
 	uint8_t chacha_key[CHACHA_KEY_SIZE];
 	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];
-	uint8_t hamc_key[HMAC_KEY_SIZE];
+	uint8_t hamc_key[NC_HMAC_KEY_SIZE];
 };
 
 struct shared_secret {
@@ -125,7 +124,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 	compressed[0] = BIP340_PUBKEY_HEADER_BYTE;
 
 	//Copy the compressed public key data into a new buffer (offset by 1 to store the header byte)
-	MEMMOV((compressed + 1), compressedPubKey->key, NC_PUBKEY_SIZE);
+	MEMMOV((compressed + 1), compressedPubKey, sizeof(NCPublicKey));
 
 	result = secp256k1_ec_pubkey_parse(ctx->secpCtx, pubKey, compressed, sizeof(compressed));
 
@@ -289,7 +288,7 @@ static inline void _expandKeysFromHkdf(const struct message_key* hkdf, struct nc
 	MEMMOV(
 		keys->hamc_key, 
 		hkdfBytes,
-		HMAC_KEY_SIZE
+		NC_HMAC_KEY_SIZE
 	);
 }
 
@@ -353,6 +352,7 @@ static inline NCResult _encryptEx(
 	const NCContext* ctx, 
 	const mbedtls_md_info_t* mdINfo,
 	const struct conversation_key* ck, 
+	uint8_t hmacKey[NC_HMAC_KEY_SIZE],
 	NCCryptoData* args
 )
 {
@@ -363,6 +363,8 @@ static inline NCResult _encryptEx(
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(ck != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args")
+	DEBUG_ASSERT2(mdINfo != NULL, "Expected valid md info struct")
+	DEBUG_ASSERT2(hmacKey != NULL, "Expected valid hmac key buffer")
 
 	//Failure, bail out
 	if ((result = _getMessageKey(mdINfo, ck, args->nonce, NC_ENCRYPTION_NONCE_SIZE, &messageKey)) != NC_SUCCESS)
@@ -373,12 +375,16 @@ static inline NCResult _encryptEx(
 	//Expand the keys from the hkdf so we can use them in the cipher
 	_expandKeysFromHkdf(&messageKey, &cipherKeys);
 
+	//Copy the hmac key into the args
+	MEMMOV(hmacKey, cipherKeys.hamc_key, NC_HMAC_KEY_SIZE);
+
 	//CHACHA20
 	result = _chachaEncipher(&cipherKeys, args);
 
 Cleanup:
 	//Clean up sensitive data
 	ZERO_FILL(&messageKey, sizeof(messageKey));
+	ZERO_FILL(&cipherKeys, sizeof(cipherKeys));
 
 	return result;
 }
@@ -770,23 +776,27 @@ Cleanup:
 NC_EXPORT NCResult NC_CC NCEncryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE], 
+	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
 	NCCryptoData* args
 )
 {
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_INVALID_ARG(ctx->secpCtx, 0)
 	CHECK_NULL_ARG(conversationKey, 1)
-	CHECK_NULL_ARG(args, 2)
+	CHECK_NULL_ARG(hmacKeyOut, 2)
+	CHECK_NULL_ARG(args, 3)
 
 	//Validte ciphertext/plaintext
-	CHECK_INVALID_ARG(args->inputData, 2)
-	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
+	CHECK_INVALID_ARG(args->inputData, 3)
+	CHECK_INVALID_ARG(args->outputData, 3)
+	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)	
 
 	return _encryptEx(
 		ctx, 
 		_getSha256MdInfo(), 
 		(struct conversation_key*)conversationKey, 
+		hmacKeyOut,
 		args
 	);
 }
@@ -795,6 +805,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	const NCContext* ctx, 
 	const NCSecretKey* sk, 
 	const NCPublicKey* pk, 
+	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
 	NCCryptoData* args
 )
 {	
@@ -807,12 +818,14 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	CHECK_INVALID_ARG(ctx->secpCtx, 0)
 	CHECK_NULL_ARG(sk, 1)
 	CHECK_NULL_ARG(pk, 2)
-	CHECK_NULL_ARG(args, 3)
+	CHECK_NULL_ARG(hmacKeyOut, 3)
+	CHECK_NULL_ARG(args, 4)
 
 	//Validate input/output data
-	CHECK_INVALID_ARG(args->inputData, 3)
-	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+	CHECK_INVALID_ARG(args->inputData, 4)
+	CHECK_INVALID_ARG(args->outputData, 4)
+	CHECK_INVALID_ARG(args->nonce, 4)
+	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 4)
 
 	mdInfo = _getSha256MdInfo();
 
@@ -828,7 +841,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 		goto Cleanup;
 	}
 
-	result = _encryptEx(ctx, mdInfo, &conversationKey, args);
+	result = _encryptEx(ctx, mdInfo, &conversationKey, hmacKeyOut, args);
 
 Cleanup:
 	//Clean up sensitive data
@@ -837,7 +850,6 @@ Cleanup:
 
 	return result;
 }
-
 
 NC_EXPORT NCResult NC_CC NCDecryptEx(
 	const NCContext* ctx, 
@@ -853,7 +865,8 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	//Validte ciphertext/plaintext
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_DEC_MESSAGE_SIZE, NIP44_MAX_DEC_MESSAGE_SIZE, 3)
+	CHECK_INVALID_ARG(args->nonce, 2)
+	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
 
 	return _decryptEx(
 		ctx, 
@@ -862,7 +875,6 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 		args
 	);
 }
-
 
 NC_EXPORT NCResult NC_CC NCDecrypt(
 	const NCContext* ctx,
@@ -885,7 +897,8 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	//Validte ciphertext/plaintext
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_DEC_MESSAGE_SIZE, NIP44_MAX_DEC_MESSAGE_SIZE, 3)
+	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	mdInfo = _getSha256MdInfo();
 

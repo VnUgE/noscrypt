@@ -72,6 +72,7 @@
 #define NC_PUBKEY_SIZE 32
 #define NC_SHARED_SEC_SIZE 32
 #define NC_CONV_KEY_SIZE 32
+#define NC_HMAC_KEY_SIZE 32
 #define NC_MESSAGE_KEY_SIZE NIP44_MESSAGE_KEY_SIZE
 
 /*
@@ -80,8 +81,6 @@
 */
 #define NIP44_MIN_ENC_MESSAGE_SIZE 1
 #define NIP44_MAX_ENC_MESSAGE_SIZE 65535
-#define NIP44_MIN_DEC_MESSAGE_SIZE 99
-#define NIP44_MAX_DEC_MESSAGE_SIZE 65603 
 
 /*
 * The Nip44 constant salt 
@@ -377,6 +376,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	const NCContext* ctx, 
 	const NCSecretKey* sk, 
 	const NCPublicKey* pk, 
+	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
 	NCCryptoData* args
 );
 
@@ -462,6 +462,7 @@ the error code and positional argument that caused the error.
 NC_EXPORT NCResult NC_CC NCEncryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
 	NCCryptoData* args
 );
 
