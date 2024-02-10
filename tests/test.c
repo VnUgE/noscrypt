@@ -243,7 +243,7 @@ static int TestPublicApiArgumentValidation(void)
     NCSecretKey secKey;
     NCPublicKey pubKey;
     NCCryptoData cryptoData;
-    uint8_t hmacOut[NC_HMAC_KEY_SIZE];
+    uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
 
     PRINTL("TEST: Public API argument validation tests\n")
 
@@ -303,25 +303,25 @@ static int TestPublicApiArgumentValidation(void)
     cryptoData.outputData = sig64;
     FillRandomData(&cryptoData.nonce, 32);
 
-    TEST(NCEncrypt(NULL, &secKey, &pubKey, hmacOut, &cryptoData), ARG_ERROR_POS_0)
-    TEST(NCEncrypt(&ctx, NULL, &pubKey, hmacOut, &cryptoData), ARG_ERROR_POS_1)
-	TEST(NCEncrypt(&ctx, &secKey, NULL, hmacOut, &cryptoData), ARG_ERROR_POS_2)
+    TEST(NCEncrypt(NULL, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_0)
+    TEST(NCEncrypt(&ctx, NULL, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_1)
+	TEST(NCEncrypt(&ctx, &secKey, NULL, hmacKeyOut, &cryptoData), ARG_ERROR_POS_2)
     TEST(NCEncrypt(&ctx, &secKey, &pubKey, NULL, &cryptoData), ARG_ERROR_POS_3)
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacOut, NULL), ARG_ERROR_POS_4)
+    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, NULL), ARG_ERROR_POS_4)
 
     //Test invalid data size
     cryptoData.dataSize = 0;
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacOut, &cryptoData), ARG_RAMGE_ERROR_POS_4)
+    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_RAMGE_ERROR_POS_4)
     
     //Test null input data
     cryptoData.dataSize = 32;
     cryptoData.inputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
+	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
 
     //Test null output data
 	cryptoData.inputData = zero32;
     cryptoData.outputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
+	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
 
     //Decrypt
     cryptoData.dataSize = 32;
@@ -345,8 +345,17 @@ static int TestPublicApiArgumentValidation(void)
     //Test null output data
     cryptoData.inputData = zero32;
     cryptoData.outputData = NULL;
-	TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
-
+    TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
+    
+    {
+        uint8_t hmacDataOut[NC_ENCRYPTION_MAC_SIZE];
+        TEST(NCComputeMac(NULL, hmacKeyOut, zero32, 32, hmacDataOut), ARG_ERROR_POS_0)
+        TEST(NCComputeMac(&ctx, NULL, zero32, 32, hmacDataOut), ARG_ERROR_POS_1)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, NULL, 32, hmacDataOut), ARG_ERROR_POS_2)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 0, hmacDataOut), ARG_RAMGE_ERROR_POS_3)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 32, NULL), ARG_ERROR_POS_4)
+    }
+    
     PRINTL("\nPASSED: Public API argument validation tests completed\n")
 
     return 0;

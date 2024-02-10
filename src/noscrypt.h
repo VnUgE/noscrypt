@@ -73,6 +73,7 @@
 #define NC_SHARED_SEC_SIZE 32
 #define NC_CONV_KEY_SIZE 32
 #define NC_HMAC_KEY_SIZE 32
+#define NC_ENCRYPTION_MAC_SIZE 32
 #define NC_MESSAGE_KEY_SIZE NIP44_MESSAGE_KEY_SIZE
 
 /*
@@ -166,6 +167,27 @@ typedef struct nc_encryption_struct {
 	uint32_t dataSize;
 
 } NCCryptoData;
+
+/*
+* A structure for Nip44 message authentication code verification. This structure
+* is used to pass arguments to the NCVerifyMac and NCVerifyMacEx functions. 
+*/
+typedef struct nc_mac_verify {
+
+	/* The message authentication code certifying the Nip44 payload */
+	const uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
+
+	/* The nonce used for the original message encryption */
+	const uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+
+	/* The message payload data */
+	const uint8_t* payload;
+
+	/* The size of the payload data */
+	size_t payloadSize;
+
+} NCMacVerifyArgs;
+
 
 /*
 	API FUNCTIONS
@@ -397,6 +419,22 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	NCCryptoData* args
 );
 
+/*
+* High level api for verifying a Nip44 message authentication code using a secret key 
+and a public key. Use the NCVerifyMacEx functions for extended verification functionality.
+* @param ctx A pointer to an existing library context
+* @param sk A pointer to the secret key
+* @param pk A pointer to the 32byte compressed public key (x-only serialized public key)
+* @param args A pointer to the mac verification arguments
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error
+*/
+NC_EXPORT NCResult NC_CC NCVerifyMac(
+	const NCContext* ctx,
+	const NCSecretKey* sk,
+	const NCPublicKey* pk,
+	NCMacVerifyArgs* args
+);
 
 /*--------------------------------------
 *		EXTENDED ENCRYPTION API
@@ -479,6 +517,39 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE], 
 	NCCryptoData* args
+);
+
+/*
+* Verifies a Nip44 message authentication code using the given conversation key.
+* @param ctx A pointer to the existing library context
+* @param conversationKey A pointer to the 32byte conversation key
+* @param args A pointer to the mac verification arguments
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NC_CC NCVerifyMacEx(
+	const NCContext* ctx,
+	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	NCMacVerifyArgs* args
+);
+
+/*
+* Computes a message authentication code for a given payload using the given hmacKey and writes the
+* mac to the hmacOut buffer.
+* @param ctx A pointer to the existing library context
+* @param hmacKey A pointer to the 32byte hmac key
+* @param payload A pointer to the payload data buffer
+* @param payloadSize The size of the payload data buffer
+* @param hmacOut A pointer to the 32byte buffer to write the mac to
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NCComputeMac(
+	const NCContext* ctx,
+	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
+	const uint8_t* payload,
+	size_t payloadSize,
+	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
 
 #endif // !NOSCRYPT_H

@@ -27,6 +27,7 @@
 #include <mbedtls/platform_util.h>
 #include <mbedtls/md.h>
 #include <mbedtls/hkdf.h>
+#include <mbedtls/hmac_drbg.h>
 #include <mbedtls/chacha20.h>
 #include <mbedtls/sha256.h>
 
@@ -82,7 +83,7 @@
 struct nc_expand_keys {
 	uint8_t chacha_key[CHACHA_KEY_SIZE];
 	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];
-	uint8_t hamc_key[NC_HMAC_KEY_SIZE];
+	uint8_t hmac_key[NC_HMAC_KEY_SIZE];
 };
 
 struct shared_secret {
@@ -286,7 +287,7 @@ static inline void _expandKeysFromHkdf(const struct message_key* hkdf, struct nc
 	hkdfBytes += CHACHA_NONCE_SIZE;	//Offset by nonce size
 
 	MEMMOV(
-		keys->hamc_key, 
+		keys->hmac_key, 
 		hkdfBytes,
 		NC_HMAC_KEY_SIZE
 	);
@@ -376,7 +377,7 @@ static inline NCResult _encryptEx(
 	_expandKeysFromHkdf(&messageKey, &cipherKeys);
 
 	//Copy the hmac key into the args
-	MEMMOV(hmacKey, cipherKeys.hamc_key, NC_HMAC_KEY_SIZE);
+	MEMMOV(hmacKey, cipherKeys.hmac_key, NC_HMAC_KEY_SIZE);
 
 	//CHACHA20
 	result = _chachaEncipher(&cipherKeys, args);
@@ -423,41 +424,6 @@ static inline NCResult _decryptEx(
 Cleanup:
 	//Clean up sensitive data
 	ZERO_FILL(&messageKey, sizeof(messageKey));
-
-	return result;
-}
-
-/*
-* Compute the sha256 digest of the data. This function should always return 0
-* on success.
-*/
-static inline int _computeSha256Digest(const uint8_t* data, size_t length, uint8_t digest[32])
-{
-	int result;
-	mbedtls_sha256_context sha256;
-
-	DEBUG_ASSERT2(data != NULL, "Expected valid data buffer")
-	DEBUG_ASSERT2(digest != NULL, "Expected valid digest buffer")
-
-	//Init the sha256 context
-	mbedtls_sha256_init(&sha256);
-
-	//starting context should never fail
-	result = mbedtls_sha256_starts(&sha256, 0);
-	DEBUG_ASSERT2(result == 0, "Expected sha256 starts to return 0")
-
-	//may fail if the data is invalid
-	if ((result = mbedtls_sha256_update(&sha256, data, length)) != 0)
-	{
-		goto Cleanup;
-	}
-
-	//Finishing context should never fail
-	result = mbedtls_sha256_finish(&sha256, digest);
-
-Cleanup:
-	//Always free the context
-	mbedtls_sha256_free(&sha256);
 
 	return result;
 }
@@ -626,7 +592,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	CHECK_NULL_ARG(sig64, 5)
 
 	//Compute sha256 of the data before signing
-	if(_computeSha256Digest(data, dataSize, digest) != 0)
+	if(mbedtls_sha256(data, dataSize, digest, 0) != 0)
 	{
 		return E_INVALID_ARG;
 	}
@@ -683,7 +649,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	CHECK_NULL_ARG(sig64, 4)
 
 	//Compute sha256 of the data before verifying
-	if (_computeSha256Digest(data, dataSize, digest) != 0)
+	if (mbedtls_sha256(data, dataSize, digest, 0) != 0)
 	{
 		return E_INVALID_ARG;
 	}
@@ -922,3 +888,139 @@ Cleanup:
 	return result;
 }
 
+NC_EXPORT NCResult NCComputeMac(
+	const NCContext* ctx,
+	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
+	const uint8_t* payload,
+	size_t payloadSize,
+	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
+)
+{
+	CHECK_NULL_ARG(ctx, 0)
+	CHECK_INVALID_ARG(ctx->secpCtx, 0)
+	CHECK_NULL_ARG(hmacKey, 1)
+	CHECK_NULL_ARG(payload, 2)
+	CHECK_ARG_RANGE(payloadSize, 1, UINT32_MAX, 3)
+	CHECK_NULL_ARG(hmacOut, 4)
+
+	/*
+	* Compute the hmac of the data using the supplied hmac key
+	*/
+	return mbedtls_md_hmac(
+		_getSha256MdInfo(), 
+		hmacKey, 
+		NC_HMAC_KEY_SIZE, 
+		payload, 
+		payloadSize, 
+		hmacOut
+	) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
+}
+
+NC_EXPORT NCResult NC_CC NCVerifyMacEx(
+	const NCContext* ctx,
+	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	NCMacVerifyArgs* args
+)
+{
+	NCResult result;
+	const mbedtls_md_info_t* sha256Info;
+	struct message_key messageKey;
+	struct nc_expand_keys keys;
+	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE];
+
+	CHECK_NULL_ARG(ctx, 0)
+	CHECK_INVALID_ARG(ctx->secpCtx, 0)
+	CHECK_NULL_ARG(conversationKey, 1)
+	CHECK_NULL_ARG(args, 2)
+
+	CHECK_INVALID_ARG(args->mac, 2)
+	CHECK_INVALID_ARG(args->payload, 2)
+	CHECK_INVALID_ARG(args->nonce, 2)
+	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
+
+	sha256Info = _getSha256MdInfo();
+
+	/*
+	* We need to get the message key in order to 
+	* get the required hmac key
+	*/
+	result = _getMessageKey(
+		sha256Info,
+		(struct conversation_key*)conversationKey,
+		args->nonce,
+		NC_ENCRYPTION_NONCE_SIZE,
+		&messageKey
+	);
+
+	if(result != NC_SUCCESS)
+	{
+		goto Cleanup;
+	}
+
+	/* Expand keys to get the hmac-key */
+	_expandKeysFromHkdf(&messageKey, &keys);
+
+	/*
+	* Compute the hmac of the data using the computed hmac key
+	*/
+	if(mbedtls_md_hmac(sha256Info, keys.hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
+	{
+		result = E_OPERATION_FAILED;
+		goto Cleanup;
+	}
+
+	/* constant time compare the macs */
+
+	result = 0;
+
+	for (int i = 0; i < NC_ENCRYPTION_MAC_SIZE; i++)
+	{
+		result |= args->mac[i] - hmacOut[i];
+	}
+
+Cleanup:
+	/* Clean up sensitive data */
+	ZERO_FILL(&messageKey, sizeof(messageKey));
+	ZERO_FILL(&keys, sizeof(keys));
+	ZERO_FILL(hmacOut, NC_ENCRYPTION_MAC_SIZE);
+
+	return result;
+}
+
+NC_EXPORT NCResult NC_CC NCVerifyMac(
+	const NCContext* ctx,
+	const NCSecretKey* sk,
+	const NCPublicKey* pk,
+	NCMacVerifyArgs* args
+)
+{
+	CHECK_NULL_ARG(ctx, 0)
+	CHECK_INVALID_ARG(ctx->secpCtx, 0)
+	CHECK_NULL_ARG(sk, 1)
+	CHECK_NULL_ARG(pk, 2)
+	CHECK_NULL_ARG(args, 3)
+
+	NCResult result;
+	struct shared_secret sharedSecret;
+	struct conversation_key conversationKey;
+
+	/* Computed the shared point so we can get the converstation key */
+	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
+	{
+		goto Cleanup;
+	}
+
+	if ((result = _computeConversationKey(ctx, _getSha256MdInfo(), &sharedSecret, &conversationKey)) != NC_SUCCESS)
+	{
+		goto Cleanup;
+	}
+
+	result = NCVerifyMacEx(ctx, (uint8_t*)&conversationKey, args);
+
+Cleanup:
+	/* Clean up sensitive data */
+	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+	ZERO_FILL(&conversationKey, sizeof(conversationKey));
+
+	return result;
+}
