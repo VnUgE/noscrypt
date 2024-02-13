@@ -30,6 +30,7 @@
 #include <mbedtls/hmac_drbg.h>
 #include <mbedtls/chacha20.h>
 #include <mbedtls/sha256.h>
+#include <mbedtls/constant_time.h>
 
 /* Non win platforms may need an inline override */
 #if !defined(_NC_IS_WINDOWS) && !defined(inline)
@@ -970,13 +971,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	}
 
 	/* constant time compare the macs */
-
-	result = 0;
-
-	for (int i = 0; i < NC_ENCRYPTION_MAC_SIZE; i++)
-	{
-		result |= args->mac[i] - hmacOut[i];
-	}
+	result = mbedtls_ct_memcmp(hmacOut, args->mac, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 
 Cleanup:
 	/* Clean up sensitive data */
