@@ -27,7 +27,7 @@
 #include <mbedtls/sha256.h>
 #include <mbedtls/platform_util.h>
 
-#if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
+#ifdef _NC_IS_WINDOWS
 	#define IS_WINDOWS
 #endif
 

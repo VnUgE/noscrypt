@@ -84,7 +84,7 @@ endif()
 unset(SECP256K1_LIB CACHE)
 
 find_library(SECP256K1_LIB 
-	NAMES secp256k1 libsecp256k1 lib_secp256k1 ${}
+	NAMES secp256k1 libsecp256k1 lib_secp256k1
 )
 
 if(NOT SECP256K1_LIB)

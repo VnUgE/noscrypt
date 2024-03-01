@@ -43,7 +43,7 @@
 #endif // !NULL
 
 #define CHACHA_NONCE_SIZE 12	//Size of 12 is set by the cipher spec
-#define CHACHA_KEY_SIZE 32		
+#define CHACHA_KEY_SIZE 32		//Size of 32 is set by the cipher spec
 
 /*
 * Local macro for secure zero buffer fill
@@ -74,18 +74,30 @@
 	/* Must include assert.h for assertions */
 	#include <assert.h> 
 	#define DEBUG_ASSERT(x) assert(x);
-	#define DEBUG_ASSERT2(x, message) assert(x && message);
+	#define DEBUG_ASSERT2(x, message) assert(x && message);	
+
+	/*
+	* Compiler enabled static assertion keywords are 
+	* only available in C11 and later. Later versions 
+	* have macros built-in from assert.h so we can use
+	* the static_assert macro directly.
+	* 
+	* Static assertions are only used for testing such as 
+	* sanity checks and this library targets the c89 standard
+	* so static_assret very likely will not be available. 
+	*/
+	#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+		#define STATIC_ASSERT(x, m) static_assert(x, m)
+	#else
+		#define STATIC_ASSERT(x, m)
+		#pragma message("Static assertions are not supported by this language version")
+	#endif
+
 #else
 	#define DEBUG_ASSERT(x)
 	#define DEBUG_ASSERT2(x, message)
+	#define STATIC_ASSERT(x, m)
 #endif
-
-
-struct nc_expand_keys {
-	uint8_t chacha_key[CHACHA_KEY_SIZE];
-	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];
-	uint8_t hmac_key[NC_HMAC_KEY_SIZE];
-};
 
 struct shared_secret {
 	uint8_t value[NC_SHARED_SEC_SIZE];
@@ -98,6 +110,22 @@ struct conversation_key {
 struct message_key {
 	uint8_t value[NC_MESSAGE_KEY_SIZE];
 };
+
+/*
+* The following struct layout is exactly the same as 
+* the message key, they may be typecasted to each other.
+* as long as the size is the same.
+*/
+struct nc_expand_keys {
+	uint8_t chacha_key[CHACHA_KEY_SIZE];
+	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];
+	uint8_t hmac_key[NC_HMAC_KEY_SIZE];
+};
+
+/* Pointer typecast must work between expanded keys 
+* and message key, size must be identical to work 
+*/
+STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expected struct nc_expand_keys to be the same size as struct message_key");
 
 /*
 * Internal helper functions to do common structure conversions
@@ -116,7 +144,7 @@ static inline int _convertToXonly(const NCContext* ctx, const NCPublicKey* compr
 static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedPubKey, secp256k1_pubkey* pubKey)
 {
 	int result;
-	uint8_t compressed[NC_PUBKEY_SIZE + 1];
+	uint8_t compressed[sizeof(NCPublicKey) + 1];
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure")
@@ -213,7 +241,7 @@ static NCResult _computeSharedSecret(
 	);
 
 	//Clean up sensitive data
-	ZERO_FILL(&pubKey, sizeof(secp256k1_pubkey));
+	ZERO_FILL(&pubKey, sizeof(pubKey));
 
 	//Result should be 1 on success
 	return result > 0 ? NC_SUCCESS : E_OPERATION_FAILED;
@@ -261,65 +289,24 @@ static inline NCResult _computeConversationKey(
 /*
 * Explode the hkdf into the chacha key, chacha nonce, and hmac key.
 */
-static inline void _expandKeysFromHkdf(const struct message_key* hkdf, struct nc_expand_keys* keys)
+static inline const struct nc_expand_keys* _expandKeysFromHkdf(const struct message_key* hkdf)
 {
-	uint8_t* hkdfBytes;
-
-	DEBUG_ASSERT2(hkdf != NULL, "Expected valid hkdf")
-	DEBUG_ASSERT2(keys != NULL, "Expected valid key expand structure")
-
-	hkdfBytes = (uint8_t*)hkdf;
-	
-	//Copy segments of the hkdf into the keys struct
-	MEMMOV(
-		keys->chacha_key, 
-		hkdfBytes, 
-		CHACHA_KEY_SIZE
-	);
-
-	hkdfBytes += CHACHA_KEY_SIZE;	//Offset by key size
-	
-	MEMMOV(
-		keys->chacha_nonce, 
-		hkdfBytes,
-		CHACHA_NONCE_SIZE
-	);
-
-	hkdfBytes += CHACHA_NONCE_SIZE;	//Offset by nonce size
-
-	MEMMOV(
-		keys->hmac_key, 
-		hkdfBytes,
-		NC_HMAC_KEY_SIZE
-	);
+	return (const struct nc_expand_keys*)hkdf;
 }
 
 static int _chachaEncipher(const struct nc_expand_keys* keys, NCCryptoData* args)
 {
-	int result;
-	mbedtls_chacha20_context chachaCtx;
-
 	DEBUG_ASSERT2(keys != NULL, "Expected valid keys")
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args")
 
-	//Init the chacha context
-	mbedtls_chacha20_init(&chachaCtx);
-
-	//Set the key and nonce
-	result = mbedtls_chacha20_setkey(&chachaCtx, keys->chacha_key);
-	DEBUG_ASSERT2(result == 0, "Expected chacha setkey to return 0")
-
-	result = mbedtls_chacha20_starts(&chachaCtx, keys->chacha_nonce, 0);
-	DEBUG_ASSERT2(result == 0, "Expected chacha starts to return 0")
-
-	//Encrypt the plaintext
-	result = mbedtls_chacha20_update(&chachaCtx, args->dataSize, args->inputData, args->outputData);
-	DEBUG_ASSERT2(result == 0, "Expected chacha update to return 0")
-
-	//Clean up the chacha context
-	mbedtls_chacha20_free(&chachaCtx);
-
-	return result;
+	return mbedtls_chacha20_crypt(
+		keys->chacha_key,
+		keys->chacha_nonce,
+		0,						//Counter (always starts at 0)
+		args->dataSize,			//Data size (input and output are assumed to be the same size)
+		args->inputData,		//Input data
+		args->outputData		//Output data
+	);
 }
 
 static inline NCResult _getMessageKey(
@@ -360,7 +347,7 @@ static inline NCResult _encryptEx(
 {
 	NCResult result;
 	struct message_key messageKey;
-	struct nc_expand_keys cipherKeys;
+	const struct nc_expand_keys* expandedKeys;
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(ck != NULL, "Expected valid conversation key")
@@ -375,18 +362,17 @@ static inline NCResult _encryptEx(
 	}
 
 	//Expand the keys from the hkdf so we can use them in the cipher
-	_expandKeysFromHkdf(&messageKey, &cipherKeys);
+	expandedKeys = _expandKeysFromHkdf(&messageKey);
 
 	//Copy the hmac key into the args
-	MEMMOV(hmacKey, cipherKeys.hmac_key, NC_HMAC_KEY_SIZE);
+	MEMMOV(hmacKey, expandedKeys->hmac_key, NC_HMAC_KEY_SIZE);
 
-	//CHACHA20
-	result = _chachaEncipher(&cipherKeys, args);
+	//CHACHA20 (the result will be 0 on success)
+	result = (NCResult)_chachaEncipher(expandedKeys, args);
 
 Cleanup:
 	//Clean up sensitive data
 	ZERO_FILL(&messageKey, sizeof(messageKey));
-	ZERO_FILL(&cipherKeys, sizeof(cipherKeys));
 
 	return result;
 }
@@ -400,10 +386,7 @@ static inline NCResult _decryptEx(
 {
 	NCResult result;
 	struct message_key messageKey;
-	struct nc_expand_keys cipherKeys;
-
-	//Assume message key buffer is the same size as the expanded key struct
-	DEBUG_ASSERT2(sizeof(messageKey) == sizeof(cipherKeys), "Message key size and expanded key sizes do not match")
+	const struct nc_expand_keys* cipherKeys;
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(ck != NULL, "Expected valid conversation key")
@@ -417,10 +400,10 @@ static inline NCResult _decryptEx(
 	}
 
 	//Expand the keys from the hkdf so we can use them in the cipher
-	_expandKeysFromHkdf(&messageKey, &cipherKeys);
+	cipherKeys = _expandKeysFromHkdf(&messageKey);
 
-	//CHACHA20
-	result = _chachaEncipher(&cipherKeys, args);
+	//CHACHA20 (the result will be 0 on success)
+	result = (NCResult) _chachaEncipher(cipherKeys, args);
 
 Cleanup:
 	//Clean up sensitive data
@@ -926,7 +909,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	NCResult result;
 	const mbedtls_md_info_t* sha256Info;
 	struct message_key messageKey;
-	struct nc_expand_keys keys;
+	const struct nc_expand_keys* keys;
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE];
 
 	CHECK_NULL_ARG(ctx, 0)
@@ -959,12 +942,12 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	}
 
 	/* Expand keys to get the hmac-key */
-	_expandKeysFromHkdf(&messageKey, &keys);
+	keys = _expandKeysFromHkdf(&messageKey);
 
 	/*
 	* Compute the hmac of the data using the computed hmac key
 	*/
-	if(mbedtls_md_hmac(sha256Info, keys.hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
+	if(mbedtls_md_hmac(sha256Info, keys->hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
@@ -976,7 +959,6 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 Cleanup:
 	/* Clean up sensitive data */
 	ZERO_FILL(&messageKey, sizeof(messageKey));
-	ZERO_FILL(&keys, sizeof(keys));
 	ZERO_FILL(hmacOut, NC_ENCRYPTION_MAC_SIZE);
 
 	return result;
