@@ -412,6 +412,65 @@ Cleanup:
 	return result;
 }
 
+static NCResult _verifyMacEx(
+	const NCContext* ctx,
+	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	NCMacVerifyArgs* args
+)
+{
+	NCResult result;
+	const mbedtls_md_info_t* sha256Info;
+	const struct nc_expand_keys* keys;
+	struct message_key messageKey;
+	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE];
+ 
+	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
+	DEBUG_ASSERT2(conversationKey != NULL, "Expected valid conversation key")
+	DEBUG_ASSERT2(args != NULL, "Expected valid mac verification args")
+
+	sha256Info = _getSha256MdInfo();
+
+	/*
+	* We need to get the message key in order to
+	* get the required hmac key
+	*/
+	result = _getMessageKey(
+		sha256Info,
+		(struct conversation_key*)conversationKey,
+		args->nonce,
+		NC_ENCRYPTION_NONCE_SIZE,
+		&messageKey
+	);
+
+	if (result != NC_SUCCESS)
+	{
+		goto Cleanup;
+	}
+
+	/* Expand keys to get the hmac-key */
+	keys = _expandKeysFromHkdf(&messageKey);
+
+	/*
+	* Compute the hmac of the data using the computed hmac key
+	*/
+	if (mbedtls_md_hmac(sha256Info, keys->hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
+	{
+		result = E_OPERATION_FAILED;
+		goto Cleanup;
+	}
+
+	/* constant time compare the macs */
+	result = mbedtls_ct_memcmp(hmacOut, args->mac, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
+
+Cleanup:
+	/* Clean up sensitive data */
+	ZERO_FILL(&messageKey, sizeof(messageKey));
+	ZERO_FILL(hmacOut, sizeof(hmacOut));
+
+	return result;
+}
+
+
 /*
 * EXTERNAL API FUNCTIONS
 */
@@ -900,18 +959,13 @@ NC_EXPORT NCResult NCComputeMac(
 	) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
+
 NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	const NCContext* ctx,
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
 	NCMacVerifyArgs* args
 )
 {
-	NCResult result;
-	const mbedtls_md_info_t* sha256Info;
-	const struct nc_expand_keys* keys;
-	struct message_key messageKey;	
-	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE];
-
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_INVALID_ARG(ctx->secpCtx, 0)
 	CHECK_NULL_ARG(conversationKey, 1)
@@ -920,48 +974,9 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	CHECK_INVALID_ARG(args->mac, 2)
 	CHECK_INVALID_ARG(args->payload, 2)
 	CHECK_INVALID_ARG(args->nonce, 2)
-	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
+	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
-	sha256Info = _getSha256MdInfo();
-
-	/*
-	* We need to get the message key in order to 
-	* get the required hmac key
-	*/
-	result = _getMessageKey(
-		sha256Info,
-		(struct conversation_key*)conversationKey,
-		args->nonce,
-		NC_ENCRYPTION_NONCE_SIZE,
-		&messageKey
-	);
-
-	if(result != NC_SUCCESS)
-	{
-		goto Cleanup;
-	}
-
-	/* Expand keys to get the hmac-key */
-	keys = _expandKeysFromHkdf(&messageKey);
-
-	/*
-	* Compute the hmac of the data using the computed hmac key
-	*/
-	if(mbedtls_md_hmac(sha256Info, keys->hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
-	{
-		result = E_OPERATION_FAILED;
-		goto Cleanup;
-	}
-
-	/* constant time compare the macs */
-	result = mbedtls_ct_memcmp(hmacOut, args->mac, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
-
-Cleanup:
-	/* Clean up sensitive data */
-	ZERO_FILL(&messageKey, sizeof(messageKey));
-	ZERO_FILL(hmacOut, NC_ENCRYPTION_MAC_SIZE);
-
-	return result;
+	return _verifyMacEx(ctx, conversationKey, args);
 }
 
 NC_EXPORT NCResult NC_CC NCVerifyMac(
@@ -976,6 +991,11 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	CHECK_NULL_ARG(sk, 1)
 	CHECK_NULL_ARG(pk, 2)
 	CHECK_NULL_ARG(args, 3)
+
+	CHECK_INVALID_ARG(args->mac, 3)
+	CHECK_INVALID_ARG(args->payload, 3)
+	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	NCResult result;
 	struct shared_secret sharedSecret;
@@ -992,7 +1012,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 		goto Cleanup;
 	}
 
-	result = NCVerifyMacEx(ctx, (uint8_t*)&conversationKey, args);
+	result = _verifyMacEx(ctx, (uint8_t*)&conversationKey, args);
 
 Cleanup:
 	/* Clean up sensitive data */

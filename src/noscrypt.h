@@ -175,10 +175,10 @@ typedef struct nc_encryption_struct {
 typedef struct nc_mac_verify {
 
 	/* The message authentication code certifying the Nip44 payload */
-	const uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
+	uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
 
 	/* The nonce used for the original message encryption */
-	const uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+	uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
 
 	/* The message payload data */
 	const uint8_t* payload;

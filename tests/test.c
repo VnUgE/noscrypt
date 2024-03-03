@@ -46,8 +46,8 @@
 #endif
 
 /*Prints a string literal to the console*/
-#define PRINTL(x) printf(x); printf("\n");
-#define ENSURE(x) if(!(x)) { printf("Assumption failed!\n"); return 1; } 
+#define PRINTL(x) puts(x); puts("\n");
+#define ENSURE(x) if(!(x)) { puts("Assumption failed!\n"); return 1; } 
 #define TEST(x, expected) printf("\tTesting %s\n", #x); if(((long)x) != ((long)expected)) \
 { printf("FAILED: Expected %ld but got %ld @ callsite %s. Line: %d \n", ((long)expected), ((long)x), #x, __LINE__); return 1; }
 
@@ -57,6 +57,15 @@
 #else
 	#define ZERO_FILL(x, size) memset(x, 0, size)
 #endif
+
+
+#ifdef IS_WINDOWS
+    #define memmove(dst, src, size) memmove_s(dst, size, src, size)
+#else
+    #include<string.h>
+#endif
+
+#include "hex.h"
 
 //Pre-computed constants for argument errors
 #define ARG_ERROR_POS_0 E_NULL_PTR
@@ -83,11 +92,12 @@
 #define ARG_INVALID_ERROR_POS_5 NCResultWithArgPosition(E_INVALID_ARG, 0x05)
 #define ARG_INVALID_ERROR_POS_6 NCResultWithArgPosition(E_INVALID_ARG, 0x06)
 
-
-
+static int RunTests(void);
 static void FillRandomData(void* pbBuffer, size_t length);
 static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
 static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
+static int TestKnownKeys(NCContext* context);
+static int TestCorrectEncryption(NCContext* context);
 
 #ifndef NC_INPUT_VALIDATION_OFF
 static int TestPublicApiArgumentValidation(void);
@@ -98,12 +108,22 @@ static const uint8_t zero64[64] = { 0 };
 
 int main(void)
 {
+    int result;
+    result = RunTests();
+
+    FreeHexBytes();
+
+	return 0;
+}
+
+static int RunTests(void)
+{
     NCContext ctx;
     uint8_t ctxRandom[32];
     NCSecretKey secKey;
     NCPublicKey pubKey;
 
-    PRINTL("Begining basic noscrypt tests\n")
+    PRINTL("Begining basic noscrypt tests")
 
     FillRandomData(ctxRandom, 32);
 
@@ -112,27 +132,37 @@ int main(void)
     TEST(NCInitContext(&ctx, ctxRandom), NC_SUCCESS)
 
     if (InitKepair(&ctx, &secKey, &pubKey) != 0)
-	{
-		return 1;
-	}
-	
+    {
+        return 1;
+    }
+
     if (TestEcdsa(&ctx, &secKey, &pubKey) != 0)
     {
         return 1;
     }
 
+    if (TestKnownKeys(&ctx) != 0)
+    {
+        return 1;
+    }
+
 #ifndef NC_INPUT_VALIDATION_OFF
-    if(TestPublicApiArgumentValidation() != 0)
-	{
-		return 1;
-	}
+    if (TestPublicApiArgumentValidation() != 0)
+    {
+        return 1;
+    }
 #endif
 
-    PRINTL("ECDSA tests passed\n")
+    if (TestCorrectEncryption(&ctx) != 0)
+    {
+        return 1;
+    }
 
     TEST(NCDestroyContext(&ctx), NC_SUCCESS)
 
-	return 0;
+    PRINTL("\nSUCCESS All tests passed")
+
+    return 0;
 }
 
 static void _sha256(const uint8_t* data, size_t length, uint8_t digest[32])
@@ -149,7 +179,7 @@ static const char* message = "Test message to sign";
 
 static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
 {
-    PRINTL("TEST: Keypair\n")
+    PRINTL("TEST: Keypair")
 
     //Get random private key
     FillRandomData(secKey, sizeof(NCSecretKey));
@@ -163,7 +193,7 @@ static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubK
     //Generate a public key from the secret key
     TEST(NCGetPublicKey(context, secKey, pubKey), NC_SUCCESS);
 
-    PRINTL("\nPASSED: Keypair tests completed\n")
+    PRINTL("\nPASSED: Keypair tests completed")
 
     return 0;
 }
@@ -174,7 +204,7 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     uint8_t sigEntropy[32];
     uint8_t invalidSig[64];
 
-    PRINTL("TEST: Ecdsa\n")
+    PRINTL("TEST: Ecdsa")
 
     //Init a new secret key with random data
     FillRandomData(invalidSig, sizeof(invalidSig));
@@ -229,7 +259,7 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
         TEST(NCVerifyDigest(context, pubKey, digestToSign, invalidSig), E_INVALID_ARG);
     }
 
-    PRINTL("\nPASSED: Ecdsa tests completed\n")
+    PRINTL("\nPASSED: Ecdsa tests completed")
 	return 0;
 }
 
@@ -245,7 +275,7 @@ static int TestPublicApiArgumentValidation(void)
     NCCryptoData cryptoData;
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
 
-    PRINTL("TEST: Public API argument validation tests\n")
+    PRINTL("TEST: Public API argument validation tests")
 
     FillRandomData(ctxRandom, 32);
 
@@ -355,13 +385,127 @@ static int TestPublicApiArgumentValidation(void)
         TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 0, hmacDataOut), ARG_RAMGE_ERROR_POS_3)
         TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 32, NULL), ARG_ERROR_POS_4)
     }
+
+    {
+        NCMacVerifyArgs macArgs;
+        macArgs.payload = zero32;
+        macArgs.payloadSize = 32;
+
+        TEST(NCVerifyMac(NULL, &secKey, &pubKey, &macArgs), ARG_ERROR_POS_0)
+        TEST(NCVerifyMac(&ctx, NULL, &pubKey, &macArgs), ARG_ERROR_POS_1)
+        TEST(NCVerifyMac(&ctx, &secKey, NULL, &macArgs), ARG_ERROR_POS_2)
+        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, NULL), ARG_ERROR_POS_3)
+
+        macArgs.payload = NULL;
+        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_INVALID_ERROR_POS_3)
+
+        macArgs.payload = zero32;
+        macArgs.payloadSize = 0;
+        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_RAMGE_ERROR_POS_3)
+    }
     
-    PRINTL("\nPASSED: Public API argument validation tests completed\n")
+    PRINTL("\nPASSED: Public API argument validation tests completed")
 
     return 0;
 }
 
-#endif
+#endif 
+
+static int TestKnownKeys(NCContext* context)
+{
+    PRINTL("TEST: Known keys")
+   
+    NCPublicKey pubKey;
+
+    HexBytes* secKey1 = FromHexString("98c642360e7163a66cee5d9a842b252345b6f3f3e21bd3b7635d5e6c20c7ea36", sizeof(secKey));
+    HexBytes* pubKey1 = FromHexString("0db15182c4ad3418b4fbab75304be7ade9cfa430a21c1c5320c9298f54ea5406", sizeof(pubKey));
+
+    HexBytes* secKey2 = FromHexString("3032cb8da355f9e72c9a94bbabae80ca99d3a38de1aed094b432a9fe3432e1f2", sizeof(secKey));
+    HexBytes* pubKey2 = FromHexString("421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a", sizeof(pubKey));
+   
+    //Test known keys
+    TEST(NCValidateSecretKey(context, NCToSecKey(secKey1->data)), 1);
+
+    /* Recover a public key from secret key 1 */
+    TEST(NCGetPublicKey(context, NCToSecKey(secKey1->data), &pubKey), NC_SUCCESS);
+
+    /* Ensure the public key matches the known public key value */
+    TEST(memcmp(pubKey1->data, &pubKey, sizeof(pubKey)), 0);
+
+    /* Repeat with second key */
+    TEST(NCValidateSecretKey(context, (NCSecretKey*)secKey2->data), 1);
+    TEST(NCGetPublicKey(context, (NCSecretKey*)secKey2->data, &pubKey), NC_SUCCESS);
+    TEST(memcmp(pubKey2->data, &pubKey, sizeof(pubKey)), 0);    
+
+    PRINTL("\nPASSED: Known keys tests completed")
+    return 0;
+}
+
+#define TEST_ENC_DATA_SIZE 128
+
+static int TestCorrectEncryption(NCContext* context)
+{
+    NCSecretKey secKey1;
+    NCPublicKey pubKey1;
+    
+    NCSecretKey secKey2;
+    NCPublicKey pubKey2;
+    
+    NCCryptoData cryptoData;
+    NCMacVerifyArgs macVerifyArgs;
+    uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
+
+    uint8_t plainText[TEST_ENC_DATA_SIZE];
+    uint8_t cipherText[TEST_ENC_DATA_SIZE];
+    uint8_t decryptedText[TEST_ENC_DATA_SIZE];
+
+    PRINTL("TEST: Correct encryption")
+
+    /* init a sending and receiving key */
+    FillRandomData(&secKey1, sizeof(NCSecretKey));
+    FillRandomData(&secKey2, sizeof(NCSecretKey));
+    FillRandomData(plainText, sizeof(plainText));
+
+    ENSURE(NCValidateSecretKey(context, &secKey1) == 1);
+    ENSURE(NCValidateSecretKey(context, &secKey2) == 1);
+
+    ENSURE(NCGetPublicKey(context, &secKey1, &pubKey1) == NC_SUCCESS);
+    ENSURE(NCGetPublicKey(context, &secKey2, &pubKey2) == NC_SUCCESS);
+
+    /* setup the crypto data structure */
+    cryptoData.dataSize = TEST_ENC_DATA_SIZE;
+    cryptoData.inputData = plainText;
+    cryptoData.outputData = cipherText;
+    /* add a random nonce, we will keep it stored in the nonce field of the struct */
+    FillRandomData(cryptoData.nonce, NC_ENCRYPTION_NONCE_SIZE);
+
+    /* Try to encrypt the data from sec1 to pub2 */
+    TEST(NCEncrypt(context, &secKey1, &pubKey2, hmacKeyOut, &cryptoData), NC_SUCCESS);
+
+    //swap texts
+    cryptoData.inputData = cipherText;
+    cryptoData.outputData = decryptedText;
+
+    /* Try to decrypt the data from sec1 to pub2 */
+    TEST(NCDecrypt(context, &secKey2, &pubKey1, &cryptoData), NC_SUCCESS);
+
+    /* Ensure the decrypted text matches the original */
+    TEST(memcmp(plainText, decryptedText, sizeof(plainText)), 0);
+
+    /* Also try to validate the payload mac */
+    memmove(macVerifyArgs.nonce, cryptoData.nonce, NC_ENCRYPTION_NONCE_SIZE);
+    macVerifyArgs.payload = cipherText;
+    macVerifyArgs.payloadSize = TEST_ENC_DATA_SIZE;
+
+    /* Compute message mac on ciphertext */
+    TEST(NCComputeMac(context, hmacKeyOut, cipherText, sizeof(cipherText), macVerifyArgs.mac), NC_SUCCESS);
+
+    /* Verify the mac */
+    TEST(NCVerifyMac(context, &secKey1, &pubKey2, &macVerifyArgs), NC_SUCCESS);    
+
+    PRINTL("\nPASSED: Correct encryption tests completed")
+    return 0;
+}
 
 static void FillRandomData(void* pbBuffer, size_t length)
 {
