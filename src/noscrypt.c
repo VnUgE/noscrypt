@@ -491,8 +491,8 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 	DEBUG_ASSERT2(result == 1, "Expected x-only pubkey serialize to return 1")
 
 	//Clean out keypair
-	ZERO_FILL(&keyPair, sizeof(secp256k1_keypair));
-	ZERO_FILL(&xonly, sizeof(secp256k1_xonly_pubkey));
+	ZERO_FILL(&keyPair, sizeof(keyPair));
+	ZERO_FILL(&xonly, sizeof(xonly));
 
 	return NC_SUCCESS;
 }
@@ -550,8 +550,8 @@ NC_EXPORT NCResult NC_CC NCSignDigest(
 	result = secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly);
 
 	//cleanup any sensitive data
-	ZERO_FILL(&keyPair, sizeof(secp256k1_keypair));
-	ZERO_FILL(&xonly, sizeof(secp256k1_xonly_pubkey));
+	ZERO_FILL(&keyPair, sizeof(keyPair));
+	ZERO_FILL(&xonly, sizeof(xonly));
 
 	return result == 1 ? NC_SUCCESS : E_INVALID_ARG;
 }
@@ -611,7 +611,7 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 	result = secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly);
 
 	//cleanup any sensitive data
-	ZERO_FILL(&xonly, sizeof(secp256k1_xonly_pubkey));
+	ZERO_FILL(&xonly, sizeof(xonly));
 
 	return result == 1 ? NC_SUCCESS : E_INVALID_ARG;
 }
@@ -908,8 +908,8 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 {
 	NCResult result;
 	const mbedtls_md_info_t* sha256Info;
-	struct message_key messageKey;
 	const struct nc_expand_keys* keys;
+	struct message_key messageKey;	
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE];
 
 	CHECK_NULL_ARG(ctx, 0)

@@ -193,11 +193,21 @@ typedef struct nc_mac_verify {
 	API FUNCTIONS
 */
 
+/*
+* A helper function to cast a 32byte buffer to a NCSecretKey struct
+* @param key The 32byte buffer to cast
+* @return A pointer to the NCSecretKey struct
+*/
 static inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
 {
 	return (NCSecretKey*)key;
 }
 
+/*
+* A helper function to cast a 32byte buffer to a NCPublicKey struct
+* @param key The 32byte buffer to cast
+* @return A pointer to the NCPublicKey struct
+*/
 static inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
 {
 	return (NCPublicKey*)key;
