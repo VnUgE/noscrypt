@@ -150,10 +150,8 @@ data buffers and required nonce used for the stream cipher.
 */
 typedef struct nc_encryption_struct {
 
-	/*
-	* The nonce used for the stream cipher.
-	*/
-	uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+	/* The nonce used for the stream cipher. */
+	const uint8_t* nonce32;
 
 	/* The input data buffer to encrypt/decrypt */
 	const void* inputData;
@@ -175,10 +173,10 @@ typedef struct nc_encryption_struct {
 typedef struct nc_mac_verify {
 
 	/* The message authentication code certifying the Nip44 payload */
-	uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
+	const uint8_t* mac32;
 
 	/* The nonce used for the original message encryption */
-	uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+	const uint8_t* nonce32;
 
 	/* The message payload data */
 	const uint8_t* payload;

@@ -272,12 +272,20 @@ static int TestPublicApiArgumentValidation(void)
     uint8_t sig64[64];
     NCSecretKey secKey;
     NCPublicKey pubKey;
-    NCCryptoData cryptoData;
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
+    uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+
+    NCCryptoData cryptoData = {
+        .dataSize = sizeof(zero32),
+        .inputData = zero32,
+        .outputData = sig64,    //just an arbitrary writeable buffer 
+        .nonce32 = nonce
+    };
 
     PRINTL("TEST: Public API argument validation tests")
 
     FillRandomData(ctxRandom, 32);
+    FillRandomData(nonce, sizeof(nonce));
 
     //Test null context
     TEST(NCInitContext(NULL, ctxRandom), ARG_ERROR_POS_0)
@@ -326,13 +334,7 @@ static int TestPublicApiArgumentValidation(void)
 	TEST(NCSignDigest(&ctx, &secKey, zero32, NULL, sig64), ARG_ERROR_POS_3)
     TEST(NCSignDigest(&ctx, &secKey, zero32, zero32, NULL), ARG_ERROR_POS_4)
 
-
-    //Encrypt
-    cryptoData.dataSize = 32;
-    cryptoData.inputData = zero32;
-    cryptoData.outputData = sig64;
-    FillRandomData(&cryptoData.nonce, 32);
-
+    //Test null encrypt args
     TEST(NCEncrypt(NULL, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_0)
     TEST(NCEncrypt(&ctx, NULL, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_1)
 	TEST(NCEncrypt(&ctx, &secKey, NULL, hmacKeyOut, &cryptoData), ARG_ERROR_POS_2)
@@ -387,9 +389,12 @@ static int TestPublicApiArgumentValidation(void)
     }
 
     {
-        NCMacVerifyArgs macArgs;
-        macArgs.payload = zero32;
-        macArgs.payloadSize = 32;
+        NCMacVerifyArgs macArgs = {
+            .payload = zero32,
+            .payloadSize = 32,
+            .mac32 = zero32,
+            .nonce32 = zero32
+        };
 
         TEST(NCVerifyMac(NULL, &secKey, &pubKey, &macArgs), ARG_ERROR_POS_0)
         TEST(NCVerifyMac(&ctx, NULL, &pubKey, &macArgs), ARG_ERROR_POS_1)
@@ -450,14 +455,29 @@ static int TestCorrectEncryption(NCContext* context)
     
     NCSecretKey secKey2;
     NCPublicKey pubKey2;
-    
-    NCCryptoData cryptoData;
-    NCMacVerifyArgs macVerifyArgs;
+  
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
+    uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
+    uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
 
     uint8_t plainText[TEST_ENC_DATA_SIZE];
     uint8_t cipherText[TEST_ENC_DATA_SIZE];
     uint8_t decryptedText[TEST_ENC_DATA_SIZE];
+
+    /* setup the crypto data structure */
+    NCCryptoData cryptoData = {
+        .dataSize = TEST_ENC_DATA_SIZE,
+        .inputData = plainText,
+        .outputData = cipherText,
+        .nonce32 = nonce
+    };
+
+    NCMacVerifyArgs macVerifyArgs = {
+        .nonce32 = nonce,
+        .mac32 = mac,
+        .payload = cipherText,
+        .payloadSize = TEST_ENC_DATA_SIZE
+    };
 
     PRINTL("TEST: Correct encryption")
 
@@ -465,6 +485,8 @@ static int TestCorrectEncryption(NCContext* context)
     FillRandomData(&secKey1, sizeof(NCSecretKey));
     FillRandomData(&secKey2, sizeof(NCSecretKey));
     FillRandomData(plainText, sizeof(plainText));
+    /* nonce is shared */
+    FillRandomData(nonce, sizeof(nonce));
 
     ENSURE(NCValidateSecretKey(context, &secKey1) == 1);
     ENSURE(NCValidateSecretKey(context, &secKey2) == 1);
@@ -472,17 +494,10 @@ static int TestCorrectEncryption(NCContext* context)
     ENSURE(NCGetPublicKey(context, &secKey1, &pubKey1) == NC_SUCCESS);
     ENSURE(NCGetPublicKey(context, &secKey2, &pubKey2) == NC_SUCCESS);
 
-    /* setup the crypto data structure */
-    cryptoData.dataSize = TEST_ENC_DATA_SIZE;
-    cryptoData.inputData = plainText;
-    cryptoData.outputData = cipherText;
-    /* add a random nonce, we will keep it stored in the nonce field of the struct */
-    FillRandomData(cryptoData.nonce, NC_ENCRYPTION_NONCE_SIZE);
-
     /* Try to encrypt the data from sec1 to pub2 */
     TEST(NCEncrypt(context, &secKey1, &pubKey2, hmacKeyOut, &cryptoData), NC_SUCCESS);
 
-    //swap texts
+    //swap cipher and plain text for decryption
     cryptoData.inputData = cipherText;
     cryptoData.outputData = decryptedText;
 
@@ -492,13 +507,8 @@ static int TestCorrectEncryption(NCContext* context)
     /* Ensure the decrypted text matches the original */
     TEST(memcmp(plainText, decryptedText, sizeof(plainText)), 0);
 
-    /* Also try to validate the payload mac */
-    memmove(macVerifyArgs.nonce, cryptoData.nonce, NC_ENCRYPTION_NONCE_SIZE);
-    macVerifyArgs.payload = cipherText;
-    macVerifyArgs.payloadSize = TEST_ENC_DATA_SIZE;
-
     /* Compute message mac on ciphertext */
-    TEST(NCComputeMac(context, hmacKeyOut, cipherText, sizeof(cipherText), macVerifyArgs.mac), NC_SUCCESS);
+    TEST(NCComputeMac(context, hmacKeyOut, cipherText, sizeof(cipherText), mac), NC_SUCCESS);
 
     /* Verify the mac */
     TEST(NCVerifyMac(context, &secKey1, &pubKey2, &macVerifyArgs), NC_SUCCESS);    
