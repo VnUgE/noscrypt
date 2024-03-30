@@ -43,8 +43,7 @@ if(MSVC)
 		/GS		#buffer security check
 		
 		$<$<CONFIG:Debug>:/FC>				#show full path in diagnostics
-		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build	
-
+		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build
 		
 		$<$<CONFIG:Debug>:/wd4820>	#disable warnings for struct padding and spectre mitigation wuen WX is enabled
 		$<$<CONFIG:Debug>:/wd5045>	#disable warnings for spectre mitigation insertion
@@ -91,6 +90,7 @@ if(NOT SECP256K1_LIB)
 	message(FATAL_ERROR "secp256k1 library not found on local system")
 endif()
 
+message(STATUS "secp256k1 library found at ${SECP256K1_LIB}")
 target_link_libraries(${CMAKE_PROJECT_NAME} ${SECP256K1_LIB})
 
 
@@ -117,12 +117,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME} ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
 #TESTS
 if(BUILD_TESTS)
 
-#add test executable and link to library
-add_executable(nctest tests/test.c)
-target_link_libraries(nctest ${CMAKE_PROJECT_NAME})
-#link mbedtls crypto sahred library
-target_link_libraries(nctest ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
-target_include_directories(nctest PRIVATE "src")
+	#add test executable and link to library
+	add_executable(nctest tests/test.c)
+	target_link_libraries(nctest ${CMAKE_PROJECT_NAME})
+	#link mbedtls crypto sahred library
+	target_link_libraries(nctest ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
+	target_include_directories(nctest PRIVATE "src")
 
 endif()
 

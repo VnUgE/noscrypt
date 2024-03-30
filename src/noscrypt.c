@@ -356,7 +356,7 @@ static inline NCResult _encryptEx(
 	DEBUG_ASSERT2(hmacKey != NULL, "Expected valid hmac key buffer")
 
 	//Failure, bail out
-	if ((result = _getMessageKey(mdINfo, ck, args->nonce, NC_ENCRYPTION_NONCE_SIZE, &messageKey)) != NC_SUCCESS)
+	if ((result = _getMessageKey(mdINfo, ck, args->nonce32, NC_ENCRYPTION_NONCE_SIZE, &messageKey)) != NC_SUCCESS)
 	{
 		goto Cleanup;
 	}
@@ -394,7 +394,7 @@ static inline NCResult _decryptEx(
 	DEBUG_ASSERT2(mdInfo != NULL, "Expected valid md info struct")	
 
 	//Failure to get message keys, bail out
-	if ((result = _getMessageKey(mdInfo, ck, args->nonce, NC_ENCRYPTION_NONCE_SIZE, &messageKey)) != NC_SUCCESS)
+	if ((result = _getMessageKey(mdInfo, ck, args->nonce32, NC_ENCRYPTION_NONCE_SIZE, &messageKey)) != NC_SUCCESS)
 	{
 		goto Cleanup;
 	}
@@ -410,6 +410,26 @@ Cleanup:
 	ZERO_FILL(&messageKey, sizeof(messageKey));
 
 	return result;
+}
+
+static inline int _computeHmac(
+	const uint8_t key[NC_HMAC_KEY_SIZE],
+	const NCMacVerifyArgs* args,
+	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
+) 
+{
+	DEBUG_ASSERT2(key != NULL, "Expected valid hmac key")
+	DEBUG_ASSERT2(args != NULL, "Expected valid mac verification args")
+	DEBUG_ASSERT2(hmacOut != NULL, "Expected valid hmac output buffer")
+
+	return mbedtls_md_hmac(
+		_getSha256MdInfo(),
+		key,
+		NC_HMAC_KEY_SIZE,
+		args->payload,
+		args->payloadSize,
+		hmacOut
+	);
 }
 
 static NCResult _verifyMacEx(
@@ -437,7 +457,7 @@ static NCResult _verifyMacEx(
 	result = _getMessageKey(
 		sha256Info,
 		(struct conversation_key*)conversationKey,
-		args->nonce,
+		args->nonce32,
 		NC_ENCRYPTION_NONCE_SIZE,
 		&messageKey
 	);
@@ -453,14 +473,14 @@ static NCResult _verifyMacEx(
 	/*
 	* Compute the hmac of the data using the computed hmac key
 	*/
-	if (mbedtls_md_hmac(sha256Info, keys->hmac_key, NC_HMAC_KEY_SIZE, args->payload, args->payloadSize, hmacOut) != 0)
+	if (_computeHmac(keys->hmac_key, args, hmacOut) != 0)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
 	}
 
 	/* constant time compare the macs */
-	result = mbedtls_ct_memcmp(hmacOut, args->mac, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
+	result = mbedtls_ct_memcmp(hmacOut, args->mac32, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 
 Cleanup:
 	/* Clean up sensitive data */
@@ -529,7 +549,7 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 {
 	int result;
 	secp256k1_keypair keyPair;
-	secp256k1_xonly_pubkey xonly;	
+	secp256k1_xonly_pubkey xonly;
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_INVALID_ARG(ctx->secpCtx, 0)
@@ -752,15 +772,12 @@ NC_EXPORT NCResult NC_CC NCGetConversationKey(
 {
 	NCResult result;
 	struct shared_secret sharedSecret;
-	const mbedtls_md_info_t* mdInfo;
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_INVALID_ARG(ctx->secpCtx, 0)
 	CHECK_NULL_ARG(sk, 1)
 	CHECK_NULL_ARG(pk, 2)
-	CHECK_NULL_ARG(conversationKey, 3)	
-	
-	mdInfo = _getSha256MdInfo();
+	CHECK_NULL_ARG(conversationKey, 3)
 
 	//Compute the shared point
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
@@ -770,7 +787,7 @@ NC_EXPORT NCResult NC_CC NCGetConversationKey(
 
 	result = _computeConversationKey(
 		ctx, 
-		mdInfo, 
+		_getSha256MdInfo(),
 		&sharedSecret, 
 		(struct conversation_key*)conversationKey
 	);
@@ -798,7 +815,7 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	//Validte ciphertext/plaintext
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_INVALID_ARG(args->nonce32, 3)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)	
 
 	return _encryptEx(
@@ -833,7 +850,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	//Validate input/output data
 	CHECK_INVALID_ARG(args->inputData, 4)
 	CHECK_INVALID_ARG(args->outputData, 4)
-	CHECK_INVALID_ARG(args->nonce, 4)
+	CHECK_INVALID_ARG(args->nonce32, 4)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 4)
 
 	mdInfo = _getSha256MdInfo();
@@ -874,7 +891,7 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	//Validte ciphertext/plaintext
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_INVALID_ARG(args->nonce, 2)
+	CHECK_INVALID_ARG(args->nonce32, 2)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
 
 	return _decryptEx(
@@ -906,7 +923,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	//Validte ciphertext/plaintext
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_INVALID_ARG(args->nonce32, 3)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	mdInfo = _getSha256MdInfo();
@@ -949,14 +966,13 @@ NC_EXPORT NCResult NCComputeMac(
 	/*
 	* Compute the hmac of the data using the supplied hmac key
 	*/
-	return mbedtls_md_hmac(
-		_getSha256MdInfo(), 
-		hmacKey, 
-		NC_HMAC_KEY_SIZE, 
-		payload, 
-		payloadSize, 
-		hmacOut
-	) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
+
+	NCMacVerifyArgs args = {
+		.payload = payload,
+		.payloadSize = payloadSize
+	};
+
+	return _computeHmac(hmacKey, &args, hmacOut) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 
@@ -971,9 +987,9 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	CHECK_NULL_ARG(conversationKey, 1)
 	CHECK_NULL_ARG(args, 2)
 
-	CHECK_INVALID_ARG(args->mac, 2)
+	CHECK_INVALID_ARG(args->mac32, 2)
 	CHECK_INVALID_ARG(args->payload, 2)
-	CHECK_INVALID_ARG(args->nonce, 2)
+	CHECK_INVALID_ARG(args->nonce32, 2)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
 	return _verifyMacEx(ctx, conversationKey, args);
@@ -992,9 +1008,9 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	CHECK_NULL_ARG(pk, 2)
 	CHECK_NULL_ARG(args, 3)
 
-	CHECK_INVALID_ARG(args->mac, 3)
+	CHECK_INVALID_ARG(args->mac32, 3)
 	CHECK_INVALID_ARG(args->payload, 3)
-	CHECK_INVALID_ARG(args->nonce, 3)
+	CHECK_INVALID_ARG(args->nonce32, 3)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	NCResult result;
