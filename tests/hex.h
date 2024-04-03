@@ -56,9 +56,11 @@ static size_t _hdeferListIndex = 0;
 
 static HexBytes* __allocHexBytes(size_t length)
 {
+	HexBytes* hexBytes;
+
 	length /= 2;
 
-	HexBytes* hexBytes = (HexBytes*)malloc(length + sizeof(HexBytes));
+	hexBytes = (HexBytes*)malloc(length + sizeof(HexBytes));
 	if(!hexBytes)
 	{
 		return NULL;
@@ -89,7 +91,11 @@ static HexBytes* _fromHexString(const char* hexLiteral, size_t strLen)
 	for (i = 0; i < strLen; i += 2)
 	{
 		/* slice string into smaller 2 char strings then parse */
-		char byteString[3] = { hexLiteral[i], hexLiteral[i + 1], '\0'};		
+		char byteString[3] = { '\0' };
+
+		byteString[0] = hexLiteral[i];
+		byteString[1] = hexLiteral[i + 1];
+
 		hexBytes->data[i / 2] = (uint8_t)strtol(byteString, NULL, 16);
 	}
 	
@@ -143,6 +149,6 @@ static void PrintHexBytes(HexBytes* hexBytes)
 }
 
 
-#endif // !HEX_HELPERS_H
+#endif /* !HEX_HELPERS_H */
 
 
