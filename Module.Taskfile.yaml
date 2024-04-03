@@ -15,25 +15,20 @@ tasks:
 #called by build pipeline to sync repo
   update:
     cmds:
-     - git remote update
      - git reset --hard  
+     - git remote update
      - git pull origin {{.BRANCH_NAME}} --verify-signatures 
-
 
 #called by build pipeline to build module
   build:
     cmds:
      - echo "building module {{.MODULE_NAME}}"   
 
-  postbuild_success:
+  publish:
     cmds:
-
-     #git archive in the module binry output directory
+     #git archive in the module directory
      - git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
 
-  postbuild_failed:
-    cmds:
-      - echo "postbuild failed {{.MODULE_NAME}}"
 
   #called by build pipeline to clean module
   clean:

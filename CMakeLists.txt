@@ -27,6 +27,8 @@ set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+target_compile_features(${CMAKE_PROJECT_NAME} PUBLIC c_std_90)
+
 #if debug
 add_compile_definitions($<$<CONFIG:Debug>:DEBUG>)
 
@@ -84,6 +86,7 @@ unset(SECP256K1_LIB CACHE)
 
 find_library(SECP256K1_LIB 
 	NAMES secp256k1 libsecp256k1 lib_secp256k1
+	PATHS ${LOCAL_SECP256K1_DIR}/src
 )
 
 if(NOT SECP256K1_LIB)
@@ -93,13 +96,18 @@ endif()
 message(STATUS "secp256k1 library found at ${SECP256K1_LIB}")
 target_link_libraries(${CMAKE_PROJECT_NAME} ${SECP256K1_LIB})
 
-
 #link mbedtls and mbedcrypto shared libraries
 unset(MBEDCRYPTO_LIB CACHE)
 unset(MBEDTLS_LIB CACHE)
 
-find_library(MBEDTLS_LIB NAMES mbedtls libmbedtls)
-find_library(MBEDCRYPTO_LIB NAMES mbedcrypto libmbedcrypto)
+find_library(MBEDTLS_LIB 
+	NAMES mbedtls libmbedtls
+	PATHS ${LOCAL_MBEDTLS_DIR}/library
+)
+find_library(MBEDCRYPTO_LIB 
+	NAMES mbedcrypto libmbedcrypto
+	PATHS ${LOCAL_MBEDTLS_DIR}/library
+)
 
 if(NOT MBEDCRYPTO_LIB)
 	message(FATAL_ERROR "mbedcrypto library not found on local system")
@@ -113,17 +121,18 @@ message(STATUS "mbedcrypto library found at ${MBEDCRYPTO_LIB}")
 
 target_link_libraries(${CMAKE_PROJECT_NAME} ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
 
-
 #TESTS
 if(BUILD_TESTS)
 
 	#add test executable and link to library
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${CMAKE_PROJECT_NAME})
-	#link mbedtls crypto sahred library
+	#link mbedtls crypto shared library directly
 	target_link_libraries(nctest ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
 	target_include_directories(nctest PRIVATE "src")
 
+	#enable c11 for testing
+	target_compile_features(nctest PRIVATE c_std_11)
 endif()
 
 

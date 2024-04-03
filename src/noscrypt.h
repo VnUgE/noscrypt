@@ -36,31 +36,31 @@
 	#define _NC_IS_WINDOWS
 #endif
 
-//Set api export calling convention (allow used to override)
+/* Set api export calling convention (allow used to override) */
 #ifndef NC_CC
 	#ifdef _NC_IS_WINDOWS
-		//STD for importing to other languages such as .NET
+		/* STD for importing to other languages such as .NET */
 		#define NC_CC __stdcall
 	#else
 		#define NC_CC 
 	#endif
-#endif // !NC_CC
+#endif /*  !NC_CC */
 
-#ifndef NC_EXPORT	//Allow users to disable the export/impoty macro if using source code directly
+#ifndef NC_EXPORT	/* Allow users to disable the export/impoty macro if using source code directly */
 	#ifdef NOSCRYPT_EXPORTING
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllexport)
 		#else
 			#define NC_EXPORT __attribute__((visibility("default")))
-		#endif // _NC_IS_WINDOWS
+		#endif /*  _NC_IS_WINDOWS */
 	#else
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllimport)
 		#else
 			#define NC_EXPORT
-		#endif // _NC_IS_WINDOWS
-	#endif // !NOSCRYPT_EXPORTING
-#endif // !NC_EXPORT
+		#endif /*  _NC_IS_WINDOWS */
+	#endif /*  !NOSCRYPT_EXPORTING */
+#endif /*  !NC_EXPORT */
 
 /*
 * CONSTANTS
@@ -225,10 +225,10 @@ that caused the error.
 */
 NC_EXPORT void NC_CC NCParseErrorCode(NCResult result, int* code, uint8_t* argPosition)
 {
-	//convert result to a positive value
+	/* convert result to a positive value*/
 	NCResult asPositive = -result;
 
-	//Get the error code from the lower 8 bits and the argument position from the upper 8 bits
+	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
 	*code = -(asPositive & NC_ERROR_CODE_MASK);
 	*argPosition = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
 }
@@ -560,4 +560,4 @@ NC_EXPORT NCResult NCComputeMac(
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
 
-#endif // !NOSCRYPT_H
+#endif /* !NOSCRYPT_H */

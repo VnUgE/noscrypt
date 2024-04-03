@@ -1,10 +1,8 @@
 # noscrypt
 *A compact, C90 cross-platform, cryptography library built specifically for nostr*
 
-At the moment this library is a work in progress, and will be more extensively tested using the suggested nip-44 vector files in [NVault](https://github.com/VnUgE/NVault)
-
 ## What is noscrypt?
-A high-level C utility library built specifically for nostr cryptography operations such as those defined in NIP-01 and the new NIP-44. It was designed to simplify the operations that the secp256k1 library was used for, along with data encryption for the new sepc.  
+A high-level C utility library built specifically for nostr cryptography operations such as those defined in NIP-01 and the new NIP-44. It was designed to simplify the operations that the secp256k1 library was used for, along with data encryption for the new sepc. It is also being built embedded in mind.  
 
 API Example:
 ```C
@@ -14,6 +12,8 @@ NCSignData()
 NCVerifyData()
 NCEncrypt()
 NCDecrypt()
+NCComputeMac()
+NCVerifyMac()
 ... extended functions
 ```
 
@@ -24,6 +24,18 @@ At the time of building this project I have not come across any C-only libraries
 
 I wanted a compact and efficient utility library that was portable across systems and runtimes. I will primarily be using this library in a .NET environment, but would like to make a hardware signer sometime. 
 
+### Testing
+Testing is an will be important to a cryptography library, I take that responsibility seriously. There are some basic api validation and correctness tests that can be built into an executable called nctest. Full automated testing suite is done in C# interop as part of my [NVault](https://github.com/vnuge/nvault) package. This includes testing against the official nip44 [vector file](https://github.com/paulmillr/nip44/blob/main/nip44.vectors.json). I'm very dependency adverse so native C90 testing using only stdlibs can get gross in a hurry. It will likely happen in the future but not right now. 
+
+### Hardness
+- Time sensitive verification always uses fixed time comparison
+- No explicit/dynamic memory allocations
+- Public API function input validation is on by default
+- All stack allocated structures are securely zeroed before return
+- Stack protection is enabled by default for GCC and MSVC compilers (also for deps)
+- Schnorr signatures are validated before the signing function returns
+- Carefully selected, widley used, tested, and audited dependencies
+
 ### Dependency choices
 I carefully chose [mbedTls](https://github.com/Mbed-TLS/mbedtls) and [libsecp256k1](https://github.com/bitcoin-core/secp256k1)  for the following reasons
 - Modern, well tested and well trusted  
@@ -32,8 +44,6 @@ I carefully chose [mbedTls](https://github.com/Mbed-TLS/mbedtls) and [libsecp256
 - Built for use in embedded applications  
 - Simple installations  
 - Great cross-platform build support  
-
-Initially I wanted to use [MonoCypher](https://monocypher.org/) for its compatibility and compactness but it did not have support for hdkf which is required for NIP-44.  
 
 ### Future Goals
 - Good support for embedded platforms that wish to implement nostr specific features (would be fun!)  
@@ -45,46 +55,65 @@ GitHub is simply a mirror for my projects. Extended documentation, pre-compiled 
 [Docs and Articles](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)  
 [Builds and Source](https://www.vaughnnugent.com/resources/software/modules/noscrypt)  
 
-## Getting the package
+### Getting the package
 There are 3 ways to get the source code to build this project.  
-1. Clone the GitHub repo `git clone https://github.com/VnUgE/noscrypt.git`  
-2. Download an archive from my website above  
+1. Download the package from my website above  (recommended)
+2. Clone the GitHub repo `git clone https://github.com/VnUgE/noscrypt.git`  
 3. Download a github archive or release when they are available  
 
-## Compilation
-This project was built from the start using cmake as the build platform so it is easily cross platform. Builds produce a shared library and a static library so you can choose how to link it with your project.  
+## Building
+This project was built from the start using cmake as the build generator so it is easily cross platform. Builds produce a shared library and a static library so you can choose how to link it with your project.  
+
+*Extended documentation includes more exhaustive build conditions and supported platforms*
 
 ### Prerequisites
 Before building this library you must install the following dependencies 
-- [secp256k1](https://github.com/bitcoin-core/secp256k1)  
-- [mbedtls](https://github.com/Mbed-TLS/mbedtls)  
+- [task](https://taskfile.dev/installation/) - build exec tool
+- git
+- [cmake](https://cmake.org)
+- Your preferred C compiler. Currently supports GCC and MSVC
 
-These libraries must be installed where cmake can find them, the easiest way is to just install them globally. So for Windows, this means the .lib files need to be available on the system PATH or safe search directories. The build process will fail if those libraries are not available. Follow the instructions for building and installing the libraries using `cmake` before continuing.  For Linux libraries must be available in one of the the `lib/` base directories.
-
-*It is recommended to download the release archives of mbedtls and secp256k1 instead of cloning the repositories.*  
-
-### Windows users
-Windows users can download pre-compiled x64 binaries from my website above when a build is run.  You will still need to manually install dependencies
+>[!NOTE]
+>The build process will install dependencies locally (in a deps/ dir) and verify the file hashes. Read extended documentation for installing dependencies manually/globally.
 
 ### Instructions
-Use the following cmake commands to generate and compile the library on your system. This assumes you are in the directory containing the `CMakeLists.txt` file  
-```shell
-cmake -B./build/
-cmake --build build/ --config Release
+After Task is installed you can run the following commands to execute the build steps. I test build steps against Debian, Ubuntu, Fedora, Windows 10 and Windows Server 2019 targets. If you have a platform that is having issues please get in touch. 
+
+>[!TIP]
+> Run `task --list-all` to see all available build commands
+
+#### Normal build
+The following command will install dependencies and build the libraries in release mode  
+``` shell
+task #or task build
 ```
 
-By default building of the test executables are disabled. At the moment testing is very basic, but will grow as time goes on. To enable testing set the `-DENABLE_TESTS=ON` flag during the first stage generation process
-```shell
-cmake -B./build/ -DENABLE_TESTS=ON
+#### Build tests in debug mode
+>[!WARNING]
+> You may want to clean the entire project before rebuilding in debug mode to cleanup caches
+``` shell
+task build-tests
 ```
 
-This will produce the `nctests` executable file in the build directory. This will likely change a bit in the future.  
+#### Cleanup
+You can delete all build related data (including dependencies) and start over
+``` shell
+task clean
+```
+The task file is configured to cache your dependencies once they are built. If you have issues with a download and need to re-run a command, try using `task <cmd> --force` to override the build caching.
+
+#### All done
+Once building is complete, your library files should be located under `build/libnoscrypt` or `build/Release/noscrypt.dll` on Windows 
 
 ## Notes
-**Builds** build packages on my website are "manual" I use an internal tool called *vnbuild* that just does the work of preparing a package, but I have to run it myself.  
+#### Builds
+Build packages on my website are "manual" I use an internal tool called *vnbuild* that just does the work of preparing a package, but I have to run it myself.  
 
-### Branches
+#### Branches
 There are currently 2 branches I use because of my build process. `develop` and `master`. All changes happen in develop, then are merged to master when I feel like they are stable enough. After some testing and time, a tag and release will become available.   
+
+#### Windows Dlls
+You may notice that I have msvc pre-compiled packages available for download. I have not compatibility tested them yet so they should only support Windows 10/Server version 1904 running amd64 processors. 
 
 ## License
 The software in this repository is licensed to you under the GNU Lesser GPL v2.1 or later. `SPDX-License-Identifier: LGPL-2.1-or-later` see the [LICENSE](LICENSE) file for more details.    
