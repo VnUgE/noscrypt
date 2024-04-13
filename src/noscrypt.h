@@ -62,32 +62,37 @@
 	#endif /*  !NOSCRYPT_EXPORTING */
 #endif /*  !NC_EXPORT */
 
+#if defined(_NC_IS_WINDOWS) || defined(inline) || defined(__clang__)
+	#define _nc_fn_inline inline
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L /* C99 allows usage of inline keyword */
+	#define _nc_fn_inline inline
+#elif defined(__GNUC__) || defined(__GNUG__)
+	#define _nc_fn_inline __inline__
+#else
+	#define _nc_fn_inline
+	#pragma message("Warning: No inline keyword defined for this compiler")
+#endif
+
 /*
 * CONSTANTS
 */
-#define BIP340_PUBKEY_HEADER_BYTE 0x02
-#define NIP44_MESSAGE_KEY_SIZE 76
-#define NC_ENCRYPTION_NONCE_SIZE 32
-#define NC_SEC_KEY_SIZE 32
-#define NC_PUBKEY_SIZE 32
-#define NC_SHARED_SEC_SIZE 32
-#define NC_CONV_KEY_SIZE 32
-#define NC_HMAC_KEY_SIZE 32
-#define NC_ENCRYPTION_MAC_SIZE 32
+#define BIP340_PUBKEY_HEADER_BYTE		0x02
+#define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 */
+#define NC_ENCRYPTION_NONCE_SIZE		0x20
+#define NC_SEC_KEY_SIZE					0x20
+#define NC_PUBKEY_SIZE					0x20
+#define NC_SHARED_SEC_SIZE				0x20
+#define NC_CONV_KEY_SIZE				0x20
+#define NC_HMAC_KEY_SIZE				0x20
+#define NC_ENCRYPTION_MAC_SIZE			0x20
 #define NC_MESSAGE_KEY_SIZE NIP44_MESSAGE_KEY_SIZE
 
 /*
 * From spec
 * https://github.com/nostr-protocol/nips/blob/master/44.md#decryption
 */
-#define NIP44_MIN_ENC_MESSAGE_SIZE 1
-#define NIP44_MAX_ENC_MESSAGE_SIZE 65535
-
-/*
-* The Nip44 constant salt 
-* https://github.com/nostr-protocol/nips/blob/master/44.md#encryption
-*/
-static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d, 0x76, 0x32 };
+#define NIP44_MIN_ENC_MESSAGE_SIZE		0x01
+#define NIP44_MAX_ENC_MESSAGE_SIZE		0xffff
 
 /*
 *	ERROR CODES
@@ -100,15 +105,15 @@ static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d
 * operations that return a value count.
 */
 
-#define NC_ARG_POSITION_OFFSET 8
-#define NC_ERROR_CODE_MASK 0xFF
+#define NC_ARG_POSITION_OFFSET		0x08
+#define NC_ERROR_CODE_MASK			0xFF
 
-#define NC_SUCCESS 0
-#define E_NULL_PTR -1
-#define E_INVALID_ARG -2
-#define E_INVALID_CONTEXT -3
-#define E_ARGUMENT_OUT_OF_RANGE -4
-#define E_OPERATION_FAILED -5
+#define NC_SUCCESS					0x00
+#define E_NULL_PTR					-1
+#define E_INVALID_ARG				-2
+#define E_INVALID_CONTEXT			-3
+#define E_ARGUMENT_OUT_OF_RANGE		-4
+#define E_OPERATION_FAILED			-5
 
 /* A compressed resul/return value, negative values 
 are failure, 0 is success and positive values are 
@@ -123,7 +128,7 @@ typedef struct secret_key_struct {
 
 	uint8_t key[NC_SEC_KEY_SIZE];
 
-}NCSecretKey;
+} NCSecretKey;
 
 /*
   An x-only secp256k1 public key
@@ -132,7 +137,7 @@ typedef struct xonly_pubkey_struct {
 
 	uint8_t key[NC_PUBKEY_SIZE];
 
-}NCPublicKey;
+} NCPublicKey;
 
 /*
 	An opaque full library context object
@@ -141,7 +146,7 @@ typedef struct ctx_struct {
 
 	void* secpCtx;
 
-}NCContext;
+} NCContext;
 
 /*
 * The encryption arguments structure. This structure is used to pass 
@@ -196,7 +201,7 @@ typedef struct nc_mac_verify {
 * @param key The 32byte buffer to cast
 * @return A pointer to the NCSecretKey struct
 */
-static inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
+static _nc_fn_inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
 {
 	return (NCSecretKey*)key;
 }
@@ -206,12 +211,12 @@ static inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
 * @param key The 32byte buffer to cast
 * @return A pointer to the NCPublicKey struct
 */
-static inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
+static _nc_fn_inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
 {
 	return (NCPublicKey*)key;
 }
 
-static inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition) 
+static _nc_fn_inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition)
 {
 	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
 }
@@ -220,17 +225,22 @@ static inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition
 * Parses an error code and returns the error code and the argument position 
 that caused the error.
 * @param result The error code to parse
-* @param code A pointer to the error code to write to
-* @param argPosition A pointer to the argument position to write to
+* @param argPositionOut A pointer to the argument position to write to
+* @return The error code
 */
-NC_EXPORT void NC_CC NCParseErrorCode(NCResult result, int* code, uint8_t* argPosition)
+static _nc_fn_inline int NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
 {
 	/* convert result to a positive value*/
-	NCResult asPositive = -result;
+	NCResult asPositive;
+	int code;
+
+	asPositive = -result;
 
 	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
-	*code = -(asPositive & NC_ERROR_CODE_MASK);
-	*argPosition = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
+	code = -(asPositive & NC_ERROR_CODE_MASK);
+	*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
+
+	return code;
 }
 
 /*--------------------------------------
