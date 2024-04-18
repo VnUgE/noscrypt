@@ -15,7 +15,7 @@
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public License
-* along with NativeHeapApi. If not, see http://www.gnu.org/licenses/.
+* along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
 
@@ -26,13 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-	#include <assert.h>
-	#define STATIC_ASSERT(x, m) static_assert(x, m)
-#else
-	#define STATIC_ASSERT(x, m)
-	#pragma message("Static assertions are not supported by this language version")
-#endif
+#include "../src/internal/nc-util.h"
 
 typedef struct hexBytes
 {

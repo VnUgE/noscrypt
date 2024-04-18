@@ -15,7 +15,7 @@
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public License
-* along with NativeHeapApi. If not, see http://www.gnu.org/licenses/.
+* along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
 /*
@@ -31,10 +31,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-#if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
-	#define _NC_IS_WINDOWS
-#endif
+#include "platform.h"
 
 /* Set api export calling convention (allow used to override) */
 #ifndef NC_CC
@@ -62,25 +59,15 @@
 	#endif /*  !NOSCRYPT_EXPORTING */
 #endif /*  !NC_EXPORT */
 
-#if defined(_NC_IS_WINDOWS) || defined(inline) || defined(__clang__)
-	#define _nc_fn_inline inline
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L /* C99 allows usage of inline keyword */
-	#define _nc_fn_inline inline
-#elif defined(__GNUC__) || defined(__GNUG__)
-	#define _nc_fn_inline __inline__
-#else
-	#define _nc_fn_inline
-	#pragma message("Warning: No inline keyword defined for this compiler")
-#endif
-
 /*
 * CONSTANTS
 */
 #define BIP340_PUBKEY_HEADER_BYTE		0x02
-#define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 */
+#define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 = 76 */
 #define NC_ENCRYPTION_NONCE_SIZE		0x20
 #define NC_SEC_KEY_SIZE					0x20
 #define NC_PUBKEY_SIZE					0x20
+#define NC_CONTEXT_ENTROPY_SIZE			0x20
 #define NC_SHARED_SEC_SIZE				0x20
 #define NC_CONV_KEY_SIZE				0x20
 #define NC_HMAC_KEY_SIZE				0x20
@@ -122,7 +109,7 @@ defined by the operation.
 typedef int64_t NCResult;
 
 /*
- An secp256k1 secret key (aka 32byte private key buffer)
+ An secp256k1 secret key (aka private key buffer)
 */
 typedef struct secret_key_struct {
 
@@ -159,17 +146,17 @@ typedef struct nc_encryption_struct {
 	const uint8_t* nonce32;
 
 	/* The input data buffer to encrypt/decrypt */
-	const void* inputData;
+	const uint8_t* inputData;
 
 	/* The output data buffer to write data to */
-	void* outputData;
+	uint8_t* outputData;
 
 	/* The size of the data buffers. Buffers must 
 	* be the same size or larger than this value
 	*/
-	uint32_t dataSize;
+	size_t dataSize;
 
-} NCCryptoData;
+} NCEncryptionArgs;
 
 /*
 * A structure for Nip44 message authentication code verification. This structure
@@ -197,8 +184,8 @@ typedef struct nc_mac_verify {
 */
 
 /*
-* A helper function to cast a 32byte buffer to a NCSecretKey struct
-* @param key The 32byte buffer to cast
+* A helper function to cast a buffer to a NCSecretKey struct
+* @param key The buffer to cast
 * @return A pointer to the NCSecretKey struct
 */
 static _nc_fn_inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
@@ -207,8 +194,8 @@ static _nc_fn_inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
 }
 
 /*
-* A helper function to cast a 32byte buffer to a NCPublicKey struct
-* @param key The 32byte buffer to cast
+* A helper function to cast a buffer to a NCPublicKey struct
+* @param key The buffer to cast
 * @return A pointer to the NCPublicKey struct
 */
 static _nc_fn_inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
@@ -256,22 +243,22 @@ NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void);
 /*
 * Initializes a context struct with the given entropy
 * @param ctx A pointer to the context structure to initialize
-* @param entropy The 32byte entropy to initialize the context with
+* @param entropy The entropy to initialize the context with
 * @return NC_SUCCESS if the operation was successful, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCInitContext(
 	NCContext* ctx, 
-	const uint8_t entropy[32]
+	const uint8_t entropy[NC_CONTEXT_ENTROPY_SIZE]
 );
 /*
 * Reinitializes a context struct with the given 
 * @param ctx A pointer to the context structure to initialize
-* @param entropy The 32byte entropy to initialize the context with
+* @param entropy The entropy to initialize the context with
 * @return NC_SUCCESS if the operation was successful, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCReInitContext(
 	NCContext* ctx, 
-	const uint8_t entropy[32]
+	const uint8_t entropy[NC_CONTEXT_ENTROPY_SIZE]
 );
 
 /*
@@ -288,7 +275,7 @@ NC_EXPORT NCResult NC_CC NCDestroyContext(NCContext* ctx);
 */
 
 /*
-* Gets a 32byte x-only compressed public key from the given secret key
+* Gets a x-only compressed public key from the given secret key
 * @param ctx A pointer to the existing library context
 * @param sk A pointer to the secret key
 * @param pk A pointer to the compressed public key buffer to write to
@@ -317,7 +304,7 @@ NC_EXPORT NCResult NC_CC NCValidateSecretKey(
 given secret key and writes the signature to the sig64 buffer.
 * @param ctx A pointer to the existing library context
 * @param sk A pointer to the secret key to sign with
-* @param random32 A pointer to the 32byte random32 buffer to use for signing
+* @param random32 A pointer to the random32 buffer to use for signing
 * @param data A pointer to the raw data buffer to sign
 * @param dataSize The size of the raw data buffer
 * @param sig64 A pointer to the 64byte buffer to write the signature to
@@ -357,8 +344,8 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 * Signs a message using the given secret key and writes the signature to the sig64 buffer
 * @param ctx A pointer to the existing library context
 * @param sk A pointer to the secret key to sign with
-* @param random32 A pointer to the 32byte random32 buffer to use for signing
-* @param digest32 A pointer to 32byte sha256 digest32 to sign
+* @param random32 A pointer to the random32 buffer to use for signing
+* @param digest32 A pointer to sha256 digest32 to sign
 * @param sig64 A pointer to the 64byte buffer to write the signature to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code
 */
@@ -375,7 +362,7 @@ NC_EXPORT NCResult NC_CC NCSignDigest(
 Equivalent to calling secp256k1_schnorrsig_verify.
 * @param ctx A pointer to the existing library context
 * @param sig64 The 64byte signature to verify
-* @param digest32 The 32byte digest32 to verify
+* @param digest32 The digest32 to verify
 * @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */
@@ -407,8 +394,9 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 the NCEncryptEx functions for extended encryption functionality
 * @param ctx The library context
 * @param sk The secret key (the local private key)
-* @param pk The 32byte compressed public key (x-only serialized public key) the other user's public key
+* @param pk The compressed public key (x-only serialized public key) the other user's public key
 * @param args The encryption arguments
+* @param hmacKeyOut A pointer to the buffer to write the hmac key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
 */
@@ -417,7 +405,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	const NCSecretKey* sk, 
 	const NCPublicKey* pk, 
 	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
-	NCCryptoData* args
+	NCEncryptionArgs* args
 );
 
 /*
@@ -425,7 +413,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 the NCDecryptEx functions for extended decryption functionality.
 * @param ctx The library context
 * @param sk The secret key (the local private key)
-* @param pk The 32byte compressed public key (x-only serialized public key) the other user's public key
+* @param pk The compressed public key (x-only serialized public key) the other user's public key
 * @param args The decryption arguments
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
@@ -434,7 +422,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	const NCContext* ctx, 
 	const NCSecretKey* sk, 
 	const NCPublicKey* pk, 
-	NCCryptoData* args
+	NCEncryptionArgs* args
 );
 
 /*
@@ -442,7 +430,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 and a public key. Use the NCVerifyMacEx functions for extended verification functionality.
 * @param ctx A pointer to an existing library context
 * @param sk A pointer to the secret key
-* @param pk A pointer to the 32byte compressed public key (x-only serialized public key)
+* @param pk A pointer to the compressed public key (x-only serialized public key)
 * @param args A pointer to the mac verification arguments
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error
@@ -463,8 +451,8 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 stores it in the sharedPoint buffer.
 * @param ctx A pointer to the existing library context
 * @param sk The secret key
-* @param pk The 32byte compressed public key (x-only serialized public key)
-* @param sharedPoint The 32byte buffer to store write the secret data to
+* @param pk The compressed public key (x-only serialized public key)
+* @param sharedPoint The buffer to store write the secret data to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
 */
@@ -479,9 +467,9 @@ NC_EXPORT NCResult NC_CC NCGetSharedSecret(
 * Computes a NIP-44 conversation key from the local secret key and the remote 
 public key, and stores it in the conversationKey buffer.
 * @param ctx A pointer to the existing library context
-* @param sk A pointer to the 32byte the secret key
-* @param pk A pointer to the 32byte compressed public key (x-only serialized public key)
-* @param conversationKey The 32byte buffer to store write the conversation key to
+* @param sk A pointer to the the secret key
+* @param pk A pointer to the compressed public key (x-only serialized public key)
+* @param conversationKey The buffer to store write the conversation key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
 */
@@ -495,8 +483,8 @@ NC_EXPORT NCResult NC_CC NCGetConversationKey(
 * Computes a NIP-44 conversation key a shared secret/point, and stores it in the 
 conversationKey buffer.
 * @param ctx A pointer to the existing library context
-* @param sharedPoint A pointer to the 32byte shared secret/point
-* @param conversationKey The 32byte buffer to store write the conversation key to
+* @param sharedPoint A pointer to the shared secret/point
+* @param conversationKey The buffer to store write the conversation key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
 */
@@ -510,8 +498,9 @@ NC_EXPORT NCResult NC_CC NCGetConversationKeyEx(
 * Encrypts a message using the given conversation key and writes the encrypted message to the
 * output buffer. The output buffer must be at least 99 bytes in size.
 * @param ctx A pointer to the existing library context
-* @param conversationKey A pointer to the 32byte conversation key
+* @param conversationKey A pointer to the conversation key
 * @param args A pointer to the encryption arguments structure
+* @param hmacKeyOut A pointer to the buffer to write the hmac key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error.
 */
@@ -519,14 +508,14 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
 	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
-	NCCryptoData* args
+	NCEncryptionArgs* args
 );
 
 /*
 * Decrypts a message using the given conversation key and writes the decrypted message to the
 * output buffer. 
 * @param ctx A pointer to the existing library context
-* @param conversationKey A pointer to the 32byte conversation key
+* @param conversationKey A pointer to the conversation key
 * @param args A pointer to the decryption arguments structure
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error.
@@ -534,13 +523,13 @@ the error code and positional argument that caused the error.
 NC_EXPORT NCResult NC_CC NCDecryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE], 
-	NCCryptoData* args
+	NCEncryptionArgs* args
 );
 
 /*
 * Verifies a Nip44 message authentication code using the given conversation key.
 * @param ctx A pointer to the existing library context
-* @param conversationKey A pointer to the 32byte conversation key
+* @param conversationKey A pointer to the conversation key
 * @param args A pointer to the mac verification arguments
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
@@ -555,10 +544,10 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 * Computes a message authentication code for a given payload using the given hmacKey and writes the
 * mac to the hmacOut buffer.
 * @param ctx A pointer to the existing library context
-* @param hmacKey A pointer to the 32byte hmac key
+* @param hmacKey A pointer to the hmac key
 * @param payload A pointer to the payload data buffer
 * @param payloadSize The size of the payload data buffer
-* @param hmacOut A pointer to the 32byte buffer to write the mac to
+* @param hmacOut A pointer to the buffer to write the mac to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */

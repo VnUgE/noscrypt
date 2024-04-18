@@ -15,7 +15,7 @@
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public License
-* along with NativeHeapApi. If not, see http://www.gnu.org/licenses/.
+* along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
 #include <stdio.h>
@@ -280,7 +280,7 @@ static int TestPublicApiArgumentValidation(void)
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
     uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
 
-    NCCryptoData cryptoData;
+    NCEncryptionArgs cryptoData;
     cryptoData.dataSize = sizeof(zero32);
     cryptoData.inputData = zero32;
     cryptoData.outputData = sig64; /*just an arbitrary writeable buffer*/
@@ -467,7 +467,7 @@ static int TestCorrectEncryption(NCContext* context)
     uint8_t cipherText[TEST_ENC_DATA_SIZE];
     uint8_t decryptedText[TEST_ENC_DATA_SIZE];
   
-    NCCryptoData cryptoData;
+    NCEncryptionArgs cryptoData;
     NCMacVerifyArgs macVerifyArgs;
 
     /* setup the crypto data structure */
