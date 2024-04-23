@@ -31,8 +31,7 @@
 #include <Windows.h>
 #include <bcrypt.h>
 
-#include "../../platform.h"
-#include "../nc-util.h"
+#include "nc-util.h"
 
 #define IF_BC_FAIL(x) if(!BCRYPT_SUCCESS(x))
 
@@ -97,7 +96,7 @@ _IMPLSTB NTSTATUS _bcCreate(struct _bcrypt_ctx* ctx)
 	return _bcCreateHmac(ctx, &key);
 }
 
-_IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* data, uint64_t len)
+_IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* data, uint32_t len)
 {
 	return BCryptHashData(ctx->hHash, (uint8_t*)data, len, 0);
 }
@@ -213,12 +212,12 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 #ifndef _IMPL_CRYPTO_SHA256_HKDF_EXPAND
 
-	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_fallbackHkdfExpand
+	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_bcrypt_fallback_hkdf_expand
 
 	/* Include string for memmove */
 	#include <string.h>
 
-	static void ncWriteSpanS(span_t* span, uint64_t offset, const uint8_t* data, uint64_t size)
+	static void ncWriteSpanS(span_t* span, uint32_t offset, const uint8_t* data, uint32_t size)
 	{
 		DEBUG_ASSERT2(span != NULL, "Expected span to be non-null")
 		DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
@@ -239,13 +238,13 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 	#define _BC_MIN(a, b) (a < b ? a : b)
 
-	_IMPLSTB cstatus_t _fallbackHkdfExpand(const cspan_t* prk, const cspan_t* info, span_t* okm)
+	_IMPLSTB cstatus_t _bcrypt_fallback_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
 
 		uint8_t counter;
-		uint64_t tLen, okmOffset;
+		uint32_t tLen, okmOffset;
 		uint8_t t[HKDF_IN_BUF_SIZE];
 
 		_IMPL_SECURE_ZERO_MEMSET(t, sizeof(t));
@@ -274,7 +273,6 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 			tLen = _BC_MIN(okm->size - okmOffset, SHA256_DIGEST_SIZE);
 
 			DEBUG_ASSERT(tLen <= sizeof(t));
-			DEBUG_ASSERT((tLen + okmOffset) < okm->size);
 
 			/* write the T buffer back to okm */
 			ncWriteSpanS(okm, okmOffset, t, tLen);

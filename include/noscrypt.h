@@ -158,7 +158,7 @@ typedef struct nc_encryption_struct {
 	/* The size of the data buffers. Buffers must 
 	* be the same size or larger than this value
 	*/
-	uint64_t dataSize;
+	uint32_t dataSize;
 
 } NCEncryptionArgs;
 
@@ -178,7 +178,7 @@ typedef struct nc_mac_verify {
 	const uint8_t* payload;
 
 	/* The size of the payload data */
-	uint64_t payloadSize;
+	uint32_t payloadSize;
 
 } NCMacVerifyArgs;
 
@@ -319,7 +319,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	const NCSecretKey* sk,
 	const uint8_t random32[32],
 	const uint8_t* data,
-	const uint64_t dataSize,
+	const uint32_t dataSize,
 	uint8_t sig64[64]
 );
 
@@ -336,7 +336,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	const NCContext* ctx,
 	const NCPublicKey* pk,
 	const uint8_t* data,
-	const uint64_t dataSize,
+	const uint32_t dataSize,
 	const uint8_t sig64[64]
 );
 
@@ -555,7 +555,7 @@ NC_EXPORT NCResult NCComputeMac(
 	const NCContext* ctx,
 	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
 	const uint8_t* payload,
-	uint64_t payloadSize,
+	uint32_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
 

@@ -31,8 +31,7 @@
 
 #include <monocypher.h>
 
-#include "../../platform.h"
-#include "../nc-util.h"
+#include "nc-util.h"
 
 /* Export secure memse0 */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
@@ -51,7 +50,7 @@
 		const uint8_t* nonce,
 		const uint8_t* input,
 		uint8_t* output,
-		uint64_t dataLen
+		uint32_t dataLen
 	)
 	{
 		if(dataLen > SIZE_MAX)

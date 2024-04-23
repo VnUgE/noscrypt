@@ -24,11 +24,12 @@
 #ifndef NC_UTIL_H
 #define NC_UTIL_H
 
+#include "platform.h"
+
 /* NULL */
 #ifndef NULL
 	#define NULL ((void*)0)
 #endif /*  !NULL */
-
 
 #ifdef DEBUG
 	/* Must include assert.h for assertions */
@@ -64,22 +65,22 @@
 typedef struct memory_span_struct
 {
 	uint8_t* data;
-	uint64_t size;
+	uint32_t size;
 } span_t;
 
 typedef struct read_only_memory_span_struct
 {
 	const uint8_t* data;
-	uint64_t size;
+	uint32_t size;
 } cspan_t;
 
-static void ncSpanInitC(cspan_t* span, const uint8_t* data, uint64_t size)
+_nc_fn_inline void ncSpanInitC(cspan_t* span, const uint8_t* data, uint32_t size)
 {
 	span->data = data;
 	span->size = size;
 }
 
-static void ncSpanInit(span_t* span, uint8_t* data, uint64_t size)
+_nc_fn_inline void ncSpanInit(span_t* span, uint8_t* data, uint32_t size)
 {
 	span->data = data;
 	span->size = size;

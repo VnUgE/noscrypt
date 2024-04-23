@@ -25,8 +25,7 @@
 
 #include <openssl/sha.h>
 
-#include "../../platform.h"
-#include "../nc-util.h"
+#include "nc-util.h"
 
 /*
 *		EXPORT SUPPORTED FUNCTIONS AS MACROS

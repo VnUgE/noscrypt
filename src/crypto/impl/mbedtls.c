@@ -35,8 +35,7 @@
 #include <mbedtls/chacha20.h>
 #include <mbedtls/constant_time.h>
 
-#include "../../platform.h"
-#include "../nc-util.h"
+#include "nc-util.h"
 
 /*
 *		EXPORT SUPPORTED FUNCTION OVERRIDES
@@ -51,21 +50,38 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	return info;
 }
 
+#if SIZE_MAX < UINT64_MAX
+	#define _ssize_guard(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
+	#define _ssize_guard_int(x) if(x > SIZE_MAX) return 1;
+#else
+	#define _ssize_guard(x)
+	#define _ssize_guard_int(x)
+#endif
+
 #ifndef _IMPL_CHACHA20_CRYPT
 	
 	/* Export chacha20 computation */
 	#define _IMPL_CHACHA20_CRYPT _mbed_chacha20_encrypt	
 
-	_IMPLSTB int _mbed_chacha20_encrypt(
+	_IMPLSTB cstatus_t _mbed_chacha20_encrypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
 		const uint8_t* input,
 		uint8_t* output,
-		size_t dataLen
+		uint32_t dataLen
 	)
 	{
+		_ssize_guard(dataLen)
+
 		/* Counter always starts at 0 */
-		return mbedtls_chacha20_crypt(key, nonce, 0x00u, dataLen, input, output);
+		return mbedtls_chacha20_crypt(
+			key, 
+			nonce, 
+			0x00u,		/* nip-44 counter version */
+			dataLen, 
+			input, 
+			output
+		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
 #endif
@@ -75,9 +91,16 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	
 	#define _IMPL_CRYPTO_SHA256_DIGEST			_mbed_sha256_digest	
 
-	_IMPLSTB CStatus _mbed_sha256_digest(const uint8_t* data, size_t dataSize,uint8_t* digestOut32)
+	_IMPLSTB cstatus_t _mbed_sha256_digest(const cspan_t* data, sha256_t digestOut32)
 	{
-		return mbedtls_sha256(data, dataSize, digestOut32, 0);
+		_ssize_guard(data->size)
+
+		return mbedtls_sha256(
+			data->data, 
+			data->size, 
+			digestOut32, 
+			0				/* Set 0 for sha256 mode */
+		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
 #endif
@@ -87,18 +110,21 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	#define _IMPL_CRYPTO_SHA256_HMAC			_mbed_sha256_hmac
 
-	_IMPLSTB CStatus _mbed_sha256_hmac(
-		const uint8_t* key, size_t keyLen,
-		const uint8_t* data, size_t dataLen,
-		void* hmacOut32
-	)
+	_IMPLSTB cstatus_t _mbed_sha256_hmac(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32)
 	{
+		_ssize_guard(data->size)
+
+		/* Keys should never be large enough for this to matter, but sanity check. */
+		DEBUG_ASSERT2(key->size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")
+
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
-			key, keyLen,
-			data, dataLen,
+			key->data, 
+			key->size,
+			data->data, 
+			data->size,
 			hmacOut32
-		);
+		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 #endif
 
@@ -107,40 +133,24 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_mbed_sha256_hkdf_expand
 
-	_IMPLSTB int _mbed_sha256_hkdf_expand(
-		const uint8_t* prk, size_t prkLen,
-		const uint8_t* info, size_t infoLen,
-		void* okm, size_t okmLen
-	)
+	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
 	{
+		/* These sizes should never be large enough to overflow on <64bit platforms, but sanity check */
+		DEBUG_ASSERT(okm->size < SIZE_MAX)
+		DEBUG_ASSERT(prk->size < SIZE_MAX)
+		DEBUG_ASSERT(info->size < SIZE_MAX)
+
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
-			prk, prkLen,
-			info, infoLen,
-			okm, okmLen
-		);
+			prk->data, 
+			prk->size,
+			info->data, 
+			info->size,
+			okm->data, 
+			okm->size
+		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
-#endif
-
-/* Export hkdf extract if not already defined */
-#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXTRACT
-
-	#define _IMPL_CRYPTO_SHA256_HKDF_EXTRACT		_mbed_sha256_hkdf_extract
-
-	_IMPLSTB int _mbed_sha256_hkdf_extract(
-		const uint8_t* salt, size_t saltLen,
-		const uint8_t* ikm, size_t ikmLen,
-		void* prk
-	)
-	{
-		return mbedtls_hkdf_extract(
-			_mbed_sha256_alg(),
-			salt, saltLen,
-			ikm, ikmLen,
-			prk
-		);
-	}
 #endif
 
 /* Export fixed-time compare if not already defined */
@@ -149,9 +159,11 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	#define _IMPL_CRYPTO_FIXED_TIME_COMPARE		_mbed_fixed_time_compare
 
 	/* fixed-time memcmp */
-	_IMPLSTB int _mbed_fixed_time_compare(const uint8_t* a, const uint8_t* b, size_t size)
+	_IMPLSTB uint32_t _mbed_fixed_time_compare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		return mbedtls_ct_memcmp(a, b, size);
+		_ssize_guard_int(size)
+
+		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
 #endif
 

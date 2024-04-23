@@ -50,9 +50,9 @@ typedef uint8_t sha256_t[SHA256_DIGEST_SIZE];
 #endif
 
 
-uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint64_t size);
+uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size);
 
-void ncCryptoSecureZero(void* ptr, uint64_t size);
+void ncCryptoSecureZero(void* ptr, uint32_t size);
 
 cstatus_t ncCryptoDigestSha256(const cspan_t* data, sha256_t digestOut32);
 
@@ -67,7 +67,7 @@ cstatus_t ncCryptoChacha20(
 	const uint8_t nonce[CHACHA_NONCE_SIZE],
 	const uint8_t* input,
 	uint8_t* output,
-	uint64_t dataSize
+	uint32_t dataSize
 );
 
 #endif /* !_NC_CRYPTO_H */

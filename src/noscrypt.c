@@ -20,8 +20,8 @@
 
 #include "noscrypt.h"
 
-#include "internal/nc-util.h"
-#include "internal/nc-crypto.h"
+#include "nc-util.h"
+#include "crypto/nc-crypto.h"
 
 #include <secp256k1_ecdh.h>
 #include <secp256k1_schnorrsig.h>
@@ -84,7 +84,7 @@ struct nc_expand_keys {
 /* Pointer typecast must work between expanded keys 
 * and message key, size must be identical to work 
 */
-STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expected struct nc_expand_keys to be the same size as struct message_key");
+STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expected struct nc_expand_keys to be the same size as struct message_key")
 
 /*
 * Check that the fallback hkdf extract internal buffer is large enough
@@ -569,7 +569,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	const NCSecretKey* sk,
 	const uint8_t random32[32],
 	const uint8_t* data,
-	uint64_t dataSize,
+	uint32_t dataSize,
 	uint8_t sig64[64]
 )
 {
@@ -630,7 +630,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	const NCContext* ctx,
 	const NCPublicKey* pk,
 	const uint8_t* data,
-	const uint64_t dataSize,
+	const uint32_t dataSize,
 	const uint8_t sig64[64]
 )
 {
@@ -857,7 +857,7 @@ NC_EXPORT NCResult NCComputeMac(
 	const NCContext* ctx,
 	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
 	const uint8_t* payload,
-	uint64_t payloadSize,
+	uint32_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 )
 {
@@ -905,6 +905,10 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	NCMacVerifyArgs* args
 )
 {
+	NCResult result;
+	struct shared_secret sharedSecret;
+	struct conversation_key conversationKey;
+
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
 	CHECK_NULL_ARG(sk, 1)
@@ -915,10 +919,6 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	CHECK_INVALID_ARG(args->payload, 3)
 	CHECK_INVALID_ARG(args->nonce32, 3)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
-
-	NCResult result;
-	struct shared_secret sharedSecret;
-	struct conversation_key conversationKey;
 
 	/* Computed the shared point so we can get the converstation key */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)

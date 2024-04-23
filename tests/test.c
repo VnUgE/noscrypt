@@ -24,9 +24,6 @@
 #include <stdlib.h>
 
 #include <noscrypt.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/platform_util.h>
-
 #ifdef _NC_IS_WINDOWS
 	#define IS_WINDOWS
 #endif

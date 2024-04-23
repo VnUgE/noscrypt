@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../src/internal/nc-util.h"
+#include <nc-util.h>
 
 typedef struct hexBytes
 {

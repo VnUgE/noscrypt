@@ -20,7 +20,6 @@
 
 #include "nc-util.h"
 #include "nc-crypto.h"
-#include "../platform.h"
 
 /*
 *  Functions are not forced inline, just suggested.
@@ -131,7 +130,7 @@
 	* integer size
 	*/
 
-	static uint32_t _fallbackFixedTimeCompare(const uint8_t* a, const uint8_t* b, uint64_t size)
+	static uint32_t _fallbackFixedTimeCompare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
 		size_t i;
 		uint32_t result;
@@ -164,7 +163,7 @@
 * for the desired crypto impl.
 */
 
-void ncCryptoSecureZero(void* ptr, uint64_t size)
+void ncCryptoSecureZero(void* ptr, uint32_t size)
 {
 	DEBUG_ASSERT2(ptr != NULL, "Expected ptr to be non-null")
 
@@ -175,7 +174,7 @@ void ncCryptoSecureZero(void* ptr, uint64_t size)
 	_IMPL_SECURE_ZERO_MEMSET(ptr, size);
 }
 
-uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint64_t size)
+uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size)
 {
 	DEBUG_ASSERT2(a != NULL, "Expected a to be non-null")
 	DEBUG_ASSERT2(b != NULL, "Expected b to be non-null")
@@ -226,7 +225,7 @@ cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span
 	* "length of output keying material in octets (<= 255 * HashLen)"
 	*/
 
-	if(okm->size > (uint64_t)(0xFFu * SHA256_DIGEST_SIZE))
+	if(okm->size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
 	{
 		return CSTATUS_FAIL;
 	}
@@ -257,13 +256,17 @@ cstatus_t ncCryptoChacha20(
 	const uint8_t nonce[CHACHA_NONCE_SIZE],
 	const uint8_t* input,
 	uint8_t* output,
-	uint64_t dataSize
+	uint32_t dataSize
 )
 {
 	DEBUG_ASSERT2(key != NULL,		"Expected key to be non-null")
 	DEBUG_ASSERT2(nonce != NULL,	"Expected nonce to be non-null")
 	DEBUG_ASSERT2(input != NULL,	"Expected input to be non-null")
 	DEBUG_ASSERT2(output != NULL,	"Expected output to be non-null")
+
+#ifndef _IMPL_CHACHA20_CRYPT
+	#error "No chacha20 implementation defined"
+#endif /* !_IMPL_CHACHA20_CRYPT */
 
 	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output, dataSize);
 }
