@@ -1,4 +1,4 @@
-# noscrypt
+﻿# noscrypt
 *A compact, C90 cross-platform, cryptography library built specifically for nostr*
 
 ## What is noscrypt?
@@ -36,18 +36,16 @@ Testing is an will be important to a cryptography library, I take that responsib
 - Schnorr signatures are validated before the signing function returns
 - Carefully selected, widley used, tested, and audited dependencies
 
-### Dependency choices
-I carefully chose [mbedTls](https://github.com/Mbed-TLS/mbedtls) and [libsecp256k1](https://github.com/bitcoin-core/secp256k1)  for the following reasons
-- Modern, well tested and well trusted  
-- Fully open source and actively maintained  
-- Absolutely no runtime memory allocations  
-- Built for use in embedded applications  
-- Simple installations  
-- Great cross-platform build support  
 
-### Future Goals
-- Good support for embedded platforms that wish to implement nostr specific features (would be fun!)  
-- Over all better testing suite  
+## Platform Support
+| Arch | Support | Notes | Tested |
+| ----- | ---------- | ------- | ------- |
+| Windows | OpenSSL, Mbed-TLS, BCrypt | NT 6.1 + | ✅ |
+| Linux   | OpenSSL, Mbed-TLS         | GCC only | ✅ |
+| FreeBSD | OpenSSL, Mbed-TLS         | GCC Only |    |
+
+### Configuring libraries
+Noscrypt now supports linking to multiple cryptographic libraries and expanded platform support. At built-time you may choose 
 
 ## Packages and Docs
 GitHub is simply a mirror for my projects. Extended documentation, pre-compiled binaries and source code bundles are always available on my website, along with PGP signatures and checksums.    

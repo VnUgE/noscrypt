@@ -87,7 +87,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 add_library(${CMAKE_PROJECT_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 target_compile_features(${CMAKE_PROJECT_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
 
-#link dependencies manually
+#link libsecp256k1
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE secp256k1)
 target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE secp256k1)
 
@@ -114,7 +114,8 @@ elseif(CRYPTO_LIB STREQUAL "openssl")
 
 	#link to openssl
 	message(STATUS "Linking to OpenSSL crypto library")
-	target_link_libraries(myTarget PRIVATE OpenSSL::Crypto)
+	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OpenSSL::Crypto)
+	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE OpenSSL::Crypto)
 
 	#enable openssl crypto library bindings
 	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE OPENSSL_CRYPTO_LIB)
@@ -131,10 +132,11 @@ if(NC_DISABLE_INPUT_VALIDATION)
 	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NC_INPUT_VALIDATION_OFF)
 endif()
 
-
-
 #setup flags for windows compilation
 if(MSVC)
+
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "bcrypt.lib")
+	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE "bcrypt.lib")
 	
     #global windows cl flags
 	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -165,7 +167,7 @@ if(MSVC)
 #configure gcc flags
 elseif(CMAKE_COMPILER_IS_GNUCC)
 
-	target_compile_definitions( ${CMAKE_PROJECT_NAME} PRIVATE -Wextra -fstack-protector)
+	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wextra -fstack-protector)
 
 	#if debug build enable additional debug flags
 	if(build_type STREQUAL "debug")
@@ -190,25 +192,27 @@ endif()
 
 # Monocypher only provides a few fallback functions
 # for builds that don't use a more complete library
-# implementation. 
+# implementation. Specifically cha-cha20 and secure 
+# erase functions.
 
 if(NC_INCLUDE_MONOCYPHER)
-	target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "vendor/monocypher")
 
-	#add monocypher source files
-	set(MONOCYPHER_SRCS
+	target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "vendor/monocypher")	
+	target_include_directories(${CMAKE_PROJECT_NAME}_static PRIVATE "vendor/monocypher")	
+
+	#add monocypher as a static dep to the project
+	add_library(monocypher STATIC 
 		"vendor/monocypher/monocypher.c"
 		"vendor/monocypher/monocypher.h"
 	)
 
-	#add monocypher as a static dep to the project
-	add_library(monocypher STATIC ${MONOCYPHER_SRCS})
 	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE monocypher)
+	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE monocypher)
 
 	#enable monocypher crypto library bindings
 	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NC_ENABLE_MONOCYPHER)
-
-	#setup compiler options
+	target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE NC_ENABLE_MONOCYPHER)
+	
 	target_compile_features(monocypher PRIVATE c_std_99)			#targets c99
 
 	if(MSVC)		
@@ -235,9 +239,7 @@ if(NC_BUILD_TESTS)
 
 	#add test executable and link to library
 	add_executable(nctest tests/test.c)
-	target_link_libraries(nctest ${CMAKE_PROJECT_NAME})
-	#link mbedtls crypto shared library directly
-	target_link_libraries(nctest ${MBEDCRYPTO_LIB} ${MBEDTLS_LIB})
+	target_link_libraries(nctest ${CMAKE_PROJECT_NAME}_static)
 	target_include_directories(nctest PRIVATE "src")
 
 	#enable c11 for testing

@@ -26,7 +26,8 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+              "CMAKE_BUILD_TYPE": "Debug",
+              "NC_BUILD_TESTS": true
             }
         },
         {
@@ -46,7 +47,8 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+              "CMAKE_BUILD_TYPE": "Debug",
+              "NC_BUILD_TESTS": true
             }
         },
         {

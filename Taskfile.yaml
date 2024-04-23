@@ -13,19 +13,7 @@
 version: '3'
 
 vars:
-  INSTALL_DIR: 'deps/'
-
-  #mbed tls variables
-  MBEDTLS_PACK_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/v3.6.0/mbedtls-3.6.0.tar.bz2'
-  MBEDTLS_PACK_SHA: '3ecf94fcfdaacafb757786a01b7538a61750ebd85c4b024f56ff8ba1490fcd38'
-  MBED_TLS_VERSION: '3.6.0'
-  MBED_TLS_DIR: '{{.INSTALL_DIR}}mbedtls-{{.MBED_TLS_VERSION}}'
-
-  #secp256k1 variables
-  SECP256K1_PACK_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.4.1.tar.gz'
-  SECP256K1_PACK_SHA: '31b1a03c7365dbce7aff4be9526243da966c58a8b88b6255556d51b3016492c5'
-  SECP256K1_VERSION: '0.4.1'
-  SCP256K1_DIR: '{{.INSTALL_DIR}}secp256k1-{{.SECP256K1_VERSION}}'
+  END_USER_CMAKE_ARGS: '-DNC_BUILD_TESTS=OFF -DNC_DISABLE_INPUT_VALIDATION=OFF -DNC_INCLUDE_MONOCYPHER=ON'
 
 tasks:
 
@@ -35,7 +23,7 @@ tasks:
      - install
     cmds:
      - task: build-local
-       vars: { CMAKE_TEST_STATUS: 'Off', BUILD_CONFIG: 'Release' }
+       vars: { CMAKE_TEST_STATUS: 'OFF', BUILD_CONFIG: 'Release' }
 
   build-tests:
     desc: "Build libraries and test executable in debug mode"
@@ -43,69 +31,15 @@ tasks:
      - install
     cmds:
      - task: build-local
-       vars: { CMAKE_TEST_STATUS: 'On', BUILD_CONFIG: 'Debug' }
+       vars: { CMAKE_TEST_STATUS: 'ON', BUILD_CONFIG: 'Debug' }
 
   build-local:
     internal: true
     cmds:
-     - cmake -S . -B./build/ -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DBUILD_TESTS={{.CMAKE_TEST_STATUS}} -DLOCAL_MBEDTLS_DIR={{.MBED_TLS_DIR}}/build -DLOCAL_SECP256K1_DIR={{.SCP256K1_DIR}}/build
+     - cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} {{.END_USER_CMAKE_ARGS}}
      - cmake --build build/ --config {{.BUILD_CONFIG}}
      - cmd: echo "Build complete your files can be found in the build/ directory"
        silent: true
-
-  install:
-     desc: 'Installs dependencies locally'     
-     cmds:
-      #make install dir
-      - cmd: powershell -Command "mkdir {{.INSTALL_DIR}} -Force"
-        platforms: [windows]
-      - cmd: mkdir -p {{.INSTALL_DIR}}
-        platforms: [linux, darwin]
-      
-      #nstall deps locally 
-      - task: install-mbedtls
-      - task: install-secp256k1
-
-  install-mbedtls:
-    internal: true
-    sources:
-     - '{{.MBED_TLS_DIR}}/*.*'
-    cmds:
-    #downlaod mbedtls
-    - cd {{.INSTALL_DIR}} && curl -L -o mbedtls.tar.bz2 {{.MBEDTLS_PACK_URL}}
-    
-    - cmd: cd {{.INSTALL_DIR}} && echo "{{.MBEDTLS_PACK_SHA}} mbedtls.tar.bz2" | sha256sum -c
-      platforms: [linux, darwin]
-    - cmd: cd {{.INSTALL_DIR}} && certutil -hashfile mbedtls.tar.bz2
-      platforms: [windows]
-
-    #extract mbedtls
-    - cd {{.INSTALL_DIR}} && tar -xjf mbedtls.tar.bz2 
-    
-    #build using cmake
-    - cd {{.MBED_TLS_DIR}} && cmake -Bbuild/ -DUSE_SHARED_MBEDTLS_LIBRARY=On -DENABLE_TESTING=Off -DENABLE_PROGRAMS=Off -DCMAKE_BUILD_TYPE=Release
-    - cd {{.MBED_TLS_DIR}} && cmake --build build/
-
-  install-secp256k1:
-    internal: true
-    sources:
-     - '{{.SCP256K1_DIR}}/*.*'
-    cmds:
-    #downlaod mbedtls
-    - cd {{.INSTALL_DIR}} && curl -L -o secp56k1.tgz {{.SECP256K1_PACK_URL}}
-    
-    - cmd: cd {{.INSTALL_DIR}} && echo "{{.SECP256K1_PACK_SHA}} secp56k1.tgz" | sha256sum -c
-      platforms: [linux, darwin]
-    - cmd: cd {{.INSTALL_DIR}} && certutil -hashfile secp56k1.tgz
-      platforms: [windows]
-
-    #extract mbedtls
-    - cd {{.INSTALL_DIR}} && tar -xzf secp56k1.tgz
-    
-    #build using cmake
-    - cd {{.SCP256K1_DIR}} && cmake -Bbuild/ -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=ON -DCMAKE_BUILD_TYPE=Release
-    - cd {{.SCP256K1_DIR}} && cmake --build build/
-    
 
 #CI ONLY!!
 

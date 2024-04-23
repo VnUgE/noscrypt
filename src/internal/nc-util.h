@@ -3,7 +3,7 @@
 * Copyright (c) 2024 Vaughn Nugent
 *
 * Package: noscrypt
-* File: nc-util.c
+* File: nc-util.h
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -58,5 +58,31 @@
 	#define DEBUG_ASSERT2(x, message)
 	#define STATIC_ASSERT(x, m)
 #endif
+
+#include <stdint.h>
+
+typedef struct memory_span_struct
+{
+	uint8_t* data;
+	uint64_t size;
+} span_t;
+
+typedef struct read_only_memory_span_struct
+{
+	const uint8_t* data;
+	uint64_t size;
+} cspan_t;
+
+static void ncSpanInitC(cspan_t* span, const uint8_t* data, uint64_t size)
+{
+	span->data = data;
+	span->size = size;
+}
+
+static void ncSpanInit(span_t* span, uint8_t* data, uint64_t size)
+{
+	span->data = data;
+	span->size = size;
+}
 
 #endif /* NC_UTIL_H */

@@ -145,6 +145,10 @@ typedef struct nc_encryption_struct {
 	/* The nonce used for the stream cipher. */
 	const uint8_t* nonce32;
 
+	/* Writes the hmac key to the buffer during encryption events.
+	Set to NULL on decryption */
+	uint8_t* hmacKeyOut32;
+
 	/* The input data buffer to encrypt/decrypt */
 	const uint8_t* inputData;
 
@@ -154,7 +158,7 @@ typedef struct nc_encryption_struct {
 	/* The size of the data buffers. Buffers must 
 	* be the same size or larger than this value
 	*/
-	size_t dataSize;
+	uint64_t dataSize;
 
 } NCEncryptionArgs;
 
@@ -174,7 +178,7 @@ typedef struct nc_mac_verify {
 	const uint8_t* payload;
 
 	/* The size of the payload data */
-	size_t payloadSize;
+	uint64_t payloadSize;
 
 } NCMacVerifyArgs;
 
@@ -217,10 +221,10 @@ that caused the error.
 */
 static _nc_fn_inline int NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
 {
-	/* convert result to a positive value*/
 	NCResult asPositive;
 	int code;
 
+	/* convert result to a positive value*/
 	asPositive = -result;
 
 	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
@@ -315,7 +319,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	const NCSecretKey* sk,
 	const uint8_t random32[32],
 	const uint8_t* data,
-	const size_t dataSize,
+	const uint64_t dataSize,
 	uint8_t sig64[64]
 );
 
@@ -332,7 +336,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	const NCContext* ctx,
 	const NCPublicKey* pk,
 	const uint8_t* data,
-	const size_t dataSize,
+	const uint64_t dataSize,
 	const uint8_t sig64[64]
 );
 
@@ -396,15 +400,13 @@ the NCEncryptEx functions for extended encryption functionality
 * @param sk The secret key (the local private key)
 * @param pk The compressed public key (x-only serialized public key) the other user's public key
 * @param args The encryption arguments
-* @param hmacKeyOut A pointer to the buffer to write the hmac key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
 */
 NC_EXPORT NCResult NC_CC NCEncrypt(
 	const NCContext* ctx, 
 	const NCSecretKey* sk, 
-	const NCPublicKey* pk, 
-	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
+	const NCPublicKey* pk,
 	NCEncryptionArgs* args
 );
 
@@ -500,14 +502,12 @@ NC_EXPORT NCResult NC_CC NCGetConversationKeyEx(
 * @param ctx A pointer to the existing library context
 * @param conversationKey A pointer to the conversation key
 * @param args A pointer to the encryption arguments structure
-* @param hmacKeyOut A pointer to the buffer to write the hmac key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error.
 */
 NC_EXPORT NCResult NC_CC NCEncryptEx(
 	const NCContext* ctx, 
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
-	uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE],
 	NCEncryptionArgs* args
 );
 
@@ -555,7 +555,7 @@ NC_EXPORT NCResult NCComputeMac(
 	const NCContext* ctx,
 	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
 	const uint8_t* payload,
-	size_t payloadSize,
+	uint64_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
 
