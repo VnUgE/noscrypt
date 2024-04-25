@@ -23,7 +23,7 @@
 
 /*
 *  Functions are not forced inline, just suggested.
-*  So unless it beomes a performance issue, I will leave
+*  So unless it becomes a performance issue, I will leave
 *  most/all impl functions inline and let the compiler 
 *  decide.
 */
@@ -43,8 +43,10 @@
 * 
 * Macros are used to allow the preprocessor to select the correct implementation
 * or raise errors if no implementation is defined.
+* 
+* Implementation functions can assume inputs have been checked/sanitized by the
+* calling function, and should return CSTATUS_OK on success, CSTATUS_FAIL on failure.
 */
-
 
 
 /*
@@ -69,7 +71,8 @@
 * memset 0 functions for each platform.
 */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
-	#if defined(__GNUC__)	
+   /* only incude bzero if libc version greater than 2.25 */
+	#if defined(__GLIBC__) && defined(__GLIBC_MINOR__) && __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 25
 		/*
 		*	When using libc, we can use explicit_bzero
 		*	as secure memset implementation.
@@ -77,6 +80,7 @@
 		*	https://sourceware.org/glibc/manual/2.39/html_mono/libc.html#Erasing-Sensitive-Data
 		*/
 		#include <string.h>
+		extern void explicit_bzero(void* block, size_t len);
 		#define _IMPL_SECURE_ZERO_MEMSET explicit_bzero
 	#endif
 #endif
@@ -161,6 +165,11 @@
 * Internal function implementations that perform
 * basic checking and call the correct implementation
 * for the desired crypto impl.
+* 
+* The following functions MUST be assumed to 
+* perform basic input validation. Since these apis are 
+* internal, debug asserts are used to ensure the
+* function has been used correctly.
 */
 
 void ncCryptoSecureZero(void* ptr, uint32_t size)
@@ -223,6 +232,8 @@ cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span
 	/*
 	* RFC 5869: 2.3
 	* "length of output keying material in octets (<= 255 * HashLen)"
+	* 
+	* important as the counter is 1 byte, so it cannot overflow
 	*/
 
 	if(okm->size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))

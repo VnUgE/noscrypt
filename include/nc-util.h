@@ -21,8 +21,8 @@
 
 #pragma once
 
-#ifndef NC_UTIL_H
-#define NC_UTIL_H
+#ifndef _NC_UTIL_H
+#define _NC_UTIL_H
 
 #include "platform.h"
 
@@ -62,6 +62,12 @@
 
 #include <stdint.h>
 
+#if SIZE_MAX < UINT32_MAX
+	#define _sizet_check(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
+#else
+	#define _sizet_check(x)
+#endif
+
 typedef struct memory_span_struct
 {
 	uint8_t* data;
@@ -74,16 +80,16 @@ typedef struct read_only_memory_span_struct
 	uint32_t size;
 } cspan_t;
 
-_nc_fn_inline void ncSpanInitC(cspan_t* span, const uint8_t* data, uint32_t size)
+static _nc_fn_inline void ncSpanInitC(cspan_t* span, const uint8_t* data, uint32_t size)
 {
 	span->data = data;
 	span->size = size;
 }
 
-_nc_fn_inline void ncSpanInit(span_t* span, uint8_t* data, uint32_t size)
+static _nc_fn_inline void ncSpanInit(span_t* span, uint8_t* data, uint32_t size)
 {
 	span->data = data;
 	span->size = size;
 }
 
-#endif /* NC_UTIL_H */
+#endif /* !_NC_UTIL_H */

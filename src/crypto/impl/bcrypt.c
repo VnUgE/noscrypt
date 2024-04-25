@@ -32,8 +32,10 @@
 #include <bcrypt.h>
 
 #include "nc-util.h"
+#include "hkdf.h"
 
-#define IF_BC_FAIL(x) if(!BCRYPT_SUCCESS(x))
+#define IF_BC_FAIL(x) if(!BCRYPT_SUCCESS(x)) 
+#define BC_FAIL(x) if(!BCRYPT_SUCCESS(x)) return CSTATUS_FAIL;
 
 struct _bcrypt_ctx
 {
@@ -68,8 +70,8 @@ _IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, const cspan_t* key)
 {
 	/*
 	 * NOTE: 
-	 * I am not explicitly managing the hash object buffer. By setting 
-	 * the hash object to NULL, and length to 0, the buffer will be
+	 * I am not explicitly managing the update object buffer. By setting 
+	 * the update object to NULL, and length to 0, the buffer will be
 	 * managed by the bcrypt library.
 	 * 
 	 * See: https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptcreatehash
@@ -113,7 +115,7 @@ _IMPLSTB NTSTATUS _bcFinishHash(const struct _bcrypt_ctx* ctx, sha256_t digestOu
 
 _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 {
-	/* Free the hash memory if it was allocated */
+	/* Free the update memory if it was allocated */
 	if(ctx->hHash) BCryptDestroyHash(ctx->hHash);
 	
 	/* Close the algorithm provider */
@@ -214,76 +216,42 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_bcrypt_fallback_hkdf_expand
 
-	/* Include string for memmove */
-	#include <string.h>
-
-	static void ncWriteSpanS(span_t* span, uint32_t offset, const uint8_t* data, uint32_t size)
+	cstatus_t _bcrypt_hkdf_update(void* ctx, const cspan_t* data)
 	{
-		DEBUG_ASSERT2(span != NULL, "Expected span to be non-null")
-		DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
-		DEBUG_ASSERT2(offset + size <= span->size, "Expected offset + size to be less than span size")
+		DEBUG_ASSERT(ctx != NULL)
 
-		/* Copy data to span */
-		memmove(span->data + offset, data, size);
+		BC_FAIL(_bcHashData((struct _bcrypt_ctx*)ctx, data))
+		return CSTATUS_OK;
 	}
 
-	STATIC_ASSERT(HKDF_IN_BUF_SIZE > SHA256_DIGEST_SIZE, "HDK Buffer must be at least the size of the underlying hashing alg output")
+	cstatus_t _bcrypt_hkdf_finish(void* ctx, sha256_t hmacOut32)
+	{
+		DEBUG_ASSERT(ctx != NULL)
 
-	/*
-	* The following functions implements the HKDF expand function using an existing 
-	* HMAC function. This is a fallback implementation for Windows platforms at the moment.
-	* 
-	* This follows the guidence from RFC 5869: https://tools.ietf.org/html/rfc5869
-	*/
-
-	#define _BC_MIN(a, b) (a < b ? a : b)
+		BC_FAIL(_bcFinishHash((struct _bcrypt_ctx*)ctx, hmacOut32))
+		return CSTATUS_OK;
+	}
 
 	_IMPLSTB cstatus_t _bcrypt_fallback_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
+		struct nc_hkdf_fn_cb_struct handler;
 
-		uint8_t counter;
-		uint32_t tLen, okmOffset;
-		uint8_t t[HKDF_IN_BUF_SIZE];
+		handler.update = _bcrypt_hkdf_update;
+		handler.finish = _bcrypt_hkdf_finish;
 
-		_IMPL_SECURE_ZERO_MEMSET(t, sizeof(t));
-		
-		tLen = 0;				/* T(0) is an empty string(zero length) */
-		okmOffset = 0;
-		result = CSTATUS_FAIL;	/* Start in fail state */
+		/* Init bcrypt */
+		BC_FAIL(_bcInitSha256(&ctx, BCRYPT_ALG_HANDLE_HMAC_FLAG))
 
-		/* Init context with hmac flag set, it will be reused */
-		IF_BC_FAIL(_bcInitSha256(&ctx, BCRYPT_ALG_HANDLE_HMAC_FLAG)) goto Exit;
+		BC_FAIL(_bcCreateHmac(&ctx, prk))
 
-		/* Set hmac key to the prk, alg is set to reusable */
-		IF_BC_FAIL(_bcCreateHmac(&ctx, prk)) goto Exit;
+		/*
+		* NOTE! Hmac reusable flag must be set to allow for multiple
+		* calls to the finish function without losing the context.
+		*/
 
-		/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
-		for (counter = 1; okmOffset < okm->size; counter++)
-		{
-			IF_BC_FAIL(_bcHashDataRaw(&ctx, t, tLen)) goto Exit;
-			IF_BC_FAIL(_bcHashData(&ctx, info)) goto Exit;
-			IF_BC_FAIL(_bcHashDataRaw(&ctx, &counter, sizeof(counter))) goto Exit;
-
-			/* Write current hash state to t buffer */
-			IF_BC_FAIL(_bcFinishHash(&ctx, t)) goto Exit;
-
-			/* Set the length of the current hash state */
-			tLen = _BC_MIN(okm->size - okmOffset, SHA256_DIGEST_SIZE);
-
-			DEBUG_ASSERT(tLen <= sizeof(t));
-
-			/* write the T buffer back to okm */
-			ncWriteSpanS(okm, okmOffset, t, tLen);
-
-			/* shift base okm pointer by T */
-			okmOffset += tLen;
-		}		
-
-		result = CSTATUS_OK;	/* HMAC operation completed, so set success */
-
-	Exit:
+		result = hkdfExpandProcess(&handler, &ctx, info, okm);
 
 		_bcDestroyCtx(&ctx);
 

@@ -36,10 +36,10 @@
 
 #ifdef IS_WINDOWS
     /*Asserts that an internal test condition is true, otherwise aborts the test process*/
-    #define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s.\n Aborting tests...\n", #x); ExitProcess(1); }
+    #define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s. @ Line: %d\n Aborting tests...\n", #x, __LINE__); ExitProcess(1); }
 #else
     /*Asserts that an internal test condition is true, otherwise aborts the test process*/
-	#define TASSERT(x) if(!(x)) { printf("Internal assumption failed: %s\n", #x); exit(1); }
+	#define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s. @ Line: %d\n Aborting tests...\n", #x, __LINE__); exit(1); }
 #endif
 
 /*Prints a string literal to the console*/
@@ -61,6 +61,8 @@
 #else
     #include<string.h>
 #endif
+
+#define strlen32(x) (uint32_t)strlen(x)
 
 #include "hex.h"
 
@@ -215,8 +217,8 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     /* Sign and verify raw data */
     {
         uint8_t sig[64];
-        TEST(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
-        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
+        TEST(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
+        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
     }
 
     /* ensure the signature is the same for signing data and sig64 */
@@ -225,7 +227,7 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
 		uint8_t sig2[64];
 
         /* Ensure operations succeed but dont print them as test cases */
-        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig1) == NC_SUCCESS);
+        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig1) == NC_SUCCESS);
         ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig2) == NC_SUCCESS);
 		
         /* Perform test */
@@ -236,14 +238,14 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     {
         uint8_t sig[64];
 		
-        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig) == NC_SUCCESS);
+        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig) == NC_SUCCESS);
         TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
 
         /* Now invert test, zero signature to ensure its overwritten */
         ZERO_FILL(sig, sizeof(sig));
 
         ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig) == NC_SUCCESS);
-        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
+        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
 	}
 
     /* test verification of invalid signature */
@@ -273,6 +275,7 @@ static int TestPublicApiArgumentValidation(void)
     cryptoData.outputData = sig64; /*just an arbitrary writeable buffer*/
     cryptoData.nonce32 = nonce;
     cryptoData.hmacKeyOut32 = hmacKeyOut;
+    cryptoData.version = NC_ENC_VERSION_NIP44;
 
     PRINTL("TEST: Public API argument validation tests")
 
@@ -283,7 +286,14 @@ static int TestPublicApiArgumentValidation(void)
     TEST(NCInitContext(NULL, ctxRandom),    ARG_ERROR_POS_0)
     TEST(NCInitContext(&ctx, NULL),         ARG_ERROR_POS_1)
 
-    /*Test null context*/
+    /* actually init a context to perform tests */
+    TASSERT(NCInitContext(&ctx, ctxRandom) == NC_SUCCESS);
+
+    /*
+    * Test null context
+    * NOTE: This is never freed, this shouldnt be an issue 
+    * for testing, but this will leak memory.
+    */
     TEST(NCDestroyContext(NULL), ARG_ERROR_POS_0)
 
     /*reinit*/
@@ -464,8 +474,9 @@ static int TestCorrectEncryption(NCContext* context)
     cryptoData.outputData = cipherText;
     cryptoData.nonce32 = nonce;
     cryptoData.hmacKeyOut32 = hmacKeyOut;
+    cryptoData.version = NC_ENC_VERSION_NIP44;
    
-    macVerifyArgs.nonce32 = nonce;
+    macVerifyArgs.nonce32 = nonce;    /* nonce is shared */
     macVerifyArgs.mac32 = mac;
     macVerifyArgs.payload = cipherText;
     macVerifyArgs.payloadSize = TEST_ENC_DATA_SIZE;

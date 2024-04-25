@@ -18,10 +18,14 @@
 * along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
-
 /*
-*		Contains platform specific defintions
+*	Contains platform specific defintions
 */
+
+#pragma once
+
+#ifndef _NC_PLATFORM_H
+#define _NC_PLATFORM_H
 
 #if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
 	#define _NC_IS_WINDOWS
@@ -46,3 +50,5 @@
 	#define _nc_fn_inline
 	#pragma message("Warning: No inline keyword defined for this compiler")
 #endif
+
+#endif /* !_NC_PLATFORM_H */

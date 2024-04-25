@@ -81,6 +81,9 @@
 #define NIP44_MIN_ENC_MESSAGE_SIZE		0x01
 #define NIP44_MAX_ENC_MESSAGE_SIZE		0xffff
 
+#define NC_ENC_VERSION_NIP04			0x04
+#define NC_ENC_VERSION_NIP44			0x2c
+
 /*
 *	ERROR CODES
 * 
@@ -101,6 +104,8 @@
 #define E_INVALID_CONTEXT			-3
 #define E_ARGUMENT_OUT_OF_RANGE		-4
 #define E_OPERATION_FAILED			-5
+#define E_VERSION_NOT_SUPPORTED		-6
+
 
 /* A compressed resul/return value, negative values 
 are failure, 0 is success and positive values are 
@@ -159,6 +164,9 @@ typedef struct nc_encryption_struct {
 	* be the same size or larger than this value
 	*/
 	uint32_t dataSize;
+
+	/* The version of the encryption standard to use */
+	uint32_t version;
 
 } NCEncryptionArgs;
 
@@ -311,7 +319,7 @@ given secret key and writes the signature to the sig64 buffer.
 * @param random32 A pointer to the random32 buffer to use for signing
 * @param data A pointer to the raw data buffer to sign
 * @param dataSize The size of the raw data buffer
-* @param sig64 A pointer to the 64byte buffer to write the signature to
+* @param sig64 A pointer to the 64-byte buffer to write the signature to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCSignData(
@@ -350,7 +358,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 * @param sk A pointer to the secret key to sign with
 * @param random32 A pointer to the random32 buffer to use for signing
 * @param digest32 A pointer to sha256 digest32 to sign
-* @param sig64 A pointer to the 64byte buffer to write the signature to
+* @param sig64 A pointer to the 64-byte buffer to write the signature to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCSignDigest(
@@ -365,8 +373,8 @@ NC_EXPORT NCResult NC_CC NCSignDigest(
 * Verifies a signature of a digest32 matches the output using the given public key.
 Equivalent to calling secp256k1_schnorrsig_verify.
 * @param ctx A pointer to the existing library context
-* @param sig64 The 64byte signature to verify
-* @param digest32 The digest32 to verify
+* @param sig64 A pointer to the 64-byte signature to verify
+* @param digest32 A pointer to a 32-byte message digest to verify
 * @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */

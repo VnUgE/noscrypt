@@ -21,10 +21,10 @@
 #include "noscrypt.h"
 
 #include "nc-util.h"
-#include "crypto/nc-crypto.h"
+#include "nc-crypto.h"
 
-#include <secp256k1_ecdh.h>
-#include <secp256k1_schnorrsig.h>
+#include <secp256k1/secp256k1_ecdh.h>
+#include <secp256k1/secp256k1_schnorrsig.h>
 
 /*
 * Local macro for secure zero buffer fill
@@ -768,19 +768,30 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	CHECK_INVALID_ARG(args->hmacKeyOut32, 3)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
+	switch(args->version)
+	{		
+		case NC_ENC_VERSION_NIP44:
+			break; /* Allow nip44 */
+
+		/* At the moment nip04 compatability is not supported */
+		case NC_ENC_VERSION_NIP04:
+		default:
+			return E_VERSION_NOT_SUPPORTED;
+	}
+	
 	/* Compute the shared point */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 	{
 		goto Cleanup;
 	}
-	
+
 	/* Compute the conversation key from secret and pubkic keys */
 	if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
 	{
 		goto Cleanup;
 	}
 
-	result = _encryptEx(ctx, &conversationKey, args->hmacKeyOut32, args);
+	result = _encryptEx(ctx, &conversationKey, args->hmacKeyOut32, args);	
 
 Cleanup:
 	/* Clean up sensitive data */

@@ -28,6 +28,11 @@
 
 #ifdef MBEDTLS_CRYPTO_LIB
 
+/* Inline errors on linux in header files on linux */
+#ifndef inline
+#define inline __inline
+#endif
+
 #include <mbedtls/md.h>
 #include <mbedtls/hkdf.h>
 #include <mbedtls/hmac_drbg.h>
@@ -35,11 +40,10 @@
 #include <mbedtls/chacha20.h>
 #include <mbedtls/constant_time.h>
 
-#include "nc-util.h"
+#ifndef inline
+#undef inline
+#endif
 
-/*
-*		EXPORT SUPPORTED FUNCTION OVERRIDES
-*/	
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
@@ -51,10 +55,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 }
 
 #if SIZE_MAX < UINT64_MAX
-	#define _ssize_guard(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
 	#define _ssize_guard_int(x) if(x > SIZE_MAX) return 1;
 #else
-	#define _ssize_guard(x)
 	#define _ssize_guard_int(x)
 #endif
 
@@ -71,7 +73,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		uint32_t dataLen
 	)
 	{
-		_ssize_guard(dataLen)
+		_sizet_check(dataLen)
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
@@ -93,7 +95,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_digest(const cspan_t* data, sha256_t digestOut32)
 	{
-		_ssize_guard(data->size)
+		_sizet_check(data->size)
 
 		return mbedtls_sha256(
 			data->data, 
@@ -112,7 +114,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_hmac(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32)
 	{
-		_ssize_guard(data->size)
+		_sizet_check(data->size)
 
 		/* Keys should never be large enough for this to matter, but sanity check. */
 		DEBUG_ASSERT2(key->size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")

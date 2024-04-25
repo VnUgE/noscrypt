@@ -4,6 +4,8 @@
 
 cmake_minimum_required (VERSION 3.10)
 
+project(noscrypt C)
+
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
 option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
@@ -20,11 +22,11 @@ set(SECP256K1_BUILD_BENCHMARK OFF)
 set(SECP256K1_BUILD_TESTS OFF)
 set(SECP256K1_BUILD_EXAMPLES OFF)
 set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF)
-set(SECP256K1_BUILD_STATIC ON)
 set(SECP256K1_ENABLE_MODULE_ECDH ON)
 set(SECP256K1_ENABLE_MODULE_RECOVERY ON)
 set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
 set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
+set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF)
 set(SECP256K1_INSTALL OFF)
 set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
 
@@ -64,15 +66,15 @@ endif()
 #		MAIN PROJECT
 #-----------------------------
 
-project(noscrypt C)
-
 include_directories(include)				#include the 'include' directory for the project
 set(CMAKE_C_STANDARD 90)					#Setup the compiler options for c90 shared library
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
 set(NOSCRYPT_SRCS 
 	"src/noscrypt.c"	
+	"src/crypto/hkdf.c"
 	"src/crypto/nc-crypto.c"				#pulls in c impl files as needed
 )
 
@@ -80,7 +82,8 @@ set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
 	"include/nc-util.h"
-	"src/crypto/nc-crypto.h"
+	"include/hkdf.h"
+	"include/nc-crypto.h"
 )
 
 #static/shared library
@@ -89,9 +92,16 @@ add_library(${CMAKE_PROJECT_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEAD
 target_compile_features(${CMAKE_PROJECT_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
 
 #link libsecp256k1
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE secp256k1)
-target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE secp256k1)
-
+if(MSVC)
+	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE secp256k1)
+	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE secp256k1)
+else()
+	target_link_libraries(${CMAKE_PROJECT_NAME} INTERFACE secp256k1)
+	target_link_libraries(${CMAKE_PROJECT_NAME}_static INTERFACE secp256k1)
+endif()
+#include secp256k1 headers
+target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
+target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/secp256k1/include)
 
 #############################################
 #
@@ -99,14 +109,14 @@ target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE secp256k1)
 #
 #############################################
 
-
 #if mbedtls linking is enabled target the library
 if(CRYPTO_LIB STREQUAL "mbedtls")
 
 	message(STATUS "Linking to MbedTLS crypto library")
 
-	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PRIVATE vendor)
-	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PRIVATE vendor)
+	#include mbedtls headers
+	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/mbedtls/include)
+	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/mbedtls/include)
 
 	if(NC_FETCH_MBEDTLS)
 		#link to included mbedtls
@@ -137,6 +147,13 @@ if(CRYPTO_LIB STREQUAL "mbedtls")
 	target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE MBEDTLS_CRYPTO_LIB)
 
 elseif(CRYPTO_LIB STREQUAL "openssl")
+
+	set(OPENSSL_USE_STATIC_LIBS ON)
+	find_package(OpenSSL REQUIRED)
+
+	#include openssl headers
+	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/openssl/include)
+	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/openssl/include)
 
 	#link to openssl
 	message(STATUS "Linking to OpenSSL crypto library")
@@ -225,9 +242,6 @@ endif()
 
 if(NC_INCLUDE_MONOCYPHER)
 
-	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PRIVATE "vendor/monocypher")	
-	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PRIVATE "vendor/monocypher")	
-
 	#add monocypher as a static dep to the project
 	add_library(monocypher STATIC 
 		"vendor/monocypher/monocypher.c"
@@ -236,6 +250,9 @@ if(NC_INCLUDE_MONOCYPHER)
 
 	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE monocypher)
 	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE monocypher)
+
+	#share mc header with project
+	target_include_directories(monocypher SYSTEM PUBLIC vendor/monocypher)
 	
 	target_compile_features(monocypher PRIVATE c_std_99)			#targets c99
 

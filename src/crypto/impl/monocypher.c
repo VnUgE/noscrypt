@@ -53,10 +53,7 @@
 		uint32_t dataLen
 	)
 	{
-		if(dataLen > SIZE_MAX)
-		{
-			return CSTATUS_FAIL;
-		}
+		_sizet_check(dataLen)
 
 		/*
 		* Function returns the next counter value which is not
