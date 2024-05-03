@@ -63,9 +63,9 @@
 #include <stdint.h>
 
 #if SIZE_MAX < UINT32_MAX
-	#define _sizet_check(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
+	#define _overflow_check(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
 #else
-	#define _sizet_check(x)
+	#define _overflow_check(x)
 #endif
 
 typedef struct memory_span_struct

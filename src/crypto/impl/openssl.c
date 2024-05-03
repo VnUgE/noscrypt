@@ -20,7 +20,6 @@
 
 
 /* Setup openssl */
-
 #ifdef OPENSSL_CRYPTO_LIB
 
 #include "nc-util.h"
@@ -34,7 +33,7 @@
 
 	_IMPLSTB void _ossl_secure_zero_memset(void* ptr, size_t size)
 	{
-		_sizet_check(size)
+		_overflow_check(size)
 
 		OPENSSL_cleanse(ptr, size);
 	}
@@ -48,7 +47,8 @@
 	{
 		int result;
 
-		_sizet_check(size)
+		/* Size checks are required for platforms that have integer sizes under 32bit */
+		_overflow_check(size)
 
 		result = CRYPTO_memcmp(a, b, size);
 
@@ -66,7 +66,7 @@
 
 	_IMPLSTB cstatus_t _ossl_sha256_digest(const cspan_t* data, sha256_t digestOut32)
 	{
-		_sizet_check(data->size)
+		_overflow_check(data->size)
 
 		_OSSL_FAIL(SHA256(data->data, data->size, digestOut32))
 
@@ -86,8 +86,8 @@
 	{
 		unsigned int hmacLen;
 
-		_sizet_check(key->size)
-		_sizet_check(data->size)
+		_overflow_check(key->size)
+		_overflow_check(data->size)
 
 		hmacLen = sizeof(sha256_t);
 
@@ -104,7 +104,7 @@
 		)
 		
 		/* digest length should match the actual digest size */
-		_OSSL_FAIL(hmacLen != sizeof(sha256_t))
+		DEBUG_ASSERT(hmacLen == sizeof(sha256_t))
 
 		return CSTATUS_OK;
 	}
@@ -122,23 +122,32 @@
 	{
 		DEBUG_ASSERT(ctx != NULL)
 
-		_OSS_FAIL(HMAC_Update((HMAC_CTX*)ctx, data->data, data->size))
+		_overflow_check(data->size)
+
+		_OSSL_FAIL(EVP_DigestUpdate((EVP_MD_CTX*)ctx, data->data, data->size))
 		
 		return CSTATUS_OK;
 	}
 
 	cstatus_t _ossl_hkdf_finish(void* ctx, sha256_t hmacOut32)
 	{
+		unsigned int hmacSize;
+
 		DEBUG_ASSERT(ctx != NULL)
 
-		_OSSL_FAIL(HMAC_Final((HMAC_CTX*)ctx, hmacOut32, NULL))
+		hmacSize = sizeof(sha256_t);
+
+		_OSSL_FAIL(EVP_DigestFinal_ex((EVP_MD_CTX*)ctx, hmacOut32, &hmacSize))
+
+		/* When configured for sha256, should always be the same size in/out */
+		DEBUG_ASSERT(hmacSize == sizeof(sha256_t))
 		
 		return CSTATUS_OK;
 	}
 
-	_IMPLSTB cstatus_t _ossl_fallback_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
+	_IMPLSTB cstatus_t _ossl_sha256_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
 	{
-		HMAC_CTX* hmac;
+		EVP_MD_CTX* ctx;
 		cstatus_t result;
 		struct nc_hkdf_fn_cb_struct handler;
 	
@@ -147,28 +156,21 @@
 		* calls to the finish function without losing the context.
 		*/
 
-		if ((hmac = HMAC_CTX_new()) == NULL)
+		if ((ctx = EVP_MD_CTX_create()) == NULL)
 		{
 			return CSTATUS_FAIL;
 		}
 
+		_OSSL_FAIL(EVP_DigestInit_ex2(ctx, EVP_sha256(), NULL))
 
-		_OSSL_FAIL(
-			HMAC_Init_ex(
-				hmac,
-				prk->data,
-				pkr->size,
-				EVP_sha256(),
-				NULL
-			)
-		)
+		_OSSL_FAIL(EVP_DigestUpdate(ctx, prk->data, prk->size));
 		
 		handler.update = _ossl_hkdf_update;
 		handler.finish = _ossl_hkdf_finish;
 
-		result = hkdfExpandProcess(&handler, hmac, info, okm);
+		result = hkdfExpandProcess(&handler, ctx, info, okm);
 
-		HMAC_CTX_free(hmac);
+		EVP_MD_CTX_destroy(ctx);
 
 		return result;
 	}

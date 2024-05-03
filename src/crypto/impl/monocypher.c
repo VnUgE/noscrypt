@@ -53,7 +53,7 @@
 		uint32_t dataLen
 	)
 	{
-		_sizet_check(dataLen)
+		_overflow_check(dataLen)
 
 		/*
 		* Function returns the next counter value which is not

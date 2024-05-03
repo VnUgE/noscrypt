@@ -13,33 +13,37 @@
 version: '3'
 
 vars:
-  END_USER_CMAKE_ARGS: '-DNC_BUILD_TESTS=OFF -DNC_DISABLE_INPUT_VALIDATION=OFF -DNC_INCLUDE_MONOCYPHER=ON'
+  CMAKE_BUILD_DIR: 'build/{{ OS }}'
 
 tasks:
 
   default:
     desc: "Build the library for your system"
-    deps:
-     - install
     cmds:
-     - task: build-local
+     - task: build-internal
        vars: { CMAKE_TEST_STATUS: 'OFF', BUILD_CONFIG: 'Release' }
 
-  build-tests:
+  build-debug:
     desc: "Build libraries and test executable in debug mode"
-    deps:
-     - install
     cmds:
-     - task: build-local
+     - task: build-internal
        vars: { CMAKE_TEST_STATUS: 'ON', BUILD_CONFIG: 'Debug' }
 
-  build-local:
+  build-internal:
     internal: true
     cmds:
-     - cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} {{.END_USER_CMAKE_ARGS}}
-     - cmake --build build/ --config {{.BUILD_CONFIG}}
-     - cmd: echo "Build complete your files can be found in the build/ directory"
+     - cmake -S . -B{{.CMAKE_BUILD_DIR}} -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }} {{.USER_ARGS}}
+     - cmake --build {{.CMAKE_BUILD_DIR}} --config {{.BUILD_CONFIG}}
+     - cmd: echo "Build complete. Your files can be found in the {{.CMAKE_BUILD_DIR}} directory"
        silent: true
+
+  #available to users and vnbuild runner
+  test:
+    desc: "Builds a local copy of the library in a debug configuration, then runs the test executable"
+    cmds:
+     - task: build-debug
+     - cmd: cd {{.CMAKE_BUILD_DIR}} && {{if eq OS "windows"}}debug/nctest.exe{{else}}./nctest{{end}}
+
 
 #CI ONLY!!
 
@@ -61,7 +65,7 @@ tasks:
     desc: "Cleans the artifact directory"
     ignore_error: true
     cmds:
-    - for: [ bin/, build/, deps/]
+    - for: [ bin/, build/ ]
       task: clean-internal
       vars: { FILE: '{{.ITEM}}'}
 
@@ -73,7 +77,7 @@ tasks:
      - cmd: rm -rf '{{.FILE}}'
        platforms: [linux, darwin]
        
-     - cmd: powershell rm -Recurse '{{.FILE}}'
+     - cmd: powershell rm -Recurse -Force '{{.FILE}}'
        platforms: [windows]
 
   build_win_x64:
@@ -86,7 +90,7 @@ tasks:
       BUILD_DIR: 'out/build/win-x64'
     
     cmds:
-      #invoke cmake build 
+    #invoke cmake build 
      - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
      - cmake --build {{.BUILD_DIR}} --config Release  
     
@@ -104,7 +108,7 @@ tasks:
     internal: true
     desc: "Packs up the project source code and creates a tarball in the builds binary directory"
     vars:
-      TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-source.tgz'
+      TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-src.tgz'
       SOURCE_FILES: 'CMakeLists.txt src include license tests Taskfile.yaml'
 
     cmds:

@@ -32,20 +32,20 @@ Testing is an will be important to a cryptography library, I take that responsib
 - No explicit/dynamic memory allocations
 - Public API function input validation is on by default
 - All stack allocated structures are securely zeroed before return
-- Stack protection is enabled by default for GCC and MSVC compilers (also for deps)
+- Stack protection is enabled by default for GCC and MSVC compilers
 - Schnorr signatures are validated before the signing function returns
 - Carefully selected, widley used, tested, and audited dependencies
 
 
 ## Platform Support
+The following table lists the supported platforms and cryptography libraries that noscrypt supports. This will expand in the future. You are free to choose and specify the location of these libraries if you desire during build time, otherwise safe defaults are attempted on your platform.
+
 | Arch | Support | Notes | Tested |
 | ----- | ---------- | ------- | ------- |
-| Windows | OpenSSL, Mbed-TLS, BCrypt | NT 6.1 + | ✅ |
-| Linux   | OpenSSL, Mbed-TLS         | GCC only | ✅ |
-| FreeBSD | OpenSSL, Mbed-TLS         | GCC Only |    |
+| Windows | OpenSSL (3.0), Mbed-TLS, BCrypt | NT 6.1 + | ✅ |
+| Linux   | OpenSSL (3.0), Mbed-TLS         | GCC only | ✅ |
+| FreeBSD | OpenSSL (3.0), Mbed-TLS         | GCC Only |    |
 
-### Configuring libraries
-Noscrypt now supports linking to multiple cryptographic libraries and expanded platform support. At built-time you may choose 
 
 ## Packages and Docs
 GitHub is simply a mirror for my projects. Extended documentation, pre-compiled binaries and source code bundles are always available on my website, along with PGP signatures and checksums.    
@@ -55,53 +55,30 @@ GitHub is simply a mirror for my projects. Extended documentation, pre-compiled 
 
 ### Getting the package
 There are 3 ways to get the source code to build this project.  
-1. Download the package from my website above  (recommended)
+1. Download the signed `noscrypt-src.tgz` package from my website above (recommended)
 2. Clone the GitHub repo `git clone https://github.com/VnUgE/noscrypt.git`  
 3. Download a github archive or release when they are available  
 
 ## Building
-This project was built from the start using cmake as the build generator so it is easily cross platform. Builds produce a shared library and a static library so you can choose how to link it with your project.  
+Please see extended documentation for all custom build configurations and tips. For now, here is enough to get most developers going. 
 
-*Extended documentation includes more exhaustive build conditions and supported platforms*
-
-### Prerequisites
-Before building this library you must install the following dependencies 
-- [task](https://taskfile.dev/installation/) - build exec tool
-- git
-- [cmake](https://cmake.org)
-- Your preferred C compiler. Currently supports GCC and MSVC
-
->[!NOTE]
->The build process will install dependencies locally (in a deps/ dir) and verify the file hashes. Read extended documentation for installing dependencies manually/globally.
-
-### Instructions
-After Task is installed you can run the following commands to execute the build steps. I test build steps against Debian, Ubuntu, Fedora, Windows 10 and Windows Server 2019 targets. If you have a platform that is having issues please get in touch. 
-
->[!TIP]
-> Run `task --list-all` to see all available build commands
-
-#### Normal build
-The following command will install dependencies and build the libraries in release mode  
-``` shell
-task #or task build
+### CMake
+```shell
+cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE=Release
 ```
 
-#### Build tests in debug mode
->[!WARNING]
-> You may want to clean the entire project before rebuilding in debug mode to cleanup caches
-``` shell
-task build-tests
+#### Enable built-in tets and debug mode
+```shell
+cmake -S . -Bbuild/test -DCMAKE_BUILD_TYPE=Debug -DNC_BUILD_TESTS=ON
 ```
 
-#### Cleanup
-You can delete all build related data (including dependencies) and start over
-``` shell
-task clean
+#### Specify the crypto library
+```shell
+cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE=Release -DCRYPTO_LIB=<openssl | mbedtls | bcrypt>
 ```
-The task file is configured to cache your dependencies once they are built. If you have issues with a download and need to re-run a command, try using `task <cmd> --force` to override the build caching.
 
-#### All done
-Once building is complete, your library files should be located under `build/libnoscrypt` or `build/Release/noscrypt.dll` on Windows 
+### Easy mode
+A [Taskfile](https://taskfile.dev) file is included for easy building if you wish to build in easy mode! Use the `task --list-all` to see all available commands. The default command `task` will build the library in release mode using defaults. You may specify extra cmake build variables using the `USER_ARGS` variable on the command line.
 
 ## Notes
 #### Builds

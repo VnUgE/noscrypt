@@ -1,6 +1,10 @@
-﻿# CMakeList.txt : CMake project for noscrypt, include source and define
-# project specific logic here.
+﻿# Copyright (c) 2024 Vaughn Nugent
+# See the LICENSE in this directory for terms of use
 #
+# This file configures noscrypt with best defaults as possible while offering 
+# some freedom in terms of crypto libraries if desired. Some defaults and 
+# worst case fallback functions are defined and will get better as time goes on
+# 
 
 cmake_minimum_required (VERSION 3.10)
 
@@ -9,58 +13,53 @@ project(noscrypt C)
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
 option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
+option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
 option(NC_INCLUDE_MONOCYPHER "Statically link to vendored monocypher library" ON)
-set(CRYPTO_LIB "none" CACHE STRING "The crypto library to link to (mbedtls, openssl, none)")
+set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl)")
 set(CRYPTO_LIB_DIR "" CACHE STRING "The path to the crypto library if it's not globally available")
+set(SECP256K1_LIB_DIR "" CACHE STRING "An optional path to search for the secp256k1 library if not globally installed")
 
 string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
 
+#list of noscrypt project defitnions
+set(NC_PROJ_DEFINTIONS "")
+
 include(FetchContent)
 
-#SET SECP256k VARS
-set(SECP256K1_BUILD_BENCHMARK OFF)
-set(SECP256K1_BUILD_TESTS OFF)
-set(SECP256K1_BUILD_EXAMPLES OFF)
-set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF)
-set(SECP256K1_ENABLE_MODULE_ECDH ON)
-set(SECP256K1_ENABLE_MODULE_RECOVERY ON)
-set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
-set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
-set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF)
-set(SECP256K1_INSTALL OFF)
-set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
+if(NC_FETCH_SECP256K1)
 
-FetchContent_Declare(
-  libsecp256k1
-  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-  GIT_TAG				1ad5185cd42c0636104129fcc9f6a4bf9c67cc40 # release-0.4.1
-  GIT_PROGRESS			TRUE
-)
-
-FetchContent_MakeAvailable(libsecp256k1)
-
-#Include mbedtls if enabled
-if(NC_FETCH_MBEDTLS)
-
-	set(ENABLE_PROGRAMS OFF)
-	set(ENABLE_TESTING OFF)
-	set(USE_SHARED_MBEDTLS_LIBRARY OFF)
-	set(USE_STATIC_MBEDTLS_LIBRARY ON)
-	set(DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF)
-	set(MBEDTLS_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls_custom_config.h" CACHE STRING "" FORCE)
+	#Fetch libsecp256k1, and build a minimal static library 
+	set(SECP256K1_BUILD_BENCHMARK OFF)
+	set(SECP256K1_BUILD_TESTS OFF)
+	set(SECP256K1_BUILD_EXAMPLES OFF)
+	set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF)
+	set(SECP256K1_ENABLE_MODULE_ECDH ON)
+	set(SECP256K1_ENABLE_MODULE_RECOVERY ON)
+	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
+	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
+	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF)
+	set(SECP256K1_INSTALL OFF)
+	set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
 
 	FetchContent_Declare(
-	  libmbedtls
-	  GIT_REPOSITORY        https://github.com/Mbed-TLS/mbedtls.git
-	  GIT_TAG               v3.6.0
-	  GIT_PROGRESS          TRUE
+	  libsecp256k1
+	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
+	  GIT_TAG				1ad5185cd42c0636104129fcc9f6a4bf9c67cc40 # release-0.4.1
+	  GIT_PROGRESS			TRUE
 	)
 
-	FetchContent_MakeAvailable(libmbedtls)
+	FetchContent_MakeAvailable(libsecp256k1)
 
-	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
+else()	
+
+	#search for an existing library, it's a required dependency
+	find_library(secp256k1
+		NAMES secp256k1 libsecp256k1 
+		PATHS ${SECP256K1_LIB_DIR}
+		REQUIRED
+	)
+
 endif()
-
 
 #-----------------------------
 #		MAIN PROJECT
@@ -99,6 +98,7 @@ else()
 	target_link_libraries(${CMAKE_PROJECT_NAME} INTERFACE secp256k1)
 	target_link_libraries(${CMAKE_PROJECT_NAME}_static INTERFACE secp256k1)
 endif()
+
 #include secp256k1 headers
 target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
 target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/secp256k1/include)
@@ -108,6 +108,42 @@ target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/sec
 #		Configure crypto library linking
 #
 #############################################
+
+#try to load openssl quietly in order to check for its availability
+find_package(OpenSSL QUIET)
+
+#setup default linking to crypto libraries for certain plaftorms. 
+#Windows defaults to bcrypt, openssl otherwise if installed
+if(CRYPTO_LIB STREQUAL "")	
+  if(MSVC)
+	set(CRYPTO_LIB "bcrypt")
+  elseif(OPENSSL_FOUND)
+	set(CRYPTO_LIB "openssl")
+  endif()
+endif()
+
+#Include mbedtls if enabled
+if(NC_FETCH_MBEDTLS)
+
+	set(ENABLE_PROGRAMS OFF)
+	set(ENABLE_TESTING OFF)
+	set(USE_SHARED_MBEDTLS_LIBRARY OFF)
+	set(USE_STATIC_MBEDTLS_LIBRARY ON)
+	set(DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF)
+	set(MBEDTLS_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mbedtls/mbedtls_noscrypt_config.h" CACHE STRING "" FORCE)
+
+	FetchContent_Declare(
+	  libmbedtls
+	  GIT_REPOSITORY        https://github.com/Mbed-TLS/mbedtls.git
+	  GIT_TAG               v3.6.0
+	  GIT_PROGRESS          TRUE
+	)
+
+	FetchContent_MakeAvailable(libmbedtls)
+
+	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
+
+endif()
 
 #if mbedtls linking is enabled target the library
 if(CRYPTO_LIB STREQUAL "mbedtls")
@@ -143,8 +179,7 @@ if(CRYPTO_LIB STREQUAL "mbedtls")
 	endif()
 
 	#enable mbedtls crypto library bindings
-	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE MBEDTLS_CRYPTO_LIB)
-	target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE MBEDTLS_CRYPTO_LIB)
+	list(APPEND NC_PROJ_DEFINTIONS MBEDTLS_CRYPTO_LIB)
 
 elseif(CRYPTO_LIB STREQUAL "openssl")
 
@@ -161,27 +196,33 @@ elseif(CRYPTO_LIB STREQUAL "openssl")
 	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE OpenSSL::Crypto)
 
 	#enable openssl crypto library bindings
-	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE OPENSSL_CRYPTO_LIB)
-	target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE OPENSSL_CRYPTO_LIB)
+	list(APPEND NC_PROJ_DEFINTIONS OPENSSL_CRYPTO_LIB)
+
+elseif(CRYPTO_LIB STREQUAL "bcrypt")
+
+	if(MSVC)
+		#link bcrypt for Windows platforms
+		target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "bcrypt.lib")
+		target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE "bcrypt.lib")
+	else()
+		message(FATAL_ERROR "Bcrypt is only supported on Windows platforms")
+	endif()
 
 else()
-	#the library should be self sufficient in handling default crypto implementations
-	
+
+	message(FATAL_ERROR "You must select a supported cryptography library: openssl, mbedtls, or bcrypt (Windows only)")
+
 endif()
 
 add_compile_definitions($<$<CONFIG:Debug>:DEBUG>)
 add_compile_definitions(NOSCRYPT_EXPORTING)			#enable exporting symbols
 
 if(NC_DISABLE_INPUT_VALIDATION)
-	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NC_INPUT_VALIDATION_OFF)
+	list(APPEND NC_PROJ_DEFINTIONS NC_INPUT_VALIDATION_OFF)
 endif()
 
 #setup flags for windows compilation
 if(MSVC)
-
-	#link bcrypt for Windows platforms
-    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "bcrypt.lib")
-	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE "bcrypt.lib")
 	
     #global windows cl flags
 	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -204,7 +245,7 @@ if(MSVC)
 	)
 
 	#set build macros
-	target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+	list(APPEND NC_PROJ_DEFINTIONS
 		$<$<CONFIG:DEBUG>:DEBUG>
 		$<$<CONFIG:RELEASE>:RELEASE>
 	)
@@ -264,21 +305,22 @@ if(NC_INCLUDE_MONOCYPHER)
 		)
 
 		#enable monocypher crypto library bindings
-		target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NC_ENABLE_MONOCYPHER)
-		target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE NC_ENABLE_MONOCYPHER)
+		list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_MONOCYPHER)
 
 	elseif(CMAKE_COMPILER_IS_GNUCC)
 		#from monocypher's Makefile
 		target_compile_options(monocypher PRIVATE -pedantic -Wall -Wextra -O3 -march=native)
 
 		#enable monocypher crypto library bindings
-		target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE NC_ENABLE_MONOCYPHER)
-		target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE NC_ENABLE_MONOCYPHER)
+		list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_MONOCYPHER)
 	else()
 		message(WARNING "Monocypher is not supported on this platform")
 	endif()
 endif()
 
+#Set NC variables to both projects
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ${NC_PROJ_DEFINTIONS})
+target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS})
 
 #TESTS
 if(NC_BUILD_TESTS)
