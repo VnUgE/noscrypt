@@ -13,99 +13,37 @@
 version: '3'
 
 vars:
-  INSTALL_DIR: 'deps/'
-
-  #mbed tls variables
-  MBEDTLS_PACK_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/v3.6.0/mbedtls-3.6.0.tar.bz2'
-  MBEDTLS_PACK_SHA: '3ecf94fcfdaacafb757786a01b7538a61750ebd85c4b024f56ff8ba1490fcd38'
-  MBED_TLS_VERSION: '3.6.0'
-  MBED_TLS_DIR: '{{.INSTALL_DIR}}mbedtls-{{.MBED_TLS_VERSION}}'
-
-  #secp256k1 variables
-  SECP256K1_PACK_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/v0.4.1.tar.gz'
-  SECP256K1_PACK_SHA: '31b1a03c7365dbce7aff4be9526243da966c58a8b88b6255556d51b3016492c5'
-  SECP256K1_VERSION: '0.4.1'
-  SCP256K1_DIR: '{{.INSTALL_DIR}}secp256k1-{{.SECP256K1_VERSION}}'
+  CMAKE_BUILD_DIR: 'build/{{ OS }}'
 
 tasks:
 
   default:
     desc: "Build the library for your system"
-    deps:
-     - install
     cmds:
-     - task: build-local
-       vars: { CMAKE_TEST_STATUS: 'Off', BUILD_CONFIG: 'Release' }
+     - task: build-internal
+       vars: { CMAKE_TEST_STATUS: 'OFF', BUILD_CONFIG: 'Release' }
 
-  build-tests:
+  build-debug:
     desc: "Build libraries and test executable in debug mode"
-    deps:
-     - install
     cmds:
-     - task: build-local
-       vars: { CMAKE_TEST_STATUS: 'On', BUILD_CONFIG: 'Debug' }
+     - task: build-internal
+       vars: { CMAKE_TEST_STATUS: 'ON', BUILD_CONFIG: 'Debug' }
 
-  build-local:
+  build-internal:
     internal: true
     cmds:
-     - cmake -S . -B./build/ -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DBUILD_TESTS={{.CMAKE_TEST_STATUS}} -DLOCAL_MBEDTLS_DIR={{.MBED_TLS_DIR}}/build -DLOCAL_SECP256K1_DIR={{.SCP256K1_DIR}}/build
-     - cmake --build build/ --config {{.BUILD_CONFIG}}
-     - cmd: echo "Build complete your files can be found in the build/ directory"
+     - cmake -S . -B{{.CMAKE_BUILD_DIR}} -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }} {{.USER_ARGS}}
+     - cmake --build {{.CMAKE_BUILD_DIR}} --config {{.BUILD_CONFIG}}
+     - cmd: echo "Build complete. Your files can be found in the {{.CMAKE_BUILD_DIR}} directory"
        silent: true
 
-  install:
-     desc: 'Installs dependencies locally'     
-     cmds:
-      #make install dir
-      - cmd: powershell -Command "mkdir {{.INSTALL_DIR}} -Force"
-        platforms: [windows]
-      - cmd: mkdir -p {{.INSTALL_DIR}}
-        platforms: [linux, darwin]
-      
-      #nstall deps locally 
-      - task: install-mbedtls
-      - task: install-secp256k1
-
-  install-mbedtls:
-    internal: true
-    sources:
-     - '{{.MBED_TLS_DIR}}/*.*'
+  #available to users and vnbuild runner
+  test:
+    desc: "Builds a local copy of the library in a debug configuration, then runs the test executable"
     cmds:
-    #downlaod mbedtls
-    - cd {{.INSTALL_DIR}} && curl -L -o mbedtls.tar.bz2 {{.MBEDTLS_PACK_URL}}
-    
-    - cmd: cd {{.INSTALL_DIR}} && echo "{{.MBEDTLS_PACK_SHA}} mbedtls.tar.bz2" | sha256sum -c
-      platforms: [linux, darwin]
-    - cmd: cd {{.INSTALL_DIR}} && certutil -hashfile mbedtls.tar.bz2
-      platforms: [windows]
+     - task: build-debug
+     - cmd: cd {{.CMAKE_BUILD_DIR}} && {{if eq OS "windows"}}debug/nctest.exe{{else}}./nctest{{end}}
 
-    #extract mbedtls
-    - cd {{.INSTALL_DIR}} && tar -xjf mbedtls.tar.bz2 
-    
-    #build using cmake
-    - cd {{.MBED_TLS_DIR}} && cmake -Bbuild/ -DUSE_SHARED_MBEDTLS_LIBRARY=On -DENABLE_TESTING=Off -DENABLE_PROGRAMS=Off -DCMAKE_BUILD_TYPE=Release
-    - cd {{.MBED_TLS_DIR}} && cmake --build build/
-
-  install-secp256k1:
-    internal: true
-    sources:
-     - '{{.SCP256K1_DIR}}/*.*'
-    cmds:
-    #downlaod mbedtls
-    - cd {{.INSTALL_DIR}} && curl -L -o secp56k1.tgz {{.SECP256K1_PACK_URL}}
-    
-    - cmd: cd {{.INSTALL_DIR}} && echo "{{.SECP256K1_PACK_SHA}} secp56k1.tgz" | sha256sum -c
-      platforms: [linux, darwin]
-    - cmd: cd {{.INSTALL_DIR}} && certutil -hashfile secp56k1.tgz
-      platforms: [windows]
-
-    #extract mbedtls
-    - cd {{.INSTALL_DIR}} && tar -xzf secp56k1.tgz
-    
-    #build using cmake
-    - cd {{.SCP256K1_DIR}} && cmake -Bbuild/ -DSECP256K1_ENABLE_MODULE_SCHNORRSIG=ON -DCMAKE_BUILD_TYPE=Release
-    - cd {{.SCP256K1_DIR}} && cmake --build build/
-    
 
 #CI ONLY!!
 
@@ -127,7 +65,7 @@ tasks:
     desc: "Cleans the artifact directory"
     ignore_error: true
     cmds:
-    - for: [ bin/, build/, deps/]
+    - for: [ bin/, build/ ]
       task: clean-internal
       vars: { FILE: '{{.ITEM}}'}
 
@@ -139,7 +77,7 @@ tasks:
      - cmd: rm -rf '{{.FILE}}'
        platforms: [linux, darwin]
        
-     - cmd: powershell rm -Recurse '{{.FILE}}'
+     - cmd: powershell rm -Recurse -Force '{{.FILE}}'
        platforms: [windows]
 
   build_win_x64:
@@ -149,11 +87,11 @@ tasks:
       DLL_FILES: '{{.PROJECT_NAME}}.dll {{.PROJECT_NAME}}.lib license.txt'
       TARGET_STATIC: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/msvc-x64-release-{{.PROJECT_NAME}}-static.tgz'
       STATIC_FILES: '{{.PROJECT_NAME}}_static.lib license.txt'
-      BUILD_DIR: 'out/build/win-x64'
+      BUILD_DIR: 'build/win-x64'
     
     cmds:
-      #invoke cmake build 
-     - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+    #invoke cmake build 
+     - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DNC_BUILD_TESTS=OFF
      - cmake --build {{.BUILD_DIR}} --config Release  
     
     #copy license to build dir
@@ -170,7 +108,7 @@ tasks:
     internal: true
     desc: "Packs up the project source code and creates a tarball in the builds binary directory"
     vars:
-      TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-source.tgz'
+      TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-src.tgz'
       SOURCE_FILES: 'CMakeLists.txt src include license tests Taskfile.yaml'
 
     cmds:
@@ -178,3 +116,60 @@ tasks:
      - tar -czf "{{.TARGET_SOURCE}}" {{.SOURCE_FILES}}  
  
   
+  dev-update-deps:
+     desc: "Updates vendored projects files (headers mostly) from their source repositories to the latest version"
+     cmds:
+      - task: dev-update-monocypher
+      - task: dev-update-mbedtls-headers
+      - task: dev-update-openssl-headers
+
+  dev-update-monocypher:
+    vars:
+      MC_GIT_URL: 'https://github.com/LoupVaillant/Monocypher'
+      MC_GIT_BRANCH: 'master'       #NOTE: Always update to the latest master branch, then verify changes manually
+      MC_DIR: 'vendor/monocypher'
+      TMP_DIR: '.task/mc'
+    cmds:
+     - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
+       ignore_error: true
+     
+     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
+     
+     - git clone --branch {{.MC_GIT_BRANCH}} {{.MC_GIT_URL}} '{{.TMP_DIR}}' 
+
+     - for: [ 'src/monocypher.h', 'src/monocypher.c' ]
+       cmd: powershell cp '{{.TMP_DIR}}/{{.ITEM}}' '{{.MC_DIR}}'
+
+  dev-update-mbedtls-headers:
+    vars:
+      MBEDTLS_GIT_URL: 'https://github.com/Mbed-TLS/mbedtls'
+      MBEDTLS_GIT_BRANCH: 'development'
+      MBEDTLS_DIR: 'vendor/mbedtls'
+      TMP_DIR: '.task/mbedtls'
+    cmds:
+     - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
+       ignore_error: true
+
+     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
+
+     - git clone --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
+
+     - for: [ 'include/mbedtls', 'include/psa' ]
+       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.MBEDTLS_DIR}}/include'
+
+  dev-update-openssl-headers:
+    vars:
+      OPENSSL_GIT_URL: 'git://git.openssl.org/openssl.git'
+      OPENSSL_GIT_BRANCH: 'master'
+      OPENSSL_DIR: 'vendor/openssl'
+      TMP_DIR: '.task/openssl'
+    cmds:
+     - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
+       ignore_error: true
+     
+     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
+     
+     - git clone --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
+     
+     - for: [ 'include/openssl' ]
+       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.OPENSSL_DIR}}/include/openssl/'

@@ -15,7 +15,7 @@
 * Lesser General Public License for more details.
 *
 * You should have received a copy of the GNU Lesser General Public License
-* along with NativeHeapApi. If not, see http://www.gnu.org/licenses/.
+* along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
 #include <stdio.h>
@@ -24,9 +24,6 @@
 #include <stdlib.h>
 
 #include <noscrypt.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/platform_util.h>
-
 #ifdef _NC_IS_WINDOWS
 	#define IS_WINDOWS
 #endif
@@ -39,10 +36,10 @@
 
 #ifdef IS_WINDOWS
     /*Asserts that an internal test condition is true, otherwise aborts the test process*/
-    #define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s.\n Aborting tests...\n", #x); ExitProcess(1); }
+    #define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s. @ Line: %d\n Aborting tests...\n", #x, __LINE__); ExitProcess(1); }
 #else
     /*Asserts that an internal test condition is true, otherwise aborts the test process*/
-	#define TASSERT(x) if(!(x)) { printf("Internal assumption failed: %s\n", #x); exit(1); }
+	#define TASSERT(x) if(!(x)) { printf("ERROR! Internal test assumption failed: %s. @ Line: %d\n Aborting tests...\n", #x, __LINE__); exit(1); }
 #endif
 
 /*Prints a string literal to the console*/
@@ -65,6 +62,8 @@
     #include<string.h>
 #endif
 
+#define strlen32(x) (uint32_t)strlen(x)
+
 #include "hex.h"
 
 /*Pre-computed constants for argument errors */
@@ -76,13 +75,13 @@
 #define ARG_ERROR_POS_5 NCResultWithArgPosition(E_NULL_PTR, 0x05)
 #define ARG_ERROR_POS_6 NCResultWithArgPosition(E_NULL_PTR, 0x06)
 
-#define ARG_RAMGE_ERROR_POS_0 E_ARGUMENT_OUT_OF_RANGE
-#define ARG_RAMGE_ERROR_POS_1 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x01)
-#define ARG_RAMGE_ERROR_POS_2 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x02)
-#define ARG_RAMGE_ERROR_POS_3 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x03)
-#define ARG_RAMGE_ERROR_POS_4 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x04)
-#define ARG_RAMGE_ERROR_POS_5 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x05)
-#define ARG_RAMGE_ERROR_POS_6 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x06)
+#define ARG_RANGE_ERROR_POS_0 E_ARGUMENT_OUT_OF_RANGE
+#define ARG_RANGE_ERROR_POS_1 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x01)
+#define ARG_RANGE_ERROR_POS_2 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x02)
+#define ARG_RANGE_ERROR_POS_3 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x03)
+#define ARG_RANGE_ERROR_POS_4 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x04)
+#define ARG_RANGE_ERROR_POS_5 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x05)
+#define ARG_RANGE_ERROR_POS_6 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x06)
 
 #define ARG_INVALID_ERROR_POS_0 E_INVALID_ARG
 #define ARG_INVALID_ERROR_POS_1 NCResultWithArgPosition(E_INVALID_ARG, 0x01)
@@ -170,16 +169,6 @@ static int RunTests(void)
     return 0;
 }
 
-static void _sha256(const uint8_t* data, size_t length, uint8_t digest[32])
-{
-	mbedtls_sha256_context sha256;
-	mbedtls_sha256_init(&sha256);
-    TASSERT(0 == mbedtls_sha256_starts(&sha256, 0))
-    TASSERT(0 == mbedtls_sha256_update(&sha256, data, length))
-    TASSERT(0 == mbedtls_sha256_finish(&sha256, digest))
-    mbedtls_sha256_free(&sha256);
-}
-
 static const char* message = "Test message to sign";
 
 static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
@@ -204,10 +193,11 @@ static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubK
 }
 
 static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
-{   
-    uint8_t digestToSign[32];
+{ 
+   
     uint8_t sigEntropy[32];
     uint8_t invalidSig[64];
+    HexBytes* digestHex;
 
     PRINTL("TEST: Ecdsa")
 
@@ -215,21 +205,20 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     FillRandomData(invalidSig, sizeof(invalidSig));
     FillRandomData(sigEntropy, sizeof(sigEntropy));
 
-    /* compute sha256 of the test string */
-    _sha256((uint8_t*)message, strlen(message), digestToSign);
+    digestHex = FromHexString("58884db8f9b2d5583a54b44daeccf029af4dd2874aa5e3dc0e55febebab55d18", 32);
 
     /* Sign and verify sig64 */
     {
 		uint8_t sig[64];
-        TEST(NCSignDigest(context, secKey, sigEntropy, digestToSign, sig), NC_SUCCESS);
-        TEST(NCVerifyDigest(context, pubKey, digestToSign, sig), NC_SUCCESS);
+        TEST(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig), NC_SUCCESS);
+        TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
     }
     
     /* Sign and verify raw data */
     {
         uint8_t sig[64];
-        TEST(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
-        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
+        TEST(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
+        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
     }
 
     /* ensure the signature is the same for signing data and sig64 */
@@ -238,8 +227,8 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
 		uint8_t sig2[64];
 
         /* Ensure operations succeed but dont print them as test cases */
-        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig1) == NC_SUCCESS);
-        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestToSign, sig2) == NC_SUCCESS);
+        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig1) == NC_SUCCESS);
+        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig2) == NC_SUCCESS);
 		
         /* Perform test */
         TEST(memcmp(sig1, sig2, 64), 0);
@@ -249,19 +238,19 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     {
         uint8_t sig[64];
 		
-        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen(message), sig) == NC_SUCCESS);
-        TEST(NCVerifyDigest(context, pubKey, digestToSign, sig), NC_SUCCESS);
+        ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig) == NC_SUCCESS);
+        TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
 
         /* Now invert test, zero signature to ensure its overwritten */
         ZERO_FILL(sig, sizeof(sig));
 
-        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestToSign, sig) == NC_SUCCESS);
-        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen(message), sig), NC_SUCCESS);
+        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig) == NC_SUCCESS);
+        TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
 	}
 
     /* test verification of invalid signature */
     {
-        TEST(NCVerifyDigest(context, pubKey, digestToSign, invalidSig), E_INVALID_ARG);
+        TEST(NCVerifyDigest(context, pubKey, digestHex->data, invalidSig), E_INVALID_ARG);
     }
 
     PRINTL("\nPASSED: Ecdsa tests completed")
@@ -280,10 +269,13 @@ static int TestPublicApiArgumentValidation(void)
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
     uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
 
-    NCCryptoData cryptoData;
+    NCEncryptionArgs cryptoData;
     cryptoData.dataSize = sizeof(zero32);
     cryptoData.inputData = zero32;
     cryptoData.outputData = sig64; /*just an arbitrary writeable buffer*/
+    cryptoData.nonce32 = nonce;
+    cryptoData.hmacKeyOut32 = hmacKeyOut;
+    cryptoData.version = NC_ENC_VERSION_NIP44;
 
     PRINTL("TEST: Public API argument validation tests")
 
@@ -291,86 +283,92 @@ static int TestPublicApiArgumentValidation(void)
     FillRandomData(nonce, sizeof(nonce));
 
     /*Test null context*/
-    TEST(NCInitContext(NULL, ctxRandom), ARG_ERROR_POS_0)
-    TEST(NCInitContext(&ctx, NULL), ARG_ERROR_POS_1)
+    TEST(NCInitContext(NULL, ctxRandom),    ARG_ERROR_POS_0)
+    TEST(NCInitContext(&ctx, NULL),         ARG_ERROR_POS_1)
 
-    /*Test null context*/
+    /* actually init a context to perform tests */
+    TASSERT(NCInitContext(&ctx, ctxRandom) == NC_SUCCESS);
+
+    /*
+    * Test null context
+    * NOTE: This is never freed, this shouldnt be an issue 
+    * for testing, but this will leak memory.
+    */
     TEST(NCDestroyContext(NULL), ARG_ERROR_POS_0)
 
     /*reinit*/
-    TEST(NCReInitContext(NULL, ctxRandom), ARG_ERROR_POS_0)
-    TEST(NCReInitContext(&ctx, NULL), ARG_ERROR_POS_1)
+    TEST(NCReInitContext(NULL, ctxRandom),  ARG_ERROR_POS_0)
+    TEST(NCReInitContext(&ctx, NULL),       ARG_ERROR_POS_1)
 
     /*Test null secret key*/
-    TEST(NCGetPublicKey(&ctx, NULL, &pubKey), ARG_ERROR_POS_1)
-    TEST(NCGetPublicKey(&ctx, &secKey, NULL), ARG_ERROR_POS_2)
+    TEST(NCGetPublicKey(&ctx, NULL, &pubKey),   ARG_ERROR_POS_1)
+    TEST(NCGetPublicKey(&ctx, &secKey, NULL),   ARG_ERROR_POS_2)
 
     /*Test null secret key*/
-    TEST(NCValidateSecretKey(NULL, &secKey), ARG_ERROR_POS_0)
-    TEST(NCValidateSecretKey(&ctx, NULL), ARG_ERROR_POS_1)
+    TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
+    TEST(NCValidateSecretKey(&ctx, NULL),       ARG_ERROR_POS_1)
 
     /*Verify sig64 args test*/
-    TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64), ARG_ERROR_POS_0)
-    TEST(NCVerifyDigest(&ctx, NULL, zero32, sig64), ARG_ERROR_POS_1)
-    TEST(NCVerifyDigest(&ctx, &pubKey, NULL, sig64), ARG_ERROR_POS_2)
-    TEST(NCVerifyDigest(&ctx, &pubKey, zero32, NULL), ARG_ERROR_POS_3)
+    TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),      ARG_ERROR_POS_0)
+    TEST(NCVerifyDigest(&ctx, NULL, zero32, sig64),         ARG_ERROR_POS_1)
+    TEST(NCVerifyDigest(&ctx, &pubKey, NULL, sig64),        ARG_ERROR_POS_2)
+    TEST(NCVerifyDigest(&ctx, &pubKey, zero32, NULL),       ARG_ERROR_POS_3)
 
     /*Test verify data args*/
-    TEST(NCVerifyData(NULL, &pubKey, zero32, 32, sig64), ARG_ERROR_POS_0)
-    TEST(NCVerifyData(&ctx, NULL, zero32, 32, sig64), ARG_ERROR_POS_1)
-    TEST(NCVerifyData(&ctx, &pubKey, NULL, 32, sig64), ARG_ERROR_POS_2)
-    TEST(NCVerifyData(&ctx, &pubKey, zero32, 0, sig64), ARG_RAMGE_ERROR_POS_3)
-    TEST(NCVerifyData(&ctx, &pubKey, zero32, 32, NULL), ARG_ERROR_POS_4)
+    TEST(NCVerifyData(NULL, &pubKey, zero32, 32, sig64),    ARG_ERROR_POS_0)
+    TEST(NCVerifyData(&ctx, NULL, zero32, 32, sig64),       ARG_ERROR_POS_1)
+    TEST(NCVerifyData(&ctx, &pubKey, NULL, 32, sig64),      ARG_ERROR_POS_2)
+    TEST(NCVerifyData(&ctx, &pubKey, zero32, 0, sig64),     ARG_RANGE_ERROR_POS_3)
+    TEST(NCVerifyData(&ctx, &pubKey, zero32, 32, NULL),     ARG_ERROR_POS_4)
 
     /*Test null sign data args*/
-    TEST(NCSignData(NULL, &secKey, zero32, zero32, 32, sig64), ARG_ERROR_POS_0)
-    TEST(NCSignData(&ctx, NULL, zero32, zero32, 32, sig64), ARG_ERROR_POS_1)
-    TEST(NCSignData(&ctx, &secKey, NULL, zero32, 32, sig64), ARG_ERROR_POS_2)
-    TEST(NCSignData(&ctx, &secKey, zero32, NULL, 32, sig64), ARG_ERROR_POS_3)
-    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 0, sig64), ARG_RAMGE_ERROR_POS_4)
-    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 32, NULL), ARG_ERROR_POS_5)
+    TEST(NCSignData(NULL, &secKey, zero32, zero32, 32, sig64),  ARG_ERROR_POS_0)
+    TEST(NCSignData(&ctx, NULL, zero32, zero32, 32, sig64),     ARG_ERROR_POS_1)
+    TEST(NCSignData(&ctx, &secKey, NULL, zero32, 32, sig64),    ARG_ERROR_POS_2)
+    TEST(NCSignData(&ctx, &secKey, zero32, NULL, 32, sig64),    ARG_ERROR_POS_3)
+    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 0, sig64),   ARG_RANGE_ERROR_POS_4)
+    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 32, NULL),   ARG_ERROR_POS_5)
    
     /*Test null sign digest args*/
-    TEST(NCSignDigest(NULL, &secKey, zero32, zero32, sig64), ARG_ERROR_POS_0)
-    TEST(NCSignDigest(&ctx, NULL, zero32, zero32, sig64), ARG_ERROR_POS_1)
-    TEST(NCSignDigest(&ctx, &secKey, NULL, zero32, sig64), ARG_ERROR_POS_2)
-	TEST(NCSignDigest(&ctx, &secKey, zero32, NULL, sig64), ARG_ERROR_POS_3)
-    TEST(NCSignDigest(&ctx, &secKey, zero32, zero32, NULL), ARG_ERROR_POS_4)
+    TEST(NCSignDigest(NULL, &secKey, zero32, zero32, sig64),    ARG_ERROR_POS_0)
+    TEST(NCSignDigest(&ctx, NULL, zero32, zero32, sig64),       ARG_ERROR_POS_1)
+    TEST(NCSignDigest(&ctx, &secKey, NULL, zero32, sig64),      ARG_ERROR_POS_2)
+	TEST(NCSignDigest(&ctx, &secKey, zero32, NULL, sig64),      ARG_ERROR_POS_3)
+    TEST(NCSignDigest(&ctx, &secKey, zero32, zero32, NULL),     ARG_ERROR_POS_4)
 
     /*Test null encrypt args*/
-    TEST(NCEncrypt(NULL, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_0)
-    TEST(NCEncrypt(&ctx, NULL, &pubKey, hmacKeyOut, &cryptoData), ARG_ERROR_POS_1)
-	TEST(NCEncrypt(&ctx, &secKey, NULL, hmacKeyOut, &cryptoData), ARG_ERROR_POS_2)
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, NULL, &cryptoData), ARG_ERROR_POS_3)
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, NULL), ARG_ERROR_POS_4)
+    TEST(NCEncrypt(NULL, &secKey, &pubKey, &cryptoData),    ARG_ERROR_POS_0)
+    TEST(NCEncrypt(&ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
+	TEST(NCEncrypt(&ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
+    TEST(NCEncrypt(&ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
 
     /*Test invalid data size*/
     cryptoData.dataSize = 0;
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_RAMGE_ERROR_POS_4)
+    TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
     
     /*Test null input data */
     cryptoData.dataSize = 32;
     cryptoData.inputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
+	TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
 
     /*Test null output data */
 	cryptoData.inputData = zero32;
     cryptoData.outputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, hmacKeyOut, &cryptoData), ARG_INVALID_ERROR_POS_4)
+	TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
 
     /* Decrypt */
     cryptoData.dataSize = 32;
     cryptoData.inputData = zero32;
     cryptoData.outputData = sig64;
 
-    TEST(NCDecrypt(NULL, &secKey, &pubKey, &cryptoData), ARG_ERROR_POS_0)
-    TEST(NCDecrypt(&ctx, NULL, &pubKey, &cryptoData), ARG_ERROR_POS_1)
-	TEST(NCDecrypt(&ctx, &secKey, NULL, &cryptoData), ARG_ERROR_POS_2)
-    TEST(NCDecrypt(&ctx, &secKey, &pubKey, NULL), ARG_ERROR_POS_3)
+    TEST(NCDecrypt(NULL, &secKey, &pubKey, &cryptoData),    ARG_ERROR_POS_0)
+    TEST(NCDecrypt(&ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
+	TEST(NCDecrypt(&ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
+    TEST(NCDecrypt(&ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
 
     /* Test invalid data size */
 	cryptoData.dataSize = 0;
-    TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_RAMGE_ERROR_POS_3)
+    TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
 
     /* Test null input data */
 	cryptoData.dataSize = 32;
@@ -384,11 +382,11 @@ static int TestPublicApiArgumentValidation(void)
     
     {
         uint8_t hmacDataOut[NC_ENCRYPTION_MAC_SIZE];
-        TEST(NCComputeMac(NULL, hmacKeyOut, zero32, 32, hmacDataOut), ARG_ERROR_POS_0)
-        TEST(NCComputeMac(&ctx, NULL, zero32, 32, hmacDataOut), ARG_ERROR_POS_1)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, NULL, 32, hmacDataOut), ARG_ERROR_POS_2)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 0, hmacDataOut), ARG_RAMGE_ERROR_POS_3)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 32, NULL), ARG_ERROR_POS_4)
+        TEST(NCComputeMac(NULL, hmacKeyOut, zero32, 32, hmacDataOut),   ARG_ERROR_POS_0)
+        TEST(NCComputeMac(&ctx, NULL, zero32, 32, hmacDataOut),         ARG_ERROR_POS_1)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, NULL, 32, hmacDataOut),     ARG_ERROR_POS_2)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 0, hmacDataOut),    ARG_RANGE_ERROR_POS_3)
+        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 32, NULL),          ARG_ERROR_POS_4)
     }
 
     {
@@ -398,17 +396,17 @@ static int TestPublicApiArgumentValidation(void)
         macArgs.mac32 = zero32;
         macArgs.nonce32 = zero32;
 
-        TEST(NCVerifyMac(NULL, &secKey, &pubKey, &macArgs), ARG_ERROR_POS_0)
-        TEST(NCVerifyMac(&ctx, NULL, &pubKey, &macArgs), ARG_ERROR_POS_1)
-        TEST(NCVerifyMac(&ctx, &secKey, NULL, &macArgs), ARG_ERROR_POS_2)
-        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, NULL), ARG_ERROR_POS_3)
+        TEST(NCVerifyMac(NULL, &secKey, &pubKey, &macArgs),     ARG_ERROR_POS_0)
+        TEST(NCVerifyMac(&ctx, NULL, &pubKey, &macArgs),        ARG_ERROR_POS_1)
+        TEST(NCVerifyMac(&ctx, &secKey, NULL, &macArgs),        ARG_ERROR_POS_2)
+        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, NULL),         ARG_ERROR_POS_3)
 
         macArgs.payload = NULL;
         TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_INVALID_ERROR_POS_3)
 
         macArgs.payload = zero32;
         macArgs.payloadSize = 0;
-        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_RAMGE_ERROR_POS_3)
+        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
     }
     
     PRINTL("\nPASSED: Public API argument validation tests completed")
@@ -467,7 +465,7 @@ static int TestCorrectEncryption(NCContext* context)
     uint8_t cipherText[TEST_ENC_DATA_SIZE];
     uint8_t decryptedText[TEST_ENC_DATA_SIZE];
   
-    NCCryptoData cryptoData;
+    NCEncryptionArgs cryptoData;
     NCMacVerifyArgs macVerifyArgs;
 
     /* setup the crypto data structure */
@@ -475,8 +473,10 @@ static int TestCorrectEncryption(NCContext* context)
     cryptoData.inputData = plainText;
     cryptoData.outputData = cipherText;
     cryptoData.nonce32 = nonce;
+    cryptoData.hmacKeyOut32 = hmacKeyOut;
+    cryptoData.version = NC_ENC_VERSION_NIP44;
    
-    macVerifyArgs.nonce32 = nonce;
+    macVerifyArgs.nonce32 = nonce;    /* nonce is shared */
     macVerifyArgs.mac32 = mac;
     macVerifyArgs.payload = cipherText;
     macVerifyArgs.payloadSize = TEST_ENC_DATA_SIZE;
@@ -497,7 +497,7 @@ static int TestCorrectEncryption(NCContext* context)
     ENSURE(NCGetPublicKey(context, &secKey2, &pubKey2) == NC_SUCCESS);
 
     /* Try to encrypt the data from sec1 to pub2 */
-    TEST(NCEncrypt(context, &secKey1, &pubKey2, hmacKeyOut, &cryptoData), NC_SUCCESS);
+    TEST(NCEncrypt(context, &secKey1, &pubKey2, &cryptoData), NC_SUCCESS);
 
     /*swap cipher and plain text for decryption */
     cryptoData.inputData = cipherText;
