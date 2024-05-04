@@ -87,11 +87,11 @@ tasks:
       DLL_FILES: '{{.PROJECT_NAME}}.dll {{.PROJECT_NAME}}.lib license.txt'
       TARGET_STATIC: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/msvc-x64-release-{{.PROJECT_NAME}}-static.tgz'
       STATIC_FILES: '{{.PROJECT_NAME}}_static.lib license.txt'
-      BUILD_DIR: 'out/build/win-x64'
+      BUILD_DIR: 'build/win-x64'
     
     cmds:
     #invoke cmake build 
-     - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+     - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DNC_BUILD_TESTS=OFF
      - cmake --build {{.BUILD_DIR}} --config Release  
     
     #copy license to build dir
