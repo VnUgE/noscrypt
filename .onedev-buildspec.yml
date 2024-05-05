@@ -1,4 +1,4 @@
-version: 17
+version: 33
 jobs:
 - name: GitHub Push
   steps:
@@ -7,8 +7,14 @@ jobs:
     remoteUrl: https://github.com/VnUgE/noscrypt.git
     userName: VnUgE
     passwordSecret: github-access-token
-    withLfs: false
-    force: false
+    force: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !PushRepository
+    name: Codeberg push sync
+    remoteUrl: https://codeberg.com/VnUgE/noscrypt.git
+    userName: VnUgE
+    passwordSecret: codeberg-access-token
+    force: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !TagCreateTrigger
@@ -18,8 +24,6 @@ jobs:
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  cpuRequirement: 250
-  memoryRequirement: 256
   timeout: 3600
 - name: GitHub Pull
   steps:
@@ -39,6 +43,4 @@ jobs:
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  cpuRequirement: 250
-  memoryRequirement: 256
   timeout: 3600
