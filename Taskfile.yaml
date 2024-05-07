@@ -43,13 +43,17 @@ tasks:
     cmds:
      - task: build-debug
      - cmd: cd {{.CMAKE_BUILD_DIR}} && {{if eq OS "windows"}}debug/nctest.exe{{else}}./nctest{{end}}
+  
+  install:
+    desc: "Uses cmake to install the library on your system"
+    cmds:
+     - cmd: cmake --install {{.CMAKE_BUILD_DIR}} {{.CLI_ARGS}}
 
 
 #CI ONLY!!
 
   #called by build pipeline to build module
   build:
-    desc: "DO NOT RUN! CI Only"
     cmds:
      - echo "building project {{.PROJECT_NAME}}" 
      - cmd: powershell -Command "mkdir bin/ -Force"
@@ -109,7 +113,7 @@ tasks:
     desc: "Packs up the project source code and creates a tarball in the builds binary directory"
     vars:
       TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-src.tgz'
-      SOURCE_FILES: 'CMakeLists.txt src include license tests Taskfile.yaml'
+      SOURCE_FILES: 'CMakeLists.txt src include license tests vendor readme.md Taskfile.yaml'
 
     cmds:
       #tar up the source

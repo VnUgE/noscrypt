@@ -205,23 +205,24 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
     FillRandomData(invalidSig, sizeof(invalidSig));
     FillRandomData(sigEntropy, sizeof(sigEntropy));
 
+    /* This is the sha256 digest of the message charater buffer above */
     digestHex = FromHexString("58884db8f9b2d5583a54b44daeccf029af4dd2874aa5e3dc0e55febebab55d18", 32);
 
-    /* Sign and verify sig64 */
+    /* Test signing just the message digest */
     {
 		uint8_t sig[64];
         TEST(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig), NC_SUCCESS);
         TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
     }
     
-    /* Sign and verify raw data */
+    /* Sign and verify the raw message */
     {
         uint8_t sig[64];
         TEST(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
         TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
     }
 
-    /* ensure the signature is the same for signing data and sig64 */
+    /* Tests that signing the message and it's digest result in the same signature */
 	{
 		uint8_t sig1[64];
 		uint8_t sig2[64];
@@ -234,7 +235,7 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
         TEST(memcmp(sig1, sig2, 64), 0);
 	}
 
-    /* Try signing data then veriyfing the sig64 */
+    /* Checks that the signature raw message can be verified against the digest of the message */
     {
         uint8_t sig[64];
 		
@@ -292,7 +293,8 @@ static int TestPublicApiArgumentValidation(void)
     /*
     * Test null context
     * NOTE: This is never freed, this shouldnt be an issue 
-    * for testing, but this will leak memory.
+    * for testing, but this will leak memory. (libsecp256k2 
+    * allocates internally)
     */
     TEST(NCDestroyContext(NULL), ARG_ERROR_POS_0)
 

@@ -8,7 +8,13 @@
 
 cmake_minimum_required (VERSION 3.10)
 
-project(noscrypt C)
+project(
+	noscrypt
+	LANGUAGES C
+	DESCRIPTION "A compact, C90 cross-platform, cryptography library built specifically for nostr"
+	HOMEPAGE_URL "https://www.vaughnnugent.com/resources/software/modules/noscrypt"	
+)
+set(_NC_PROJ_NAME "noscrypt")
 
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
@@ -86,22 +92,22 @@ set(NOSCRYPT_HEADERS
 )
 
 #static/shared library
-add_library(${CMAKE_PROJECT_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
-add_library(${CMAKE_PROJECT_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
-target_compile_features(${CMAKE_PROJECT_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
+add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
+add_library(${_NC_PROJ_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
+target_compile_features(${_NC_PROJ_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
 
 #link libsecp256k1
 if(MSVC)
-	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE secp256k1)
-	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE secp256k1)
+	target_link_libraries(${_NC_PROJ_NAME} PRIVATE secp256k1)
+	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE secp256k1)
 else()
-	target_link_libraries(${CMAKE_PROJECT_NAME} INTERFACE secp256k1)
-	target_link_libraries(${CMAKE_PROJECT_NAME}_static INTERFACE secp256k1)
+	target_link_libraries(${_NC_PROJ_NAME} INTERFACE secp256k1)
+	target_link_libraries(${_NC_PROJ_NAME}_static INTERFACE secp256k1)
 endif()
 
 #include secp256k1 headers
-target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
-target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/secp256k1/include)
+target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
+target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/secp256k1/include)
 
 #############################################
 #
@@ -151,13 +157,13 @@ if(CRYPTO_LIB STREQUAL "mbedtls")
 	message(STATUS "Linking to MbedTLS crypto library")
 
 	#include mbedtls headers
-	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/mbedtls/include)
-	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/mbedtls/include)
+	target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/mbedtls/include)
+	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/mbedtls/include)
 
 	if(NC_FETCH_MBEDTLS)
 		#link to included mbedtls
-		target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE mbedcrypto PRIVATE mbedtls)
-		target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE mbedcrypto PRIVATE mbedtls)
+		target_link_libraries(${_NC_PROJ_NAME} PRIVATE mbedcrypto PRIVATE mbedtls)
+		target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE mbedcrypto PRIVATE mbedtls)
 	else()
 		#find the library
 		find_library(MBEDTLS_LIB_CRYPTO
@@ -174,8 +180,8 @@ if(CRYPTO_LIB STREQUAL "mbedtls")
 		message(STATUS "Found mbedtls tls library at ${MBEDTLS_LIB_TLS}")
 
 		#link to the library
-		target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
-		target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
+		target_link_libraries(${_NC_PROJ_NAME} PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
+		target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
 	endif()
 
 	#enable mbedtls crypto library bindings
@@ -187,13 +193,13 @@ elseif(CRYPTO_LIB STREQUAL "openssl")
 	find_package(OpenSSL REQUIRED)
 
 	#include openssl headers
-	target_include_directories(${CMAKE_PROJECT_NAME} SYSTEM PUBLIC vendor/openssl/include)
-	target_include_directories(${CMAKE_PROJECT_NAME}_static SYSTEM PUBLIC vendor/openssl/include)
+	target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/openssl/include)
+	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/openssl/include)
 
 	#link to openssl
 	message(STATUS "Linking to OpenSSL crypto library")
-	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OpenSSL::Crypto)
-	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE OpenSSL::Crypto)
+	target_link_libraries(${_NC_PROJ_NAME} PRIVATE OpenSSL::Crypto)
+	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE OpenSSL::Crypto)
 
 	#enable openssl crypto library bindings
 	list(APPEND NC_PROJ_DEFINTIONS OPENSSL_CRYPTO_LIB)
@@ -202,8 +208,8 @@ elseif(CRYPTO_LIB STREQUAL "bcrypt")
 
 	if(MSVC)
 		#link bcrypt for Windows platforms
-		target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "bcrypt.lib")
-		target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE "bcrypt.lib")
+		target_link_libraries(${_NC_PROJ_NAME} PRIVATE "bcrypt.lib")
+		target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE "bcrypt.lib")
 	else()
 		message(FATAL_ERROR "Bcrypt is only supported on Windows platforms")
 	endif()
@@ -221,11 +227,12 @@ if(NC_DISABLE_INPUT_VALIDATION)
 	list(APPEND NC_PROJ_DEFINTIONS NC_INPUT_VALIDATION_OFF)
 endif()
 
+set(_NC_COMPILE_OPTS)
+
 #setup flags for windows compilation
 if(MSVC)
-	
-    #global windows cl flags
-	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
+
+   list(APPEND _NC_COMPILE_OPTS
 		/sdl						#enable additional security checks
 		/TC							#compile as c
 		/GS							#buffer security check
@@ -242,7 +249,7 @@ if(MSVC)
 		$<$<CONFIG:Debug>:/WX>		#warnings as errors (only for our project)
 		$<$<CONFIG:Debug>:/Zi>		#enable rich debug info
 		$<$<CONFIG:Debug>:/Zo>
-	)
+   )
 
 	#set build macros
 	list(APPEND NC_PROJ_DEFINTIONS
@@ -253,13 +260,14 @@ if(MSVC)
 #configure gcc flags
 elseif(CMAKE_COMPILER_IS_GNUCC)
 
-	target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wextra -fstack-protector)
+	list(APPEND _NC_COMPILE_OPTS 
+		-Wextra 
+		-fstack-protector
+	)
 
 	#if debug build enable additional debug flags
 	if(build_type STREQUAL "debug")
-		target_compile_options(
-			${CMAKE_PROJECT_NAME} 
-			PRIVATE 
+		 list(APPEND _NC_COMPILE_OPTS
 		
 			-g
 			-Og
@@ -269,6 +277,9 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 		)
 	endif()
 endif()
+
+target_compile_options(${_NC_PROJ_NAME} PRIVATE ${_NC_COMPILE_OPTS})
+target_compile_options(${_NC_PROJ_NAME}_static PRIVATE ${_NC_COMPILE_OPTS})
 
 #############################################
 #
@@ -289,8 +300,8 @@ if(NC_INCLUDE_MONOCYPHER)
 		"vendor/monocypher/monocypher.h"
 	)
 
-	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE monocypher)
-	target_link_libraries(${CMAKE_PROJECT_NAME}_static PRIVATE monocypher)
+	target_link_libraries(${_NC_PROJ_NAME} PRIVATE monocypher)
+	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE monocypher)
 
 	#share mc header with project
 	target_include_directories(monocypher SYSTEM PUBLIC vendor/monocypher)
@@ -319,21 +330,50 @@ if(NC_INCLUDE_MONOCYPHER)
 endif()
 
 #Set NC variables to both projects
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ${NC_PROJ_DEFINTIONS})
-target_compile_definitions(${CMAKE_PROJECT_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS})
+target_compile_definitions(${_NC_PROJ_NAME} PRIVATE ${NC_PROJ_DEFINTIONS})
+target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS})
 
 #TESTS
 if(NC_BUILD_TESTS)
 
 	#add test executable and link to library
 	add_executable(nctest tests/test.c)
-	target_link_libraries(nctest ${CMAKE_PROJECT_NAME}_static)
+	target_link_libraries(nctest ${_NC_PROJ_NAME}_static)
 	target_include_directories(nctest PRIVATE include)
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
 endif()
 
+###########################
+#
+#		Installing
+#
+###########################
+
+#export shared library
+install(TARGETS ${_NC_PROJ_NAME} 
+	EXPORT MyLibraryTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+#export static library
+install(TARGETS ${_NC_PROJ_NAME}_static
+	EXPORT MyLibraryTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+install(FILES 
+	include/noscrypt.h
+	include/platform.h
+	DESTINATION noscrypt
+)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
