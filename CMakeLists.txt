@@ -227,11 +227,12 @@ if(NC_DISABLE_INPUT_VALIDATION)
 	list(APPEND NC_PROJ_DEFINTIONS NC_INPUT_VALIDATION_OFF)
 endif()
 
+set(_NC_COMPILE_OPTS)
+
 #setup flags for windows compilation
 if(MSVC)
-	
-    #global windows cl flags
-	target_compile_options(${_NC_PROJ_NAME} PRIVATE
+
+   list(APPEND _NC_COMPILE_OPTS
 		/sdl						#enable additional security checks
 		/TC							#compile as c
 		/GS							#buffer security check
@@ -248,7 +249,7 @@ if(MSVC)
 		$<$<CONFIG:Debug>:/WX>		#warnings as errors (only for our project)
 		$<$<CONFIG:Debug>:/Zi>		#enable rich debug info
 		$<$<CONFIG:Debug>:/Zo>
-	)
+   )
 
 	#set build macros
 	list(APPEND NC_PROJ_DEFINTIONS
@@ -259,13 +260,14 @@ if(MSVC)
 #configure gcc flags
 elseif(CMAKE_COMPILER_IS_GNUCC)
 
-	target_compile_options(${_NC_PROJ_NAME} PRIVATE -Wextra -fstack-protector)
+	list(APPEND _NC_COMPILE_OPTS 
+		-Wextra 
+		-fstack-protector
+	)
 
 	#if debug build enable additional debug flags
 	if(build_type STREQUAL "debug")
-		target_compile_options(
-			${_NC_PROJ_NAME} 
-			PRIVATE 
+		 list(APPEND _NC_COMPILE_OPTS
 		
 			-g
 			-Og
@@ -275,6 +277,9 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 		)
 	endif()
 endif()
+
+target_compile_options(${_NC_PROJ_NAME} PRIVATE ${_NC_COMPILE_OPTS})
+target_compile_options(${_NC_PROJ_NAME}_static PRIVATE ${_NC_COMPILE_OPTS})
 
 #############################################
 #
