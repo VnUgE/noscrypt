@@ -32,7 +32,7 @@ tasks:
   build-internal:
     internal: true
     cmds:
-     - cmake -S . -B{{.CMAKE_BUILD_DIR}} -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }} {{.USER_ARGS}}
+     - cmake -S . -B{{.CMAKE_BUILD_DIR}} -DCMAKE_BUILD_TYPE={{.BUILD_CONFIG}} -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }} {{.CLI_ARGS}}
      - cmake --build {{.CMAKE_BUILD_DIR}} --config {{.BUILD_CONFIG}}
      - cmd: echo "Build complete. Your files can be found in the {{.CMAKE_BUILD_DIR}} directory"
        silent: true
