@@ -55,7 +55,15 @@ if(NC_FETCH_SECP256K1)
 	)
 
 	FetchContent_MakeAvailable(libsecp256k1)
-
+	
+	set_target_properties(
+		secp256k1 
+		secp256k1_precomputed 
+		
+		PROPERTIES 
+		POSITION_INDEPENDENT_CODE  ON
+	)
+	
 else()	
 
 	#search for an existing library, it's a required dependency
@@ -74,7 +82,6 @@ endif()
 include_directories(include)				#include the 'include' directory for the project
 set(CMAKE_C_STANDARD 90)					#Setup the compiler options for c90 shared library
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 set(NOSCRYPT_SRCS 
@@ -95,15 +102,11 @@ set(NOSCRYPT_HEADERS
 add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 add_library(${_NC_PROJ_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 target_compile_features(${_NC_PROJ_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
+set_target_properties(${_NC_PROJ_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 #link libsecp256k1
-if(MSVC)
-	target_link_libraries(${_NC_PROJ_NAME} PRIVATE secp256k1)
-	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE secp256k1)
-else()
-	target_link_libraries(${_NC_PROJ_NAME} INTERFACE secp256k1)
-	target_link_libraries(${_NC_PROJ_NAME}_static INTERFACE secp256k1)
-endif()
+target_link_libraries(${_NC_PROJ_NAME} PRIVATE secp256k1)
+target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE secp256k1)
 
 #include secp256k1 headers
 target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
@@ -336,9 +339,9 @@ target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS}
 #TESTS
 if(NC_BUILD_TESTS)
 
-	#add test executable and link to library
+	#add test executable and link to shared library for more realistic usage
 	add_executable(nctest tests/test.c)
-	target_link_libraries(nctest ${_NC_PROJ_NAME}_static)
+	target_link_libraries(nctest ${_NC_PROJ_NAME})
 	target_include_directories(nctest PRIVATE include)
 
 	#enable c11 for testing
