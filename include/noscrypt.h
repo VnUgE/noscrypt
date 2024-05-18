@@ -135,11 +135,7 @@ typedef struct xonly_pubkey_struct {
 /*
 	An opaque full library context object
 */
-typedef struct ctx_struct {
-
-	void* secpCtx;
-
-} NCContext;
+typedef struct nc_ctx_struct NCContext;
 
 /*
 * The encryption arguments structure. This structure is used to pass 
@@ -253,6 +249,16 @@ for dynamic allocation when context size structure is not known.
 * @return The size of the context struct in bytes
 */
 NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void);
+
+/*
+* Obtains a pointer to the process-wide shared structure to be 
+* used in single-threaded, resource constrained systems. NOTE:
+* this structure is not initalized and still requires calling
+* NCInitContext() before use.
+* @return The address of the process-wide, shared structure.
+*/
+NC_EXPORT NCContext* NC_CC NCGetSharedContext(void);
+
 /*
 * Initializes a context struct with the given entropy
 * @param ctx A pointer to the context structure to initialize

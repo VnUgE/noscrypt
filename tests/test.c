@@ -93,10 +93,10 @@
 
 static int RunTests(void);
 static void FillRandomData(void* pbBuffer, size_t length);
-static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
-static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
-static int TestKnownKeys(NCContext* context);
-static int TestCorrectEncryption(NCContext* context);
+static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
+static int InitKepair(const NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey);
+static int TestKnownKeys(const NCContext* context);
+static int TestCorrectEncryption(const NCContext* context);
 
 #ifndef NC_INPUT_VALIDATION_OFF
 static int TestPublicApiArgumentValidation(void);
@@ -118,7 +118,7 @@ int main(void)
 
 static int RunTests(void)
 {
-    NCContext ctx;
+    NCContext* ctx;
     uint8_t ctxRandom[32];
     NCSecretKey secKey;
     NCPublicKey pubKey;
@@ -127,42 +127,44 @@ static int RunTests(void)
 
     FillRandomData(ctxRandom, 32);
 
-    /* 
-     * Context struct size should aways match the size of the 
-     * struct returned by NCGetContextStructSize 
-     */
+    /*
+    * Can use the shared/global context for tests that won't modify
+    * the structure
+    */
+    ctx = NCGetSharedContext();
+    
+    TEST(NCInitContext(ctx, ctxRandom), NC_SUCCESS)
 
-    TEST(NCGetContextStructSize(), sizeof(NCContext))
-    TEST(NCInitContext(&ctx, ctxRandom), NC_SUCCESS)
-
-    if (InitKepair(&ctx, &secKey, &pubKey) != 0)
+    if (InitKepair(ctx, &secKey, &pubKey) != 0)
     {
         return 1;
     }
 
-    if (TestEcdsa(&ctx, &secKey, &pubKey) != 0)
+    if (TestEcdsa(ctx, &secKey, &pubKey) != 0)
     {
         return 1;
     }
 
-    if (TestKnownKeys(&ctx) != 0)
+    if (TestKnownKeys(ctx) != 0)
     {
         return 1;
     }
 
 #ifndef NC_INPUT_VALIDATION_OFF
+
     if (TestPublicApiArgumentValidation() != 0)
     {
         return 1;
     }
+
 #endif
 
-    if (TestCorrectEncryption(&ctx) != 0)
+    if (TestCorrectEncryption(ctx) != 0)
     {
         return 1;
     }
 
-    TEST(NCDestroyContext(&ctx), NC_SUCCESS)
+    TEST(NCDestroyContext(ctx), NC_SUCCESS)
 
     PRINTL("\nSUCCESS All tests passed")
 
@@ -171,7 +173,7 @@ static int RunTests(void)
 
 static const char* message = "Test message to sign";
 
-static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
+static int InitKepair(const NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
 {
     PRINTL("TEST: Keypair")
 
@@ -192,7 +194,7 @@ static int InitKepair(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubK
     return 0;
 }
 
-static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
+static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKey)
 { 
    
     uint8_t sigEntropy[32];
@@ -260,9 +262,9 @@ static int TestEcdsa(NCContext* context, NCSecretKey* secKey, NCPublicKey* pubKe
 
 #ifndef NC_INPUT_VALIDATION_OFF
 
-static int TestPublicApiArgumentValidation(void)
+static int TestPublicApiArgumentValidation()
 {
-    NCContext ctx;
+    NCContext* ctx;
     uint8_t ctxRandom[32];
     uint8_t sig64[64];
     NCSecretKey secKey;
@@ -283,12 +285,19 @@ static int TestPublicApiArgumentValidation(void)
     FillRandomData(ctxRandom, 32);
     FillRandomData(nonce, sizeof(nonce));
 
+    /*
+    * Alloc context structure on the heap before use. 
+    * THIS WILL LEAK IN THE CURRENT CONFIG ALWAYS FEE UNDER NORMAL CONDITIONS 
+    */
+    ctx = (NCContext*)malloc(NCGetContextStructSize());
+    TASSERT(ctx != NULL)
+
     /*Test null context*/
     TEST(NCInitContext(NULL, ctxRandom),    ARG_ERROR_POS_0)
-    TEST(NCInitContext(&ctx, NULL),         ARG_ERROR_POS_1)
+    TEST(NCInitContext(ctx, NULL),         ARG_ERROR_POS_1)
 
     /* actually init a context to perform tests */
-    TASSERT(NCInitContext(&ctx, ctxRandom) == NC_SUCCESS);
+    TASSERT(NCInitContext(ctx, ctxRandom) == NC_SUCCESS);
 
     /*
     * Test null context
@@ -300,63 +309,63 @@ static int TestPublicApiArgumentValidation(void)
 
     /*reinit*/
     TEST(NCReInitContext(NULL, ctxRandom),  ARG_ERROR_POS_0)
-    TEST(NCReInitContext(&ctx, NULL),       ARG_ERROR_POS_1)
+    TEST(NCReInitContext(ctx, NULL),       ARG_ERROR_POS_1)
 
     /*Test null secret key*/
-    TEST(NCGetPublicKey(&ctx, NULL, &pubKey),   ARG_ERROR_POS_1)
-    TEST(NCGetPublicKey(&ctx, &secKey, NULL),   ARG_ERROR_POS_2)
+    TEST(NCGetPublicKey(ctx, NULL, &pubKey),   ARG_ERROR_POS_1)
+    TEST(NCGetPublicKey(ctx, &secKey, NULL),   ARG_ERROR_POS_2)
 
     /*Test null secret key*/
     TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
-    TEST(NCValidateSecretKey(&ctx, NULL),       ARG_ERROR_POS_1)
+    TEST(NCValidateSecretKey(ctx, NULL),       ARG_ERROR_POS_1)
 
     /*Verify sig64 args test*/
     TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),      ARG_ERROR_POS_0)
-    TEST(NCVerifyDigest(&ctx, NULL, zero32, sig64),         ARG_ERROR_POS_1)
-    TEST(NCVerifyDigest(&ctx, &pubKey, NULL, sig64),        ARG_ERROR_POS_2)
-    TEST(NCVerifyDigest(&ctx, &pubKey, zero32, NULL),       ARG_ERROR_POS_3)
+    TEST(NCVerifyDigest(ctx, NULL, zero32, sig64),         ARG_ERROR_POS_1)
+    TEST(NCVerifyDigest(ctx, &pubKey, NULL, sig64),        ARG_ERROR_POS_2)
+    TEST(NCVerifyDigest(ctx, &pubKey, zero32, NULL),       ARG_ERROR_POS_3)
 
     /*Test verify data args*/
     TEST(NCVerifyData(NULL, &pubKey, zero32, 32, sig64),    ARG_ERROR_POS_0)
-    TEST(NCVerifyData(&ctx, NULL, zero32, 32, sig64),       ARG_ERROR_POS_1)
-    TEST(NCVerifyData(&ctx, &pubKey, NULL, 32, sig64),      ARG_ERROR_POS_2)
-    TEST(NCVerifyData(&ctx, &pubKey, zero32, 0, sig64),     ARG_RANGE_ERROR_POS_3)
-    TEST(NCVerifyData(&ctx, &pubKey, zero32, 32, NULL),     ARG_ERROR_POS_4)
+    TEST(NCVerifyData(ctx, NULL, zero32, 32, sig64),       ARG_ERROR_POS_1)
+    TEST(NCVerifyData(ctx, &pubKey, NULL, 32, sig64),      ARG_ERROR_POS_2)
+    TEST(NCVerifyData(ctx, &pubKey, zero32, 0, sig64),     ARG_RANGE_ERROR_POS_3)
+    TEST(NCVerifyData(ctx, &pubKey, zero32, 32, NULL),     ARG_ERROR_POS_4)
 
     /*Test null sign data args*/
     TEST(NCSignData(NULL, &secKey, zero32, zero32, 32, sig64),  ARG_ERROR_POS_0)
-    TEST(NCSignData(&ctx, NULL, zero32, zero32, 32, sig64),     ARG_ERROR_POS_1)
-    TEST(NCSignData(&ctx, &secKey, NULL, zero32, 32, sig64),    ARG_ERROR_POS_2)
-    TEST(NCSignData(&ctx, &secKey, zero32, NULL, 32, sig64),    ARG_ERROR_POS_3)
-    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 0, sig64),   ARG_RANGE_ERROR_POS_4)
-    TEST(NCSignData(&ctx, &secKey, zero32, zero32, 32, NULL),   ARG_ERROR_POS_5)
+    TEST(NCSignData(ctx, NULL, zero32, zero32, 32, sig64),     ARG_ERROR_POS_1)
+    TEST(NCSignData(ctx, &secKey, NULL, zero32, 32, sig64),    ARG_ERROR_POS_2)
+    TEST(NCSignData(ctx, &secKey, zero32, NULL, 32, sig64),    ARG_ERROR_POS_3)
+    TEST(NCSignData(ctx, &secKey, zero32, zero32, 0, sig64),   ARG_RANGE_ERROR_POS_4)
+    TEST(NCSignData(ctx, &secKey, zero32, zero32, 32, NULL),   ARG_ERROR_POS_5)
    
     /*Test null sign digest args*/
     TEST(NCSignDigest(NULL, &secKey, zero32, zero32, sig64),    ARG_ERROR_POS_0)
-    TEST(NCSignDigest(&ctx, NULL, zero32, zero32, sig64),       ARG_ERROR_POS_1)
-    TEST(NCSignDigest(&ctx, &secKey, NULL, zero32, sig64),      ARG_ERROR_POS_2)
-	TEST(NCSignDigest(&ctx, &secKey, zero32, NULL, sig64),      ARG_ERROR_POS_3)
-    TEST(NCSignDigest(&ctx, &secKey, zero32, zero32, NULL),     ARG_ERROR_POS_4)
+    TEST(NCSignDigest(ctx, NULL, zero32, zero32, sig64),       ARG_ERROR_POS_1)
+    TEST(NCSignDigest(ctx, &secKey, NULL, zero32, sig64),      ARG_ERROR_POS_2)
+	TEST(NCSignDigest(ctx, &secKey, zero32, NULL, sig64),      ARG_ERROR_POS_3)
+    TEST(NCSignDigest(ctx, &secKey, zero32, zero32, NULL),     ARG_ERROR_POS_4)
 
     /*Test null encrypt args*/
     TEST(NCEncrypt(NULL, &secKey, &pubKey, &cryptoData),    ARG_ERROR_POS_0)
-    TEST(NCEncrypt(&ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
-	TEST(NCEncrypt(&ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
+    TEST(NCEncrypt(ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
+	TEST(NCEncrypt(ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
+    TEST(NCEncrypt(ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
 
     /*Test invalid data size*/
     cryptoData.dataSize = 0;
-    TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
+    TEST(NCEncrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
     
     /*Test null input data */
     cryptoData.dataSize = 32;
     cryptoData.inputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
+	TEST(NCEncrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
 
     /*Test null output data */
 	cryptoData.inputData = zero32;
     cryptoData.outputData = NULL;
-	TEST(NCEncrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
+	TEST(NCEncrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
 
     /* Decrypt */
     cryptoData.dataSize = 32;
@@ -364,31 +373,31 @@ static int TestPublicApiArgumentValidation(void)
     cryptoData.outputData = sig64;
 
     TEST(NCDecrypt(NULL, &secKey, &pubKey, &cryptoData),    ARG_ERROR_POS_0)
-    TEST(NCDecrypt(&ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
-	TEST(NCDecrypt(&ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
-    TEST(NCDecrypt(&ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
+    TEST(NCDecrypt(ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
+	TEST(NCDecrypt(ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
+    TEST(NCDecrypt(ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
 
     /* Test invalid data size */
 	cryptoData.dataSize = 0;
-    TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
+    TEST(NCDecrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_RANGE_ERROR_POS_3)
 
     /* Test null input data */
 	cryptoData.dataSize = 32;
     cryptoData.inputData = NULL;
-	TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
+	TEST(NCDecrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
 
     /*Test null output data */
     cryptoData.inputData = zero32;
     cryptoData.outputData = NULL;
-    TEST(NCDecrypt(&ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
+    TEST(NCDecrypt(ctx, &secKey, &pubKey, &cryptoData), ARG_INVALID_ERROR_POS_3)
     
     {
         uint8_t hmacDataOut[NC_ENCRYPTION_MAC_SIZE];
         TEST(NCComputeMac(NULL, hmacKeyOut, zero32, 32, hmacDataOut),   ARG_ERROR_POS_0)
-        TEST(NCComputeMac(&ctx, NULL, zero32, 32, hmacDataOut),         ARG_ERROR_POS_1)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, NULL, 32, hmacDataOut),     ARG_ERROR_POS_2)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 0, hmacDataOut),    ARG_RANGE_ERROR_POS_3)
-        TEST(NCComputeMac(&ctx, hmacKeyOut, zero32, 32, NULL),          ARG_ERROR_POS_4)
+        TEST(NCComputeMac(ctx, NULL, zero32, 32, hmacDataOut),         ARG_ERROR_POS_1)
+        TEST(NCComputeMac(ctx, hmacKeyOut, NULL, 32, hmacDataOut),     ARG_ERROR_POS_2)
+        TEST(NCComputeMac(ctx, hmacKeyOut, zero32, 0, hmacDataOut),    ARG_RANGE_ERROR_POS_3)
+        TEST(NCComputeMac(ctx, hmacKeyOut, zero32, 32, NULL),          ARG_ERROR_POS_4)
     }
 
     {
@@ -399,16 +408,16 @@ static int TestPublicApiArgumentValidation(void)
         macArgs.nonce32 = zero32;
 
         TEST(NCVerifyMac(NULL, &secKey, &pubKey, &macArgs),     ARG_ERROR_POS_0)
-        TEST(NCVerifyMac(&ctx, NULL, &pubKey, &macArgs),        ARG_ERROR_POS_1)
-        TEST(NCVerifyMac(&ctx, &secKey, NULL, &macArgs),        ARG_ERROR_POS_2)
-        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, NULL),         ARG_ERROR_POS_3)
+        TEST(NCVerifyMac(ctx, NULL, &pubKey, &macArgs),        ARG_ERROR_POS_1)
+        TEST(NCVerifyMac(ctx, &secKey, NULL, &macArgs),        ARG_ERROR_POS_2)
+        TEST(NCVerifyMac(ctx, &secKey, &pubKey, NULL),         ARG_ERROR_POS_3)
 
         macArgs.payload = NULL;
-        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_INVALID_ERROR_POS_3)
+        TEST(NCVerifyMac(ctx, &secKey, &pubKey, &macArgs), ARG_INVALID_ERROR_POS_3)
 
         macArgs.payload = zero32;
         macArgs.payloadSize = 0;
-        TEST(NCVerifyMac(&ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
+        TEST(NCVerifyMac(ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
     }
     
     PRINTL("\nPASSED: Public API argument validation tests completed")
@@ -418,7 +427,7 @@ static int TestPublicApiArgumentValidation(void)
 
 #endif 
 
-static int TestKnownKeys(NCContext* context)
+static int TestKnownKeys(const NCContext* context)
 {   
     NCPublicKey pubKey;
     HexBytes* secKey1, * pubKey1, * secKey2, * pubKey2;
@@ -451,7 +460,7 @@ static int TestKnownKeys(NCContext* context)
 
 #define TEST_ENC_DATA_SIZE 128
 
-static int TestCorrectEncryption(NCContext* context)
+static int TestCorrectEncryption(const NCContext* context)
 {
     NCSecretKey secKey1;
     NCPublicKey pubKey1;

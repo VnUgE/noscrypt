@@ -52,10 +52,23 @@
 #endif /* !NC_DISABLE_INPUT_VALIDATION */
 
 /*
+* Actual, private defintion of the NCContext structure 
+* to allow for future development and ABI backords 
+* compatability.
+*/
+struct nc_ctx_struct {
+
+	void* secpCtx;
+
+};
+
+/*
 * The Nip44 constant salt
 * https://github.com/nostr-protocol/nips/blob/master/44.md#encryption
 */
 static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d, 0x76, 0x32 };
+
+static struct nc_ctx_struct _ncSharedCtx;
 
 struct shared_secret {
 	uint8_t value[NC_SHARED_SEC_SIZE];
@@ -427,6 +440,12 @@ Cleanup:
 NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void) 
 {
 	return sizeof(NCContext);
+}
+
+NC_EXPORT NCContext* NC_CC NCGetSharedContext(void)
+{
+	/*Return the global address of the shared context structure */
+	return &_ncSharedCtx;
 }
 
 NC_EXPORT NCResult NC_CC NCInitContext(

@@ -47,6 +47,8 @@ tasks:
   install:
     desc: "Uses cmake to install the library on your system"
     cmds:
+     - cmd: echo "Installing noscrypt globally"
+       silent: true
      - cmd: cmake --install {{.CMAKE_BUILD_DIR}} {{.CLI_ARGS}}
 
 
