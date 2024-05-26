@@ -22,7 +22,6 @@
 /* Setup openssl */
 #ifdef OPENSSL_CRYPTO_LIB
 
-#include "nc-util.h"
 #include <openssl/crypto.h>
 
 #define _OSSL_FAIL(x) if(!(x)) return CSTATUS_FAIL;
@@ -114,7 +113,6 @@
 #ifndef _IMPL_CRYPTO_SHA256_HKDF_EXPAND
 	
 	#include <openssl/hmac.h>
-	#include "hkdf.h"
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_ossl_sha256_hkdf_expand
 
@@ -188,6 +186,8 @@
 #endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXPAND */
 
 #ifndef _IMPL_CHACHA20_CRYPT
+
+    #include <openssl/evp.h>
 
 	#define _IMPL_CHACHA20_CRYPT _ossl_chacha20_crypt
 

@@ -31,8 +31,6 @@
 
 #include <monocypher.h>
 
-#include "nc-util.h"
-
 /* Export secure memse0 */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
 

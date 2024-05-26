@@ -179,3 +179,18 @@ tasks:
      
      - for: [ 'include/openssl' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.OPENSSL_DIR}}/include/'
+
+  dev-set-secp256-headers:
+    vars:
+      SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
+      SECP256_GIT_BRANCH: 'v0.5.0'
+      SECP256_DIR: 'vendor/secp256k1'
+      TMP_DIR: '.update/openssl'
+    cmds:
+     - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
+       ignore_error: true
+     
+     - git clone --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
+     
+     - for: [ 'include/*' ]
+       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.SECP256_DIR}}/include/secp256k1/'

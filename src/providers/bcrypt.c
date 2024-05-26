@@ -31,9 +31,6 @@
 #include <Windows.h>
 #include <bcrypt.h>
 
-#include "nc-util.h"
-#include "hkdf.h"
-
 #define IF_BC_FAIL(x) if(!BCRYPT_SUCCESS(x)) 
 #define BC_FAIL(x) if(!BCRYPT_SUCCESS(x)) return CSTATUS_FAIL;
 

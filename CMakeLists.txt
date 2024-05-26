@@ -40,7 +40,7 @@ if(NC_FETCH_SECP256K1)
 	set(SECP256K1_BUILD_EXAMPLES OFF)
 	set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF)
 	set(SECP256K1_ENABLE_MODULE_ECDH ON)
-	set(SECP256K1_ENABLE_MODULE_RECOVERY ON)
+	set(SECP256K1_ENABLE_MODULE_RECOVERY OFF)
 	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
 	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
 	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF)
@@ -50,7 +50,7 @@ if(NC_FETCH_SECP256K1)
 	FetchContent_Declare(
 	  libsecp256k1
 	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				1ad5185cd42c0636104129fcc9f6a4bf9c67cc40 # release-0.4.1
+	  GIT_TAG				e3a885d42a7800c1ccebad94ad1e2b82c4df5c65 # release-0.5.0
 	  GIT_PROGRESS			TRUE
 	)
 
@@ -79,23 +79,22 @@ endif()
 #		MAIN PROJECT
 #-----------------------------
 
-include_directories(include)				#include the 'include' directory for the project
 set(CMAKE_C_STANDARD 90)					#Setup the compiler options for c90 shared library
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 set(NOSCRYPT_SRCS 
 	"src/noscrypt.c"	
-	"src/crypto/hkdf.c"
-	"src/crypto/nc-crypto.c"				#pulls in c impl files as needed
+	"src/hkdf.c"
+	"src/nc-crypto.c"				#pulls in c impl files as needed
 )
 
 set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
-	"include/nc-util.h"
-	"include/hkdf.h"
-	"include/nc-crypto.h"
+	"src/nc-util.h"
+	"src/hkdf.h"
+	"src/nc-crypto.h"
 )
 
 #static/shared library
@@ -103,6 +102,9 @@ add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 add_library(${_NC_PROJ_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 target_compile_features(${_NC_PROJ_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
 set_target_properties(${_NC_PROJ_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+target_include_directories(${_NC_PROJ_NAME} PRIVATE include)
+target_include_directories(${_NC_PROJ_NAME}_static PRIVATE include)
 
 #link libsecp256k1
 target_link_libraries(${_NC_PROJ_NAME} PRIVATE secp256k1)
@@ -343,6 +345,7 @@ if(NC_BUILD_TESTS)
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})
 	target_include_directories(nctest PRIVATE include)
+	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
