@@ -150,6 +150,8 @@
 		EVP_MD_CTX* ctx;
 		cstatus_t result;
 		struct nc_hkdf_fn_cb_struct handler;
+
+		result = CSTATUS_FAIL;
 	
 		/*
 		* NOTE! Hmac reusable flag must be set to allow for multiple
@@ -161,14 +163,22 @@
 			return CSTATUS_FAIL;
 		}
 
-		_OSSL_FAIL(EVP_DigestInit_ex2(ctx, EVP_sha256(), NULL))
+		if (!EVP_DigestInit_ex2(ctx, EVP_sha256(), NULL))
+		{
+			goto Cleanup;
+		}
 
-		_OSSL_FAIL(EVP_DigestUpdate(ctx, prk->data, prk->size));
+		if (!EVP_DigestUpdate(ctx, prk->data, prk->size)) 
+		{
+			goto Cleanup;
+		}
 		
 		handler.update = _ossl_hkdf_update;
 		handler.finish = _ossl_hkdf_finish;
 
 		result = hkdfExpandProcess(&handler, ctx, info, okm);
+
+	Cleanup:
 
 		EVP_MD_CTX_destroy(ctx);
 
@@ -176,5 +186,48 @@
 	}
 
 #endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXPAND */
+
+#ifndef _IMPL_CHACHA20_CRYPT
+
+	#define _IMPL_CHACHA20_CRYPT _ossl_chacha20_crypt
+
+	_IMPLSTB cstatus_t _ossl_chacha20_crypt(
+		const uint8_t* key,
+		const uint8_t* nonce,
+		const uint8_t* input,
+		uint8_t* output,
+		uint32_t dataLen
+	)
+	{
+		cstatus_t result;
+		EVP_CIPHER_CTX* ctx;
+
+		result = CSTATUS_FAIL;
+
+		if ((ctx = EVP_CIPHER_CTX_new()) == NULL)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		if (!EVP_EncryptInit_ex(ctx, EVP_chacha20(), NULL, key, nonce))
+		{
+			goto Cleanup;
+		}
+
+		if (!EVP_EncryptUpdate(ctx, output, (int*)&dataLen, input, dataLen))
+		{
+			goto Cleanup;
+		}
+
+		result = CSTATUS_OK;
+
+	Cleanup:
+
+		EVP_CIPHER_CTX_free(ctx);
+
+		return result;
+	}
+
+#endif
 
 #endif	/*!OPENSSL_CRYPTO_LIB */
