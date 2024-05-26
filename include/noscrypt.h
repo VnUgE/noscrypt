@@ -29,6 +29,10 @@
 #ifndef NOSCRYPT_H
 #define NOSCRYPT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
 #include <stdint.h>
 #include <stddef.h>
 #include "platform.h"
@@ -573,5 +577,9 @@ NC_EXPORT NCResult NCComputeMac(
 	uint32_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* !NOSCRYPT_H */
