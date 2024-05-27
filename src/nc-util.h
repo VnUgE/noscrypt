@@ -24,7 +24,7 @@
 #ifndef _NC_UTIL_H
 #define _NC_UTIL_H
 
-#include "platform.h"
+#include <platform.h>
 
 /* NULL */
 #ifndef NULL
@@ -48,7 +48,7 @@
 	* so static_assret very likely will not be available. 
 	*/
 	#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-		#define STATIC_ASSERT(x, m) static_assert(x, m)
+		#define STATIC_ASSERT(x, m) static_assert(x, m);
 	#elif !defined(STATIC_ASSERT)
 		#define STATIC_ASSERT(x, m)
 		#pragma message("Static assertions are not supported by this language version")

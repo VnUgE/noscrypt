@@ -56,6 +56,7 @@ if(NC_FETCH_SECP256K1)
 
 	FetchContent_MakeAvailable(libsecp256k1)
 	
+	#Must force FPIC when using secp256k1, ld linker complains otherwise
 	set_target_properties(
 		secp256k1 
 		secp256k1_precomputed 
@@ -79,10 +80,6 @@ endif()
 #		MAIN PROJECT
 #-----------------------------
 
-set(CMAKE_C_STANDARD 90)					#Setup the compiler options for c90 shared library
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
-
 set(NOSCRYPT_SRCS 
 	"src/noscrypt.c"	
 	"src/hkdf.c"
@@ -100,8 +97,22 @@ set(NOSCRYPT_HEADERS
 #static/shared library
 add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 add_library(${_NC_PROJ_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
-target_compile_features(${_NC_PROJ_NAME} PUBLIC c_std_90)	#force compiler to use c90 standard for library
-set_target_properties(${_NC_PROJ_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${_NC_PROJ_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)		#fPIC for shared library
+
+#set specific cmake commands to target our projects only
+set_target_properties(
+	${_NC_PROJ_NAME} 
+	${_NC_PROJ_NAME}_static 
+	
+	#Setup the compiler options for c90 standard
+	PROPERTIES 
+	C_STANDARD 90
+	C_STANDARD_REQUIRED ON
+	C_EXTENSIONS ON			#enables c++ style comments (only required for mbedtls stuff)
+)
+
+target_compile_features(${_NC_PROJ_NAME} PRIVATE c_std_90)	#force compiler to use c90 standard for library
+target_compile_features(${_NC_PROJ_NAME}_static PRIVATE c_std_90)	#force compiler to use c90 standard for library
 
 target_include_directories(${_NC_PROJ_NAME} PRIVATE include)
 target_include_directories(${_NC_PROJ_NAME}_static PRIVATE include)
@@ -135,6 +146,11 @@ endif()
 
 #Include mbedtls if enabled
 if(NC_FETCH_MBEDTLS)
+
+	###############
+	# NOTE: Must disable shared libraries to avoid linking errors when using mbedtls
+	###############
+	set(BUILD_SHARED_LIBS OFF)
 
 	set(ENABLE_PROGRAMS OFF)
 	set(ENABLE_TESTING OFF)

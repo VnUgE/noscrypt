@@ -21,6 +21,7 @@
 #include "noscrypt.h"
 
 #include "nc-util.h"
+#include "hkdf.h"
 #include "nc-crypto.h"
 
 #include <secp256k1/secp256k1_ecdh.h>
@@ -103,13 +104,17 @@ STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expe
 * Check that the fallback hkdf extract internal buffer is large enough
 * for full converstation key buffers 
 */
-STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for Safe HKDF operations")
+STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for safe HKDF operations")
 
 /*
 * Internal helper functions to do common structure conversions
 */
 
-static _nc_fn_inline int _convertToXonly(const NCContext* ctx, const NCPublicKey* compressedPubKey, secp256k1_xonly_pubkey* xonly)
+static _nc_fn_inline int _convertToXonly(
+	const NCContext* ctx, 
+	const NCPublicKey* compressedPubKey, 
+	secp256k1_xonly_pubkey* xonly
+)
 {
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure")
@@ -455,6 +460,8 @@ NC_EXPORT NCResult NC_CC NCInitContext(
 {
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_NULL_ARG(entropy, 1)
+
+	ZERO_FILL(ctx, sizeof(NCContext));
 
 	ctx->secpCtx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
 
