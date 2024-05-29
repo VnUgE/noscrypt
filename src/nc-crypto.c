@@ -20,6 +20,7 @@
 
 #include "nc-util.h"
 #include "nc-crypto.h"
+#include "hkdf.h"
 
 /*
 *  Functions are not forced inline, just suggested.
@@ -52,19 +53,19 @@
 /*
 * Prioritize embedded builds with mbedtls
 */
-#include "impl/mbedtls.c"
+#include "providers/mbedtls.c"
 
 /*
 * Include openssl as an alternative default 
 * implementation
 */
-#include "impl/openssl.c"
+#include "providers/openssl.c"
 
 /*
 * Include win32 platform specific fallback support 
 * using bcrypt.
 */
-#include "impl/bcrypt.c"
+#include "providers/bcrypt.c"
 
 /*
 * Handle default implementations of secure 
@@ -95,7 +96,7 @@
 * and portable, but not optimized for any specific
 * platform.
 */
-#include "impl/monocypher.c"
+#include "providers/monocypher.c"
 
 
 #ifdef _IMPL_CRYPTO_SHA256_HMAC

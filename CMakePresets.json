@@ -30,6 +30,20 @@
               "NC_BUILD_TESTS": true
             }
         },
+         {
+            "name": "x64-debug-openssl",
+            "displayName": "x64 Debug Openssl",
+            "inherits": "x64-debug",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+              "CMAKE_BUILD_TYPE": "Debug",
+              "NC_BUILD_TESTS": true,
+              "CRYPTO_LIB": "openssl"
+            }
+        },
         {
             "name": "x64-release",
             "displayName": "x64 Release",

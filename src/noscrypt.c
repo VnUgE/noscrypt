@@ -21,6 +21,7 @@
 #include "noscrypt.h"
 
 #include "nc-util.h"
+#include "hkdf.h"
 #include "nc-crypto.h"
 
 #include <secp256k1/secp256k1_ecdh.h>
@@ -52,10 +53,23 @@
 #endif /* !NC_DISABLE_INPUT_VALIDATION */
 
 /*
+* Actual, private defintion of the NCContext structure 
+* to allow for future development and ABI backords 
+* compatability.
+*/
+struct nc_ctx_struct {
+
+	void* secpCtx;
+
+};
+
+/*
 * The Nip44 constant salt
 * https://github.com/nostr-protocol/nips/blob/master/44.md#encryption
 */
 static const uint8_t Nip44ConstantSalt[8] = { 0x6e, 0x69, 0x70, 0x34, 0x34, 0x2d, 0x76, 0x32 };
+
+static struct nc_ctx_struct _ncSharedCtx;
 
 struct shared_secret {
 	uint8_t value[NC_SHARED_SEC_SIZE];
@@ -90,13 +104,17 @@ STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expe
 * Check that the fallback hkdf extract internal buffer is large enough
 * for full converstation key buffers 
 */
-STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for Safe HKDF operations")
+STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for safe HKDF operations")
 
 /*
 * Internal helper functions to do common structure conversions
 */
 
-static _nc_fn_inline int _convertToXonly(const NCContext* ctx, const NCPublicKey* compressedPubKey, secp256k1_xonly_pubkey* xonly)
+static _nc_fn_inline int _convertToXonly(
+	const NCContext* ctx, 
+	const NCPublicKey* compressedPubKey, 
+	secp256k1_xonly_pubkey* xonly
+)
 {
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
 	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure")
@@ -429,6 +447,12 @@ NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void)
 	return sizeof(NCContext);
 }
 
+NC_EXPORT NCContext* NC_CC NCGetSharedContext(void)
+{
+	/*Return the global address of the shared context structure */
+	return &_ncSharedCtx;
+}
+
 NC_EXPORT NCResult NC_CC NCInitContext(
 	NCContext* ctx, 
 	const uint8_t entropy[NC_CONTEXT_ENTROPY_SIZE]
@@ -436,6 +460,8 @@ NC_EXPORT NCResult NC_CC NCInitContext(
 {
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_NULL_ARG(entropy, 1)
+
+	ZERO_FILL(ctx, sizeof(NCContext));
 
 	ctx->secpCtx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
 
@@ -516,7 +542,9 @@ NC_EXPORT NCResult NC_CC NCValidateSecretKey(const NCContext* ctx, const NCSecre
 	CHECK_CONTEXT_STATE(ctx, 0)
 
 	/* Validate the secret key */
-	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key);
+	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key) == 1 
+		? NC_SUCCESS 
+		: E_OPERATION_FAILED;
 }
 
 /* Ecdsa Functions */

@@ -29,6 +29,10 @@
 #ifndef NOSCRYPT_H
 #define NOSCRYPT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
 #include <stdint.h>
 #include <stddef.h>
 #include "platform.h"
@@ -135,11 +139,7 @@ typedef struct xonly_pubkey_struct {
 /*
 	An opaque full library context object
 */
-typedef struct ctx_struct {
-
-	void* secpCtx;
-
-} NCContext;
+typedef struct nc_ctx_struct NCContext;
 
 /*
 * The encryption arguments structure. This structure is used to pass 
@@ -253,6 +253,16 @@ for dynamic allocation when context size structure is not known.
 * @return The size of the context struct in bytes
 */
 NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void);
+
+/*
+* Obtains a pointer to the process-wide shared structure to be 
+* used in single-threaded, resource constrained systems. NOTE:
+* this structure is not initalized and still requires calling
+* NCInitContext() before use.
+* @return The address of the process-wide, shared structure.
+*/
+NC_EXPORT NCContext* NC_CC NCGetSharedContext(void);
+
 /*
 * Initializes a context struct with the given entropy
 * @param ctx A pointer to the context structure to initialize
@@ -304,7 +314,7 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 is functionally the same as calling secp256k1_ec_seckey_verify. 
 * @param ctx A pointer to the existing library context
 * @param sk A pointer to the secret key to verify 
-* @return 1 if the secret key is valid, 0 if it is not, otherwise an error code
+* @return NC_SUCCESS if the secret key is valid, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCValidateSecretKey(
 	const NCContext* ctx, 
@@ -567,5 +577,9 @@ NC_EXPORT NCResult NCComputeMac(
 	uint32_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 );
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* !NOSCRYPT_H */

@@ -42,11 +42,13 @@ tasks:
     desc: "Builds a local copy of the library in a debug configuration, then runs the test executable"
     cmds:
      - task: build-debug
-     - cmd: cd {{.CMAKE_BUILD_DIR}} && {{if eq OS "windows"}}debug/nctest.exe{{else}}./nctest{{end}}
+     - cmd: cd {{.CMAKE_BUILD_DIR}} && ctest -C Debug --verbose
   
   install:
     desc: "Uses cmake to install the library on your system"
     cmds:
+     - cmd: echo "Installing noscrypt globally"
+       silent: true
      - cmd: cmake --install {{.CMAKE_BUILD_DIR}} {{.CLI_ARGS}}
 
 
@@ -119,10 +121,16 @@ tasks:
       #tar up the source
      - tar -czf "{{.TARGET_SOURCE}}" {{.SOURCE_FILES}}  
  
+#################################
+#
+#       DEV TASKS
+#
+#################################
   
   dev-update-deps:
      desc: "Updates vendored projects files (headers mostly) from their source repositories to the latest version"
      cmds:
+      - defer: powershell rm -Recurse '.update/' -Force
       - task: dev-update-monocypher
       - task: dev-update-mbedtls-headers
       - task: dev-update-openssl-headers
@@ -132,12 +140,10 @@ tasks:
       MC_GIT_URL: 'https://github.com/LoupVaillant/Monocypher'
       MC_GIT_BRANCH: 'master'       #NOTE: Always update to the latest master branch, then verify changes manually
       MC_DIR: 'vendor/monocypher'
-      TMP_DIR: '.task/mc'
+      TMP_DIR: '.update/mc'
     cmds:
      - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
        ignore_error: true
-     
-     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
      
      - git clone --branch {{.MC_GIT_BRANCH}} {{.MC_GIT_URL}} '{{.TMP_DIR}}' 
 
@@ -149,12 +155,10 @@ tasks:
       MBEDTLS_GIT_URL: 'https://github.com/Mbed-TLS/mbedtls'
       MBEDTLS_GIT_BRANCH: 'development'
       MBEDTLS_DIR: 'vendor/mbedtls'
-      TMP_DIR: '.task/mbedtls'
+      TMP_DIR: '.update/mbedtls'
     cmds:
      - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
        ignore_error: true
-
-     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
 
      - git clone --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
 
@@ -166,14 +170,27 @@ tasks:
       OPENSSL_GIT_URL: 'git://git.openssl.org/openssl.git'
       OPENSSL_GIT_BRANCH: 'master'
       OPENSSL_DIR: 'vendor/openssl'
-      TMP_DIR: '.task/openssl'
+      TMP_DIR: '.update/openssl'
     cmds:
      - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
        ignore_error: true
      
-     - defer: powershell rm -Recurse '{{.TMP_DIR}}' -Force
-     
      - git clone --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
      
      - for: [ 'include/openssl' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.OPENSSL_DIR}}/include/openssl/'
+       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.OPENSSL_DIR}}/include/'
+
+  dev-set-secp256-headers:
+    vars:
+      SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
+      SECP256_GIT_BRANCH: 'v0.5.0'
+      SECP256_DIR: 'vendor/secp256k1'
+      TMP_DIR: '.update/openssl'
+    cmds:
+     - cmd: powershell mkdir '{{.TMP_DIR}}' -Force
+       ignore_error: true
+     
+     - git clone --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
+     
+     - for: [ 'include/*' ]
+       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.SECP256_DIR}}/include/secp256k1/'

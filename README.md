@@ -1,4 +1,18 @@
-﻿# noscrypt
+﻿﻿
+# noscrypt  
+
+<h4 align="left">
+  <a href="https://github.com/VnUgE/noscrypt/blob/master/LICENSE">
+    <img src="https://img.shields.io/badge/license-LGPL2.1-green.svg" alt="LGPL2.1" />
+  </a>
+  <a href="https://github.com/VnUgE/noscrypt/tags">
+    <img src="https://img.shields.io/github/v/tag/vnuge/noscrypt" alt="Latest tag"/>
+  </a>
+  <a href="https://github.com/VnUgE/noscrypt/commits">
+    <img src="https://img.shields.io/github/last-commit/vnuge/noscrypt/master" alt="Latest commit"/>
+  </a>
+</h4>
+
 *A compact, C90 cross-platform, cryptography library built specifically for nostr*
 
 ## What is noscrypt?
@@ -16,8 +30,6 @@ NCComputeMac()
 NCVerifyMac()
 ... extended functions
 ```
-
-There are no functions that handle key generation, because secp256k1 simply requires a 32byte random number that needs to only be validated. I assume most applications will prefer and or have better random number generators than I can assume. Use your preferred or platform CSRNG.  
 
 ## Motivation
 At the time of building this project I have not come across any C-only libraries that exposed functionality for nostr specific cryptography. IMO it is easy to use the secp256k1 library incorrectly. In the process of building [NVault](https://github.com/VnUgE/NVault) NIP-44 came out in December and I realized my libraries were falling short for my needs for proper and safe nostr cryptographic operations, and I needed to start over and start with a good base that has all the basic  functionality built with trusted and tested libraries.  
@@ -47,11 +59,11 @@ The following table lists the supported platforms and cryptography libraries tha
 | FreeBSD | OpenSSL (3.0), Mbed-TLS         | GCC Only |    |
 
 
-## Packages and Docs
+## Getting started
 GitHub is simply a mirror for my projects. Extended documentation, pre-compiled binaries and source code bundles are always available on my website, along with PGP signatures and checksums.    
 
-[Docs and Articles](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)  
-[Builds and Source](https://www.vaughnnugent.com/resources/software/modules/noscrypt)  
+- **[Documentation](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)**  
+- **[Signed builds and sourcecode ](https://www.vaughnnugent.com/resources/software/modules/noscrypt)**  
 
 ### Getting the package
 There are 3 ways to get the source code to build this project.  
@@ -60,25 +72,54 @@ There are 3 ways to get the source code to build this project.
 3. Download a github archive or release when they are available  
 
 ## Building
-Please see extended documentation for all custom build configurations and tips. For now, here is enough to get most developers going. 
+**The following build commands may be incomplete.** Please read documentation (link above) for all custom build configurations and tips.
 
-### CMake
+### Using CMake
 ```shell
 cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE=Release
 ```
 
-#### Enable built-in tets and debug mode
+Enable built-in tests and debug mode
 ```shell
 cmake -S . -Bbuild/test -DCMAKE_BUILD_TYPE=Debug -DNC_BUILD_TESTS=ON
 ```
 
-#### Specify the crypto library
+Specify the crypto library
 ```shell
 cmake -S . -Bbuild/ -DCMAKE_BUILD_TYPE=Release -DCRYPTO_LIB=<openssl | mbedtls | bcrypt>
 ```
 
-### Easy mode
-A [Taskfile](https://taskfile.dev) file is included for easy building if you wish to build in easy mode! Use the `task --list-all` to see all available commands. The default command `task` will build the library in release mode using defaults. You may specify extra cmake build variables using the `USER_ARGS` variable on the command line.
+Install library globally
+```shell
+cmake --install build/
+```
+
+### Using Task
+A [Taskfile](https://taskfile.dev) file is included for easy building if you wish to build in easy mode! Use the `task --list` to see all available commands. The default command `task` will build the library locally in release mode using defaults. 
+
+```shell
+task 
+```
+Build in debug mode with tests enabled
+```shell
+task build-debug
+```
+
+Build in debug mode, with testing enabled, then runs the test executable after it's built
+```shell
+task test
+```
+
+Install globally. Run after running the default task or `build-debug` task
+```shell
+task install
+```
+
+Task accepts any extra arguments following `--` and passes them to the cmake build command.   
+Example:
+```shell
+task <command> -- -DCMAKE_X_X=x
+```
 
 ## Notes
 #### Builds

@@ -31,19 +31,21 @@
 /* Inline errors on linux in header files on linux */
 #ifndef inline
 	#define inline __inline
-#endif
-
-#include <mbedtls/md.h>
-#include <mbedtls/hkdf.h>
-#include <mbedtls/hmac_drbg.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/chacha20.h>
-#include <mbedtls/constant_time.h>
-
-#ifndef inline
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 	#undef inline
+#else
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 #endif
-
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
