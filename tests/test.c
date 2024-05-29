@@ -319,7 +319,7 @@ static int TestPublicApiArgumentValidation()
     TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
     TEST(NCValidateSecretKey(ctx, NULL),       ARG_ERROR_POS_1)
     /* Should fail with a zero key */
-	TEST(NCValidateSecretKey(ctx, NCToSecKey(zero32), NULL), E_OPERATION_FAILED)
+	TEST(NCValidateSecretKey(ctx, NCToSecKey(zero32)), E_OPERATION_FAILED)
 
     /*Verify sig64 args test*/
     TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),      ARG_ERROR_POS_0)
