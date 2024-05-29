@@ -314,7 +314,7 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 is functionally the same as calling secp256k1_ec_seckey_verify. 
 * @param ctx A pointer to the existing library context
 * @param sk A pointer to the secret key to verify 
-* @return 1 if the secret key is valid, 0 if it is not, otherwise an error code
+* @return NC_SUCCESS if the secret key is valid, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCValidateSecretKey(
 	const NCContext* ctx, 

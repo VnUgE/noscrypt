@@ -1,4 +1,5 @@
-﻿﻿# noscrypt  
+﻿﻿
+# noscrypt  
 
 <h4 align="left">
   <a href="https://github.com/VnUgE/noscrypt/blob/master/LICENSE">

@@ -42,7 +42,7 @@ tasks:
     desc: "Builds a local copy of the library in a debug configuration, then runs the test executable"
     cmds:
      - task: build-debug
-     - cmd: cd {{.CMAKE_BUILD_DIR}} && {{if eq OS "windows"}}debug/nctest.exe{{else}}./nctest{{end}}
+     - cmd: cd {{.CMAKE_BUILD_DIR}} && ctest -C Debug --verbose
   
   install:
     desc: "Uses cmake to install the library on your system"

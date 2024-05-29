@@ -184,7 +184,7 @@ static int InitKepair(const NCContext* context, NCSecretKey* secKey, NCPublicKey
     ENSURE(memcmp(zero32, secKey, 32) != 0);
 
     /* Ensure the key is valid, result should be 1 on success */
-    TEST(NCValidateSecretKey(context, secKey), 1);
+    TEST(NCValidateSecretKey(context, secKey), NC_SUCCESS);
 
     /* Generate a public key from the secret key */
     TEST(NCGetPublicKey(context, secKey, pubKey), NC_SUCCESS);
@@ -318,6 +318,8 @@ static int TestPublicApiArgumentValidation()
     /*Test null secret key*/
     TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
     TEST(NCValidateSecretKey(ctx, NULL),       ARG_ERROR_POS_1)
+    /* Should fail with a zero key */
+	TEST(NCValidateSecretKey(ctx, NCToSecKey(zero32), NULL), E_OPERATION_FAILED)
 
     /*Verify sig64 args test*/
     TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),      ARG_ERROR_POS_0)
@@ -441,7 +443,7 @@ static int TestKnownKeys(const NCContext* context)
     pubKey2 = FromHexString("421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a", sizeof(NCPublicKey));
    
     /*Test known keys*/
-    TEST(NCValidateSecretKey(context, NCToSecKey(secKey1->data)), 1);
+    TEST(NCValidateSecretKey(context, NCToSecKey(secKey1->data)), NC_SUCCESS);
 
     /* Recover a public key from secret key 1 */
     TEST(NCGetPublicKey(context, NCToSecKey(secKey1->data), &pubKey), NC_SUCCESS);
@@ -450,7 +452,7 @@ static int TestKnownKeys(const NCContext* context)
     TEST(memcmp(pubKey1->data, &pubKey, sizeof(pubKey)), 0);
 
     /* Repeat with second key */
-    TEST(NCValidateSecretKey(context, (NCSecretKey*)secKey2->data), 1);
+    TEST(NCValidateSecretKey(context, (NCSecretKey*)secKey2->data), NC_SUCCESS);
     TEST(NCGetPublicKey(context, (NCSecretKey*)secKey2->data, &pubKey), NC_SUCCESS);
     TEST(memcmp(pubKey2->data, &pubKey, sizeof(pubKey)), 0);    
 
@@ -501,8 +503,8 @@ static int TestCorrectEncryption(const NCContext* context)
     /* nonce is shared */
     FillRandomData(nonce, sizeof(nonce));
 
-    ENSURE(NCValidateSecretKey(context, &secKey1) == 1);
-    ENSURE(NCValidateSecretKey(context, &secKey2) == 1);
+    ENSURE(NCValidateSecretKey(context, &secKey1) == NC_SUCCESS);
+    ENSURE(NCValidateSecretKey(context, &secKey2) == NC_SUCCESS);
 
     ENSURE(NCGetPublicKey(context, &secKey1, &pubKey1) == NC_SUCCESS);
     ENSURE(NCGetPublicKey(context, &secKey2, &pubKey2) == NC_SUCCESS);

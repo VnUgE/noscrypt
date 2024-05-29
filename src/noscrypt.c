@@ -542,7 +542,9 @@ NC_EXPORT NCResult NC_CC NCValidateSecretKey(const NCContext* ctx, const NCSecre
 	CHECK_CONTEXT_STATE(ctx, 0)
 
 	/* Validate the secret key */
-	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key);
+	return secp256k1_ec_seckey_verify(ctx->secpCtx, sk->key) == 1 
+		? NC_SUCCESS 
+		: E_OPERATION_FAILED;
 }
 
 /* Ecdsa Functions */

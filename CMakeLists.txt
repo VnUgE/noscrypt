@@ -21,7 +21,7 @@ option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" O
 option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
 option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
 option(NC_INCLUDE_MONOCYPHER "Statically link to vendored monocypher library" ON)
-set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl)")
+set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl, bcrypt)")
 set(CRYPTO_LIB_DIR "" CACHE STRING "The path to the crypto library if it's not globally available")
 set(SECP256K1_LIB_DIR "" CACHE STRING "An optional path to search for the secp256k1 library if not globally installed")
 
@@ -354,7 +354,11 @@ endif()
 target_compile_definitions(${_NC_PROJ_NAME} PRIVATE ${NC_PROJ_DEFINTIONS})
 target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS})
 
-#TESTS
+############################
+#
+#		TESTS
+#
+###########################
 if(NC_BUILD_TESTS)
 
 	#add test executable and link to shared library for more realistic usage
@@ -365,6 +369,15 @@ if(NC_BUILD_TESTS)
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
+
+	enable_testing()
+
+	add_test(
+		NAME nctest 
+		COMMAND nctest
+		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+	)
+
 endif()
 
 ###########################
