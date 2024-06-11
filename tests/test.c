@@ -44,7 +44,7 @@
 
 /*Prints a string literal to the console*/
 #define PRINTL(x) puts(x); puts("\n");
-#define ENSURE(x) if(!(x)) { puts("Assumption failed!\n"); return 1; } 
+#define ENSURE(x) if(!(x)) { printf("Test assumption failed on line %d\n", __LINE__); return 1; } 
 #define TEST(x, expected) printf("\tTesting %s\n", #x); if(((long)x) != ((long)expected)) \
 { printf("FAILED: Expected %ld but got %ld @ callsite %s. Line: %d \n", ((long)expected), ((long)x), #x, __LINE__); return 1; }
 
@@ -68,28 +68,31 @@
 
 /*Pre-computed constants for argument errors */
 #define ARG_ERROR_POS_0 E_NULL_PTR
-#define ARG_ERROR_POS_1 NCResultWithArgPosition(E_NULL_PTR, 0x01)
-#define ARG_ERROR_POS_2 NCResultWithArgPosition(E_NULL_PTR, 0x02)
-#define ARG_ERROR_POS_3 NCResultWithArgPosition(E_NULL_PTR, 0x03)
-#define ARG_ERROR_POS_4 NCResultWithArgPosition(E_NULL_PTR, 0x04)
-#define ARG_ERROR_POS_5 NCResultWithArgPosition(E_NULL_PTR, 0x05)
-#define ARG_ERROR_POS_6 NCResultWithArgPosition(E_NULL_PTR, 0x06)
+#define ARG_ERROR(pos) NCResultWithArgPosition(E_NULL_PTR, pos) 
+#define ARG_ERROR_POS_1 ARG_ERROR(0x01)
+#define ARG_ERROR_POS_2 ARG_ERROR(0x02)
+#define ARG_ERROR_POS_3 ARG_ERROR(0x03)
+#define ARG_ERROR_POS_4 ARG_ERROR(0x04)
+#define ARG_ERROR_POS_5 ARG_ERROR(0x05)
+#define ARG_ERROR_POS_6 ARG_ERROR(0x06)
 
 #define ARG_RANGE_ERROR_POS_0 E_ARGUMENT_OUT_OF_RANGE
-#define ARG_RANGE_ERROR_POS_1 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x01)
-#define ARG_RANGE_ERROR_POS_2 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x02)
-#define ARG_RANGE_ERROR_POS_3 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x03)
-#define ARG_RANGE_ERROR_POS_4 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x04)
-#define ARG_RANGE_ERROR_POS_5 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x05)
-#define ARG_RANGE_ERROR_POS_6 NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, 0x06)
+#define ARG_RANGE_ERROR(pos) NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, pos)
+#define ARG_RANGE_ERROR_POS_1 ARG_RANGE_ERROR(0x01)
+#define ARG_RANGE_ERROR_POS_2 ARG_RANGE_ERROR(0x02)
+#define ARG_RANGE_ERROR_POS_3 ARG_RANGE_ERROR(0x03)
+#define ARG_RANGE_ERROR_POS_4 ARG_RANGE_ERROR(0x04)
+#define ARG_RANGE_ERROR_POS_5 ARG_RANGE_ERROR(0x05)
+#define ARG_RANGE_ERROR_POS_6 ARG_RANGE_ERROR(0x06)
 
 #define ARG_INVALID_ERROR_POS_0 E_INVALID_ARG
-#define ARG_INVALID_ERROR_POS_1 NCResultWithArgPosition(E_INVALID_ARG, 0x01)
-#define ARG_INVALID_ERROR_POS_2 NCResultWithArgPosition(E_INVALID_ARG, 0x02)
-#define ARG_INVALID_ERROR_POS_3 NCResultWithArgPosition(E_INVALID_ARG, 0x03)
-#define ARG_INVALID_ERROR_POS_4 NCResultWithArgPosition(E_INVALID_ARG, 0x04)
-#define ARG_INVALID_ERROR_POS_5 NCResultWithArgPosition(E_INVALID_ARG, 0x05)
-#define ARG_INVALID_ERROR_POS_6 NCResultWithArgPosition(E_INVALID_ARG, 0x06)
+#define ARG_INVALID_ERROR(pos) NCResultWithArgPosition(E_INVALID_ARG, pos)
+#define ARG_INVALID_ERROR_POS_1 ARG_INVALID_ERROR(0x01)
+#define ARG_INVALID_ERROR_POS_2 ARG_INVALID_ERROR(0x02)
+#define ARG_INVALID_ERROR_POS_3 ARG_INVALID_ERROR(0x03)
+#define ARG_INVALID_ERROR_POS_4 ARG_INVALID_ERROR(0x04)
+#define ARG_INVALID_ERROR_POS_5 ARG_INVALID_ERROR(0x05)
+#define ARG_INVALID_ERROR_POS_6 ARG_INVALID_ERROR(0x06)
 
 static int RunTests(void);
 static void FillRandomData(void* pbBuffer, size_t length);
@@ -273,12 +276,68 @@ static int TestPublicApiArgumentValidation()
     uint8_t nonce[NC_ENCRYPTION_NONCE_SIZE];
 
     NCEncryptionArgs cryptoData;
-    cryptoData.dataSize = sizeof(zero32);
-    cryptoData.inputData = zero32;
-    cryptoData.outputData = sig64; /*just an arbitrary writeable buffer*/
-    cryptoData.nonce32 = nonce;
-    cryptoData.hmacKeyOut32 = hmacKeyOut;
-    cryptoData.version = NC_ENC_VERSION_NIP44;
+
+    {
+        /*
+        * Test arguments for encryption properties
+        */
+
+		uint8_t testBuff32[32];
+
+		TEST(NCSetEncryptionProperty(NULL, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44), ARG_ERROR_POS_0)
+		TEST(NCSetEncryptionProperty(&cryptoData, 0, 1), E_INVALID_ARG)
+
+        TEST(NCSetEncryptionData(NULL, zero32, sig64, sizeof(zero32)), ARG_ERROR_POS_0)
+		TEST(NCSetEncryptionData(&cryptoData, NULL, sig64, sizeof(zero32)), ARG_ERROR_POS_1)
+		TEST(NCSetEncryptionData(&cryptoData, zero32, NULL, sizeof(zero32)), ARG_ERROR_POS_2)
+		TEST(NCSetEncryptionData(&cryptoData, zero32, sig64, 0), ARG_RANGE_ERROR_POS_3)
+
+        /* Setting any version specific value should fail */
+        TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, sizeof(nonce)), E_VERSION_NOT_SUPPORTED)
+
+        /* Set to nip44 to continue nip44 tests */
+        TEST(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44), NC_SUCCESS)
+
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, 0, nonce, sizeof(nonce)), E_INVALID_ARG)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, NULL, sizeof(nonce)), ARG_ERROR_POS_2)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, 0), ARG_RANGE_ERROR_POS_3)
+		/* Nonce size should fail if smaller than the required nonce size */
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, NC_ENCRYPTION_NONCE_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, 0, hmacKeyOut, sizeof(hmacKeyOut)), E_INVALID_ARG)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, NULL, sizeof(hmacKeyOut)), ARG_ERROR_POS_2)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, 0), ARG_RANGE_ERROR_POS_3)
+        /* Key size should fail if smaller than the required nip44 key size */
+        TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, NC_HMAC_KEY_SIZE - 1), ARG_RANGE_ERROR_POS_3) 
+		
+        /* Test for nip04 */
+        
+        /* Any nip04 specific properties should fail since nip44 has already been set */
+
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_IV, testBuff32, sizeof(testBuff32)), E_VERSION_NOT_SUPPORTED)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, sizeof(testBuff32)), E_VERSION_NOT_SUPPORTED)
+
+		/* Set to nip04 to continue nip04 tests */
+		ENSURE(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP04) == NC_SUCCESS)
+
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_IV, NULL, sizeof(testBuff32)), ARG_ERROR_POS_2)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_IV, testBuff32, 0), ARG_RANGE_ERROR_POS_3)
+        /* IV size should fail if smaller than IV */
+        TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_IV, testBuff32, NC_NIP04_AES_IV_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+
+
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, NULL, sizeof(testBuff32)), ARG_ERROR_POS_2)
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, 0), ARG_RANGE_ERROR_POS_3)
+		/* Key size should fail if smaller than the required nip04 key size */
+		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, NC_NIP04_AES_KEY_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+    }
+
+	ENSURE(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44) == NC_SUCCESS);
+    ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, sizeof(nonce)) == NC_SUCCESS);
+    ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, sizeof(hmacKeyOut)) == NC_SUCCESS);
+	
+    /* Assign the encryption material */
+    ENSURE(NCSetEncryptionData(&cryptoData, zero32, sig64, sizeof(zero32)) == NC_SUCCESS);
 
     PRINTL("TEST: Public API argument validation tests")
 
@@ -308,27 +367,27 @@ static int TestPublicApiArgumentValidation()
     TEST(NCDestroyContext(NULL), ARG_ERROR_POS_0)
 
     /*reinit*/
-    TEST(NCReInitContext(NULL, ctxRandom),  ARG_ERROR_POS_0)
-    TEST(NCReInitContext(ctx, NULL),       ARG_ERROR_POS_1)
+    TEST(NCReInitContext(NULL, ctxRandom),      ARG_ERROR_POS_0)
+    TEST(NCReInitContext(ctx, NULL),            ARG_ERROR_POS_1)
 
     /*Test null secret key*/
-    TEST(NCGetPublicKey(ctx, NULL, &pubKey),   ARG_ERROR_POS_1)
-    TEST(NCGetPublicKey(ctx, &secKey, NULL),   ARG_ERROR_POS_2)
+    TEST(NCGetPublicKey(ctx, NULL, &pubKey),    ARG_ERROR_POS_1)
+    TEST(NCGetPublicKey(ctx, &secKey, NULL),    ARG_ERROR_POS_2)
 
     /*Test null secret key*/
     TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
-    TEST(NCValidateSecretKey(ctx, NULL),       ARG_ERROR_POS_1)
+    TEST(NCValidateSecretKey(ctx, NULL),        ARG_ERROR_POS_1)
     /* Should fail with a zero key */
 	TEST(NCValidateSecretKey(ctx, NCToSecKey(zero32)), E_OPERATION_FAILED)
 
     /*Verify sig64 args test*/
-    TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),      ARG_ERROR_POS_0)
+    TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),     ARG_ERROR_POS_0)
     TEST(NCVerifyDigest(ctx, NULL, zero32, sig64),         ARG_ERROR_POS_1)
     TEST(NCVerifyDigest(ctx, &pubKey, NULL, sig64),        ARG_ERROR_POS_2)
     TEST(NCVerifyDigest(ctx, &pubKey, zero32, NULL),       ARG_ERROR_POS_3)
 
     /*Test verify data args*/
-    TEST(NCVerifyData(NULL, &pubKey, zero32, 32, sig64),    ARG_ERROR_POS_0)
+    TEST(NCVerifyData(NULL, &pubKey, zero32, 32, sig64),   ARG_ERROR_POS_0)
     TEST(NCVerifyData(ctx, NULL, zero32, 32, sig64),       ARG_ERROR_POS_1)
     TEST(NCVerifyData(ctx, &pubKey, NULL, 32, sig64),      ARG_ERROR_POS_2)
     TEST(NCVerifyData(ctx, &pubKey, zero32, 0, sig64),     ARG_RANGE_ERROR_POS_3)
@@ -336,24 +395,24 @@ static int TestPublicApiArgumentValidation()
 
     /*Test null sign data args*/
     TEST(NCSignData(NULL, &secKey, zero32, zero32, 32, sig64),  ARG_ERROR_POS_0)
-    TEST(NCSignData(ctx, NULL, zero32, zero32, 32, sig64),     ARG_ERROR_POS_1)
-    TEST(NCSignData(ctx, &secKey, NULL, zero32, 32, sig64),    ARG_ERROR_POS_2)
-    TEST(NCSignData(ctx, &secKey, zero32, NULL, 32, sig64),    ARG_ERROR_POS_3)
-    TEST(NCSignData(ctx, &secKey, zero32, zero32, 0, sig64),   ARG_RANGE_ERROR_POS_4)
-    TEST(NCSignData(ctx, &secKey, zero32, zero32, 32, NULL),   ARG_ERROR_POS_5)
+    TEST(NCSignData(ctx, NULL, zero32, zero32, 32, sig64),      ARG_ERROR_POS_1)
+    TEST(NCSignData(ctx, &secKey, NULL, zero32, 32, sig64),     ARG_ERROR_POS_2)
+    TEST(NCSignData(ctx, &secKey, zero32, NULL, 32, sig64),     ARG_ERROR_POS_3)
+    TEST(NCSignData(ctx, &secKey, zero32, zero32, 0, sig64),    ARG_RANGE_ERROR_POS_4)
+    TEST(NCSignData(ctx, &secKey, zero32, zero32, 32, NULL),    ARG_ERROR_POS_5)
    
     /*Test null sign digest args*/
     TEST(NCSignDigest(NULL, &secKey, zero32, zero32, sig64),    ARG_ERROR_POS_0)
-    TEST(NCSignDigest(ctx, NULL, zero32, zero32, sig64),       ARG_ERROR_POS_1)
-    TEST(NCSignDigest(ctx, &secKey, NULL, zero32, sig64),      ARG_ERROR_POS_2)
-	TEST(NCSignDigest(ctx, &secKey, zero32, NULL, sig64),      ARG_ERROR_POS_3)
-    TEST(NCSignDigest(ctx, &secKey, zero32, zero32, NULL),     ARG_ERROR_POS_4)
+    TEST(NCSignDigest(ctx, NULL, zero32, zero32, sig64),        ARG_ERROR_POS_1)
+    TEST(NCSignDigest(ctx, &secKey, NULL, zero32, sig64),       ARG_ERROR_POS_2)
+	TEST(NCSignDigest(ctx, &secKey, zero32, NULL, sig64),       ARG_ERROR_POS_3)
+    TEST(NCSignDigest(ctx, &secKey, zero32, zero32, NULL),      ARG_ERROR_POS_4)
 
     /*Test null encrypt args*/
     TEST(NCEncrypt(NULL, &secKey, &pubKey, &cryptoData),    ARG_ERROR_POS_0)
-    TEST(NCEncrypt(ctx, NULL, &pubKey, &cryptoData),       ARG_ERROR_POS_1)
-	TEST(NCEncrypt(ctx, &secKey, NULL, &cryptoData),       ARG_ERROR_POS_2)
-    TEST(NCEncrypt(ctx, &secKey, &pubKey, NULL),           ARG_ERROR_POS_3)
+    TEST(NCEncrypt(ctx, NULL, &pubKey, &cryptoData),        ARG_ERROR_POS_1)
+	TEST(NCEncrypt(ctx, &secKey, NULL, &cryptoData),        ARG_ERROR_POS_2)
+    TEST(NCEncrypt(ctx, &secKey, &pubKey, NULL),            ARG_ERROR_POS_3)
 
     /*Test invalid data size*/
     cryptoData.dataSize = 0;
@@ -481,13 +540,12 @@ static int TestCorrectEncryption(const NCContext* context)
     NCEncryptionArgs cryptoData;
     NCMacVerifyArgs macVerifyArgs;
 
-    /* setup the crypto data structure */
-    cryptoData.dataSize = TEST_ENC_DATA_SIZE;
-    cryptoData.inputData = plainText;
-    cryptoData.outputData = cipherText;
-    cryptoData.nonce32 = nonce;
-    cryptoData.hmacKeyOut32 = hmacKeyOut;
-    cryptoData.version = NC_ENC_VERSION_NIP44;
+    ENSURE(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44) == NC_SUCCESS);
+    ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, sizeof(nonce)) == NC_SUCCESS);
+    ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, NC_HMAC_KEY_SIZE) == NC_SUCCESS);
+
+    /* Assign the encryption material */
+    ENSURE(NCSetEncryptionData(&cryptoData, plainText, cipherText, TEST_ENC_DATA_SIZE) == NC_SUCCESS);
    
     macVerifyArgs.nonce32 = nonce;    /* nonce is shared */
     macVerifyArgs.mac32 = mac;

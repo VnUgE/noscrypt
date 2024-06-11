@@ -29,6 +29,8 @@
 #define CHACHA_NONCE_SIZE		0x0cu		/* Size of 12 is set by the cipher spec */
 #define CHACHA_KEY_SIZE			0x20u		/* Size of 32 is set by the cipher spec */
 #define SHA256_DIGEST_SIZE		0x20u		/* Size of 32 is set by the cipher spec */
+#define AES_IV_SIZE				0x10u		/* CBC IV size matches the AES block size of 128 */
+#define AES_KEY_SIZE			0x20u		/* AES 256 key size */
 
 typedef uint8_t cstatus_t;
 #define CSTATUS_OK				((cstatus_t)0x01u)
@@ -51,6 +53,14 @@ cstatus_t ncCryptoSha256HkdfExtract(const cspan_t* salt, const cspan_t* ikm, sha
 cstatus_t ncCryptoChacha20(
 	const uint8_t key[CHACHA_KEY_SIZE],
 	const uint8_t nonce[CHACHA_NONCE_SIZE],
+	const uint8_t* input,
+	uint8_t* output,
+	uint32_t dataSize
+);
+
+cstatus_t ncAes256CBCEncrypt(
+	const uint8_t key[32],
+	const uint8_t iv[16],
 	const uint8_t* input,
 	uint8_t* output,
 	uint32_t dataSize
