@@ -41,6 +41,7 @@
 *		_IMPL_CRYPTO_SHA256_DIGEST			standard sha256 digest function
 * 		_IMPL_CRYPTO_SHA256_HKDF_EXPAND		hkdf expand function
 * 		_IMPL_CRYPTO_SHA256_HKDF_EXTRACT	hkdf extract function
+*       _IMPL_AES256_CBC_CRYPT				performs an AES 256 CBC encryption/decryption
 * 
 * Macros are used to allow the preprocessor to select the correct implementation
 * or raise errors if no implementation is defined.
@@ -49,6 +50,26 @@
 * calling function, and should return CSTATUS_OK on success, CSTATUS_FAIL on failure.
 */
 
+#define UNREFPARAM(x) (void)(x)
+
+_IMPLSTB cstatus_t _dummyAesFunc(
+	const uint8_t key[32], 
+	const uint8_t iv[16], 
+	const uint8_t* input, 
+	uint8_t* output, 
+	uint32_t dataSize
+)
+{
+	UNREFPARAM(key);
+	UNREFPARAM(iv);
+	UNREFPARAM(input);
+	UNREFPARAM(output);
+	UNREFPARAM(dataSize);
+
+	return CSTATUS_FAIL;
+}
+
+#define _IMPL_AES256_CBC_CRYPT _dummyAesFunc
 
 /*
 * Prioritize embedded builds with mbedtls
@@ -281,4 +302,24 @@ cstatus_t ncCryptoChacha20(
 #endif /* !_IMPL_CHACHA20_CRYPT */
 
 	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output, dataSize);
+}
+
+cstatus_t ncAes256CBCEncrypt(
+	const uint8_t key[32],
+	const uint8_t iv[16],
+	const uint8_t* input,
+	uint8_t* output,
+	uint32_t dataSize
+)
+{
+	DEBUG_ASSERT2(key != NULL, "Expected key to be non-null")
+	DEBUG_ASSERT2(iv != NULL, "Expected iv to be non-null")
+	DEBUG_ASSERT2(input != NULL, "Expected input to be non-null")
+	DEBUG_ASSERT2(output != NULL, "Expected output to be non-null")
+
+#ifndef _IMPL_AES256_CBC_CRYPT
+	#error "No AES256 CBC encrypt implementation defined"
+#endif /* !_IMPL_AES256_CBC_CRYPT */
+
+	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output, dataSize);
 }

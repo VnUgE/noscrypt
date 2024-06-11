@@ -293,7 +293,7 @@ static _nc_fn_inline cstatus_t _getMessageKey(
 	return ncCryptoSha256HkdfExpand(&prkSpan, nonce, &okmSpan);
 }
 
-static _nc_fn_inline NCResult _encryptEx(
+static _nc_fn_inline NCResult _encryptNip44Ex(
 	const NCContext* ctx, 
 	const struct conversation_key* ck, 
 	uint8_t* hmacKey,
@@ -312,7 +312,7 @@ static _nc_fn_inline NCResult _encryptEx(
 
 	result = NC_SUCCESS;
 
-	ncSpanInitC(&nonceSpan, args->nonce32, NC_ENCRYPTION_NONCE_SIZE);
+	ncSpanInitC(&nonceSpan, args->nonceData, NC_ENCRYPTION_NONCE_SIZE);
 	
 	/* Message key will be derrived on every encryption call */
 	if (_getMessageKey(ck, &nonceSpan, &messageKey) != CSTATUS_OK)
@@ -339,7 +339,7 @@ Cleanup:
 	return result;
 }
 
-static _nc_fn_inline NCResult _decryptEx(const NCContext* ctx, const struct conversation_key* ck, NCEncryptionArgs* args)
+static _nc_fn_inline NCResult _decryptNip44Ex(const NCContext* ctx, const struct conversation_key* ck, NCEncryptionArgs* args)
 {
 	NCResult result;
 	cspan_t nonceSpan;
@@ -352,7 +352,7 @@ static _nc_fn_inline NCResult _decryptEx(const NCContext* ctx, const struct conv
 
 	result = NC_SUCCESS;
 
-	ncSpanInitC(&nonceSpan, args->nonce32, NC_ENCRYPTION_NONCE_SIZE);
+	ncSpanInitC(&nonceSpan, args->nonceData, NC_ENCRYPTION_NONCE_SIZE);
 	
 	if (_getMessageKey(ck, &nonceSpan, &messageKey) != CSTATUS_OK)
 	{
@@ -646,7 +646,6 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 		return E_INVALID_ARG;
 	}
 
-	/* Verify the signature */
 	result = secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly);
 	
 	ZERO_FILL(&xonly, sizeof(xonly));
@@ -679,7 +678,6 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 		return E_INVALID_ARG;
 	}
 
-	/* Verify the freshly computed digest */
 	return NCVerifyDigest(ctx, pk, digest, sig64);
 }
 
@@ -765,11 +763,23 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_INVALID_ARG(args->nonce32, 2)
-	CHECK_INVALID_ARG(args->hmacKeyOut32, 2)
+	CHECK_INVALID_ARG(args->nonceData, 2)
+	CHECK_INVALID_ARG(args->keyData, 2)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
-	return _encryptEx(ctx, (struct conversation_key*)conversationKey, args->hmacKeyOut32, args);
+	switch (args->version) 
+	{
+		/* TODO: Implement nip04 */
+		case NC_ENC_VERSION_NIP04:
+			return E_VERSION_NOT_SUPPORTED;
+
+		case NC_ENC_VERSION_NIP44:
+			return _encryptNip44Ex(ctx, (struct conversation_key*)conversationKey, args->keyData, args);
+
+		default:
+			return E_VERSION_NOT_SUPPORTED;
+	}
+
 }
 
 NC_EXPORT NCResult NC_CC NCEncrypt(
@@ -792,34 +802,40 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	/* Validate input/output data */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonce32, 3)
-	CHECK_INVALID_ARG(args->hmacKeyOut32, 3)
+	CHECK_INVALID_ARG(args->nonceData, 3)
+	CHECK_INVALID_ARG(args->keyData, 3)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+
+	result = E_OPERATION_FAILED;
 
 	switch(args->version)
 	{		
 		case NC_ENC_VERSION_NIP44:
-			break; /* Allow nip44 */
+		{
+			/* Compute the shared point */
+			if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
+			{
+				goto Cleanup;
+			}
+
+			/* Compute the conversation key from secret and pubkic keys */
+			if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
+			{
+				goto Cleanup;
+			}
+
+			result = _encryptNip44Ex(ctx, &conversationKey, args->keyData, args);
+		}
+
+		break;
 
 		/* At the moment nip04 compatability is not supported */
 		case NC_ENC_VERSION_NIP04:
 		default:
-			return E_VERSION_NOT_SUPPORTED;
+			result = E_VERSION_NOT_SUPPORTED;
+			break;
 	}
 	
-	/* Compute the shared point */
-	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
-	{
-		goto Cleanup;
-	}
-
-	/* Compute the conversation key from secret and pubkic keys */
-	if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
-	{
-		goto Cleanup;
-	}
-
-	result = _encryptEx(ctx, &conversationKey, args->hmacKeyOut32, args);	
 
 Cleanup:
 	/* Clean up sensitive data */
@@ -843,10 +859,18 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_INVALID_ARG(args->nonce32, 2)
+	CHECK_INVALID_ARG(args->nonceData, 2)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
 
-	return _decryptEx(ctx, (struct conversation_key*)conversationKey, args);
+	switch (args->version)
+	{
+		case NC_ENC_VERSION_NIP44:
+			return _decryptNip44Ex(ctx, (struct conversation_key*)conversationKey, args);
+
+		case NC_ENC_VERSION_NIP04:
+		default:
+			return E_VERSION_NOT_SUPPORTED;
+	}
 }
 
 NC_EXPORT NCResult NC_CC NCDecrypt(
@@ -869,20 +893,34 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonce32, 3)
+	CHECK_INVALID_ARG(args->nonceData, 3)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
-	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
-	{
-		goto Cleanup;
-	}
+	result = E_OPERATION_FAILED;
 
-	if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
+	switch (args->version)
 	{
-		goto Cleanup;
-	}
+		case NC_ENC_VERSION_NIP44:
+		{
+			if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
+			{
+				goto Cleanup;
+			}
 
-	result = _decryptEx(ctx, &conversationKey, args);
+			if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
+			{
+				goto Cleanup;
+			}
+
+			result = _decryptNip44Ex(ctx, &conversationKey, args);
+		}
+		break;
+
+		case NC_ENC_VERSION_NIP04:
+		default:
+			result = E_VERSION_NOT_SUPPORTED;
+			break;
+	}
 
 Cleanup:
 	/* Clean up sensitive data */
@@ -978,4 +1016,125 @@ Cleanup:
 	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	return result;
+}
+
+#define ENSURE_ENC_MODE(args, mode) if(args->version != mode) return E_VERSION_NOT_SUPPORTED;
+
+NC_EXPORT NCResult NCSetEncryptionPropertyEx(
+	NCEncryptionArgs* args,
+	uint32_t property,
+	uint8_t* value,
+	uint32_t valueLen
+)
+{
+
+	CHECK_NULL_ARG(args, 0)
+	CHECK_NULL_ARG(value, 2)
+
+	switch (property)
+	{
+		case NC_ENC_SET_VERSION:
+		
+			/* Ensure version is proper length */
+			CHECK_ARG_RANGE(valueLen, sizeof(uint32_t), sizeof(uint32_t), 2)
+
+			args->version = *((uint32_t*)value);
+		
+			return NC_SUCCESS;
+
+		case NC_ENC_SET_NIP04_IV:
+			/*
+			* The safest way to store the nip04 IV is in the nonce
+			* field. An IV is essentially a nonce. A secure random
+			* number used to encrypt the first block of a CBC chain.
+			*/
+			
+			CHECK_ARG_RANGE(valueLen, AES_IV_SIZE, UINT32_MAX, 3)
+
+			ENSURE_ENC_MODE(args, NC_ENC_VERSION_NIP04)
+
+			args->nonceData = value;
+
+			return NC_SUCCESS;
+		
+
+		case NC_ENC_SET_NIP04_KEY:
+			/*
+			* The AES key is stored in the hmac key field, since
+			* it won't be used for the operating and should be the same size
+			* as the hmac key.
+			*/
+			
+			CHECK_ARG_RANGE(valueLen, AES_KEY_SIZE, UINT32_MAX, 3)
+
+			ENSURE_ENC_MODE(args, NC_ENC_VERSION_NIP04)
+
+			args->keyData = value;
+
+			return NC_SUCCESS;
+
+		case NC_ENC_SET_NIP44_NONCE:
+		
+			/* Nonce buffer must be at least the size, max doesnt matter */
+			CHECK_ARG_RANGE(valueLen, NC_ENCRYPTION_NONCE_SIZE, UINT32_MAX, 3)
+
+			/* Nonce is only used in nip44 mode */
+			ENSURE_ENC_MODE(args, NC_ENC_VERSION_NIP44)
+
+			args->nonceData = value;
+
+			return NC_SUCCESS;
+
+		case NC_ENC_SET_NIP44_MAC_KEY:
+			
+			/* The maximum size of the buffer doesn't matter as long as its larger than the key size */
+			CHECK_ARG_RANGE(valueLen, NC_HMAC_KEY_SIZE, UINT32_MAX, 3)
+
+			/* Mac key is only used in nip44 mode */
+			ENSURE_ENC_MODE(args, NC_ENC_VERSION_NIP44)
+
+			/*
+			* During encryption the key data buffer is used 
+			* to write the hmac hey used for MAC computation 
+			* operations.
+			*/
+			args->keyData = value;
+
+			return NC_SUCCESS;
+	}
+
+	return E_INVALID_ARG;
+}
+
+NC_EXPORT NCResult NCSetEncryptionProperty(
+	NCEncryptionArgs* args,
+	uint32_t property,
+	uint32_t value
+)
+{
+	return NCSetEncryptionPropertyEx(
+		args, 
+		property, 
+		(uint8_t*)&value, 
+		sizeof(uint32_t)
+	);
+}
+
+NC_EXPORT NCResult NCSetEncryptionData(
+	NCEncryptionArgs* args,
+	const uint8_t* input,
+	uint8_t* output,
+	uint32_t dataSize
+)
+{
+	CHECK_NULL_ARG(args, 0)
+	CHECK_NULL_ARG(input, 1)
+	CHECK_NULL_ARG(output, 2)
+	CHECK_ARG_RANGE(dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+
+	args->inputData = input;
+	args->outputData = output;
+	args->dataSize = dataSize;
+
+	return NC_SUCCESS;	
 }
