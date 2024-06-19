@@ -21,8 +21,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct NCEncryptionArgs
     {
-        public byte* nonce32;
-        public byte* hmacKeyOut32;
+        public byte* nonceData;
+        public byte* keyData;
         public byte* inputData;
         public byte* outputData;
         public uint dataSize;

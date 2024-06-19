@@ -38,6 +38,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         public readonly NCDecryptDelegate NCDecrypt;
         public readonly NCVerifyMacDelegate NCVerifyMac;
         public readonly NCComputeMacDelegate NCComputeMac;
+        public readonly NCSetEncryptionDataDelegate NCSetEncryptionData;
+        public readonly NCSetEncryptionPropertyDelegate NCSetEncryptionProperty;
+        public readonly NCSetEncryptionPropertyExDelegate NCSetEncryptionPropertyEx;
 
 #if DEBUG
         public readonly NCGetConversationKeyDelegate NCGetConversationKey;
@@ -60,6 +63,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             NCDecrypt = library.DangerousGetFunction<NCDecryptDelegate>();
             NCVerifyMac = library.DangerousGetFunction<NCVerifyMacDelegate>();
             NCComputeMac = library.DangerousGetFunction<NCComputeMacDelegate>();
+            NCSetEncryptionData = library.DangerousGetFunction<NCSetEncryptionDataDelegate>();
+            NCSetEncryptionProperty = library.DangerousGetFunction<NCSetEncryptionPropertyDelegate>();
+            NCSetEncryptionPropertyEx = library.DangerousGetFunction<NCSetEncryptionPropertyExDelegate>();
 
 #if DEBUG
             NCGetConversationKey = library.DangerousGetFunction<NCGetConversationKeyDelegate>();
@@ -123,5 +129,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         [SafeMethodName("NCGetConversationKey")]
         internal delegate NCResult NCGetConversationKeyDelegate(nint ctx, NCSecretKey* sk, NCPublicKey* pk, byte* keyOut32);
 
+        [SafeMethodName("NCSetEncryptionProperty")]
+        internal delegate NCResult NCSetEncryptionPropertyDelegate(NCEncryptionArgs* args, uint property, uint value);
+
+        [SafeMethodName("NCSetEncryptionPropertyEx")]
+        internal delegate NCResult NCSetEncryptionPropertyExDelegate(NCEncryptionArgs* args, uint property, byte* value, uint valueLen);
+
+        [SafeMethodName("NCSetEncryptionData")]
+        internal delegate NCResult NCSetEncryptionDataDelegate(NCEncryptionArgs* args, byte* input, byte* output, uint dataSize);
     }
 }

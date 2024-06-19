@@ -55,17 +55,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             fixed (NCSecretKey* pSecKey = &secretKey)
             fixed (NCPublicKey* pPubKey = &publicKey)
             fixed (byte* pCipherText = &cipherText, pTextPtr = &plainText, pNonce = &nonce32)
-            {
-                NCEncryptionArgs data = new()
-                {
-                     //Set input data to the cipher text to decrypt and the output data to the plaintext buffer
-                    dataSize = size,    
-                    hmacKeyOut32 = null,
-                    inputData = pCipherText,
-                    outputData = pTextPtr,
-                    nonce32 = pNonce,
-                    version = NC_ENC_VERSION_NIP44
-                };
+            {              
+                NCEncryptionArgs data = new();
+              
+                //Version set first otherwise errors will occur
+                SetEncProperty(&data, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44);
+                //Only the nonce must be set, the hmac key is not needed for decryption
+                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_NONCE, pNonce, NC_ENCRYPTION_NONCE_SIZE);
+                SetEncData(&data, pTextPtr, pCipherText, size);
 
                 NCResult result = Functions.NCDecrypt.Invoke(context.DangerousGetHandle(), pSecKey, pPubKey, &data);
                 NCUtil.CheckResult<FunctionTable.NCDecryptDelegate>(result, true);
@@ -91,16 +88,20 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             fixed (NCPublicKey* pPubKey = &publicKey)
             fixed (byte* pCipherText = &cipherText, pTextPtr = &plainText, pHmacKeyOut = &hmackKeyOut32, pNonce = &nonce32)
             {
-                NCEncryptionArgs data = new()
-                {
-                    nonce32 = pNonce,
-                    hmacKeyOut32 = pHmacKeyOut,
-                    //Set input data to the plaintext to encrypt and the output data to the cipher text buffer
-                    inputData = pTextPtr,
-                    outputData = pCipherText,
-                    dataSize = size,
-                    version = NC_ENC_VERSION_NIP44  //Force nip44 encryption
-                };
+                NCEncryptionArgs data = new();
+
+                /*
+                 * Use the extended api to set properties correctly and validate them.
+                 * 
+                 * The version MUST be set before continuing to set properties
+                 * 
+                 * Since pointers are used, they must be only be set/accessed inside 
+                 * this fixed statement.
+                 */
+                SetEncProperty(&data, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44);
+                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_MAC_KEY, pHmacKeyOut, NC_HMAC_KEY_SIZE);
+                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_NONCE, pNonce, NC_ENCRYPTION_NONCE_SIZE);
+                SetEncData(&data, pTextPtr, pCipherText, size);
 
                 NCResult result = Functions.NCEncrypt.Invoke(context.DangerousGetHandle(), pSecKey, pPubKey, &data);
                 NCUtil.CheckResult<FunctionTable.NCEncryptDelegate>(result, true);
@@ -265,6 +266,32 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
 #endif
 
+
+        private void SetEncPropertyEx(NCEncryptionArgs* args, uint prop, byte* value, uint valueLen)
+        {
+            NCResult result = Functions.NCSetEncryptionPropertyEx(args, prop, value, valueLen);
+            NCUtil.CheckResult<FunctionTable.NCSetEncryptionPropertyExDelegate>(result, true);
+        }
+
+        private void SetEncProperty(NCEncryptionArgs* args, uint prop, uint value)
+        {
+            NCResult result = Functions.NCSetEncryptionProperty(args, prop, value);
+            NCUtil.CheckResult<FunctionTable.NCSetEncryptionPropertyExDelegate>(result, true);
+        }
+
+        private void SetEncData(NCEncryptionArgs* args, byte* input, byte* output, uint dataLen)
+        {
+            /*
+             * WARNING:
+             * For now this a short-cut for setting the input and output data pointers
+             * technically this still works and avoids the PInvoke call, but this may
+             * change in the future.
+             */
+            args->dataSize = dataLen;
+            args->inputData = input;
+            args->outputData = output;
+        }
+
         ///<inheritdoc/>
         protected override void Free()
         {
@@ -281,7 +308,5 @@ namespace VNLib.Utils.Cryptography.Noscrypt
                 throw new ArgumentNullException(name);
             }
         }
-
-       
     }
 }

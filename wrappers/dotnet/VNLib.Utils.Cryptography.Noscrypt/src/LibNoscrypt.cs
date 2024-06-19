@@ -22,6 +22,8 @@ using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 using VNLib.Utils.Native;
 
+using VNLib.Utils.Cryptography.Noscrypt.@internal;
+
 using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
@@ -49,6 +51,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
         public const uint NC_ENC_VERSION_NIP04 = 0x00000004u;
         public const uint NC_ENC_VERSION_NIP44 = 0x00000002c;
+
+        public const uint NC_ENC_SET_VERSION = 0x01u;
+        public const uint NC_ENC_SET_NIP44_NONCE = 0x02u;
+        public const uint NC_ENC_SET_NIP44_MAC_KEY = 0x03u;
+        public const uint NC_ENC_SET_NIP04_KEY = 0x04u;
+        public const uint NC_ENC_SET_NIP04_IV = 0x05u;
 
         public const NCResult NC_SUCCESS = 0;
         public const byte E_NULL_PTR = 0x01;
