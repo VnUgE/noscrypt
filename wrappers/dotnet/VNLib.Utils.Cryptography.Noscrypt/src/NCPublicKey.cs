@@ -14,9 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
@@ -26,6 +27,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     [StructLayout(LayoutKind.Sequential, Size = NC_SEC_PUBKEY_SIZE)]
     public unsafe struct NCPublicKey
     {
+        /// <summary>
+        /// Gets a null <see cref="NCPublicKey"/> reference.
+        /// </summary>
+        public static ref NCPublicKey NullRef => ref Unsafe.NullRef<NCPublicKey>();
+
         private fixed byte key[NC_SEC_PUBKEY_SIZE];
     }
 }

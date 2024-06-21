@@ -13,9 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
@@ -26,6 +27,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     [StructLayout(LayoutKind.Sequential, Size = NC_SEC_KEY_SIZE)]
     public unsafe struct NCSecretKey
     {
+        /// <summary>
+        /// Gets a null reference to a secret key
+        /// </summary>
+        public static ref NCSecretKey NullRef => ref Unsafe.NullRef<NCSecretKey>();
+
         private fixed byte key[NC_SEC_KEY_SIZE];       
     }
 }

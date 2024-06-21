@@ -18,7 +18,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 using NCResult = System.Int64;
 
@@ -86,7 +86,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt
            
             fixed (NCSecretKey* pSecKey = &secretKey)
             fixed (NCPublicKey* pPubKey = &publicKey)
-            fixed (byte* pCipherText = &cipherText, pTextPtr = &plainText, pHmacKeyOut = &hmackKeyOut32, pNonce = &nonce32)
+            fixed (byte* pCipherText = &cipherText, 
+                pTextPtr = &plainText, 
+                pHmacKeyOut = &hmackKeyOut32, 
+                pNonce = &nonce32
+            )
             {
                 NCEncryptionArgs data = new();
 
@@ -227,7 +231,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             }
         }
 
-        public void ComputeMac(ref readonly byte hmacKey32, ref readonly byte payload, uint payloadSize, ref byte hmacOut32)
+        ///<inheritdoc/>
+        public void ComputeMac(
+            ref readonly byte hmacKey32, 
+            ref readonly byte payload, 
+            uint payloadSize, 
+            ref byte hmacOut32
+        )
         {
             Check();
 

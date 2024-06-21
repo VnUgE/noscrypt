@@ -13,14 +13,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
     /// The NIP04 encryption version used by the Nostr protocol
     /// </summary>
-    public sealed class NCNip04EncryptionVersion : IEncryptionVersion
+    public sealed class NCNip04EncryptionVersion : INostrEncryptionVersion
     {
         /// <summary>
         /// A static nip04 encryption version instance
@@ -28,10 +28,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public static readonly NCNip04EncryptionVersion Instance = new();
 
         ///<inheritdoc/>
-        uint IEncryptionVersion.Version => NC_ENC_VERSION_NIP04;
-        
+        uint INostrEncryptionVersion.Version => NC_ENC_VERSION_NIP04;
+
         ///<inheritdoc/>
-        int IEncryptionVersion.CalcBufferSize(int dataSize) => Nip04Util.CalcBufferSize(dataSize);        
+        int INostrEncryptionVersion.GetMessageBufferSize(int dataSize) => Nip04Util.CalcBufferSize(dataSize);
+
+        ///<inheritdoc/>
+        int INostrEncryptionVersion.GetPayloadBufferSize(int dataSize) => Nip04Util.CalcBufferSize(dataSize);        
     }
 
 }

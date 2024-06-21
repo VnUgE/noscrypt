@@ -13,27 +13,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using System;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
-    /// <summary>
-    /// The NIP44 encryption version used by the Nostr protocol
-    /// </summary>
-    public sealed class NCNip44EncryptionVersion : INostrEncryptionVersion
+    public readonly ref struct Nip44MessageSegments(ReadOnlySpan<byte> payload)
     {
-        /// <summary>
-        /// A static nip44 encryption version instance
-        /// </summary>
-        public static readonly NCNip44EncryptionVersion Instance = new();
+        readonly ReadOnlySpan<byte> _payload = payload;
 
-        ///<inheritdoc/>
-        uint INostrEncryptionVersion.Version => NC_ENC_VERSION_NIP44;
+        public ReadOnlySpan<byte> Payload => _payload;
 
-        int INostrEncryptionVersion.GetMessageBufferSize(int dataSize) => Nip44Util.CalcFinalBufferSize(dataSize);
+        public ReadOnlySpan<byte> Nonce => Nip44Util.GetNonceFromPayload(_payload);
 
-        ///<inheritdoc/>
-        int INostrEncryptionVersion.GetPayloadBufferSize(int dataSize) => Nip44Util.CalcBufferSize(dataSize);
+        public ReadOnlySpan<byte> Ciphertext => Nip44Util.GetCiphertextFromPayload(_payload);
+
+        public ReadOnlySpan<byte> Mac => Nip44Util.GetMacFromPayload(_payload);
+
+        public ReadOnlySpan<byte> NonceAndCiphertext => Nip44Util.GetNonceAndCiphertext(_payload);
+
+        public byte Version => Nip44Util.GetMessageVersion(_payload);
     }
-
 }

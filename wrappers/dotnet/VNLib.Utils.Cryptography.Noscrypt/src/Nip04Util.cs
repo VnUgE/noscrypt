@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Buffers.Text;
 
 using VNLib.Utils.Extensions;
 
@@ -35,6 +36,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public static int CalcBufferSize(int dataSize)
         {
             throw new NotImplementedException();
+        }
+
+        static readonly int MaxEncodedIvLength = Base64.GetMaxEncodedToUtf8Length(16);
+
+        public static int CalcMessageBufferSize(int dataSize)
+        {
+            int bufSize = CalcBufferSize(dataSize);
+            return bufSize + "?iv=".Length + MaxEncodedIvLength;
         }
     }
 

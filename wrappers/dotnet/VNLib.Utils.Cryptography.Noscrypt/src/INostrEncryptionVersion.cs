@@ -18,7 +18,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// <summary>
     /// Represents a message encryption version used by the Nostr protocol
     /// </summary>
-    public interface IEncryptionVersion
+    public interface INostrEncryptionVersion
     {
         /// <summary>
         /// The noscrypt compatible encryption version
@@ -26,11 +26,18 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         internal uint Version { get; }
 
         /// <summary>
-        /// Calculates the required buffer size for the specified data size
+        /// Calculates the required payload buffer size for the specified data size
         /// </summary>
         /// <param name="dataSize">The size of the input data</param>
         /// <returns>The estimated size of the buffer required to complete the opeation</returns>
-        internal int CalcBufferSize(int dataSize);
+        internal int GetPayloadBufferSize(int dataSize);
+
+        /// <summary>
+        /// Calculates the required message buffer size for the specified data size
+        /// </summary>
+        /// <param name="dataSize">Plain text data size</param>
+        /// <returns>The estimated size of the buffer required to complete the opeation</returns>
+        internal int GetMessageBufferSize(int dataSize);
     }
 
 }

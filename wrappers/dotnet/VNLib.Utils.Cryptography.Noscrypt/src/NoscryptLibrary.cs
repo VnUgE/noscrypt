@@ -16,11 +16,9 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-
-using VNLib.Utils;
-using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 using VNLib.Utils.Native;
+using VNLib.Utils.Extensions;
 
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
 
@@ -34,37 +32,41 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// </summary>
     /// <param name="Library">An existing noscrypt library handle</param>
     /// <param name="OwnsHandle">A value that indicates if the instance owns the library handle</param>
-    public unsafe sealed class LibNoscrypt(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
+    public unsafe sealed class NoscryptLibrary(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
     {
-        //Values that match the noscrypt.h header
-        public const int NC_SEC_KEY_SIZE = 32;
-        public const int NC_SEC_PUBKEY_SIZE = 32;
-        public const int NC_ENCRYPTION_NONCE_SIZE = 32;
-        public const int NC_PUBKEY_SIZE = 32;
-        public const int NC_SIGNATURE_SIZE = 64;
-        public const int NC_CONV_KEY_SIZE = 32;
-        public const int NC_MESSAGE_KEY_SIZE = 32;
-        public const int NC_HMAC_KEY_SIZE = 32;
-        public const int NC_ENCRYPTION_MAC_SIZE = 32;
-        public const int NC_CONVERSATION_KEY_SIZE = 32;
-        public const int CTX_ENTROPY_SIZE = 32;
+        public const string NoscryptDefaultLibraryName = "noscrypt";
 
-        public const uint NC_ENC_VERSION_NIP04 = 0x00000004u;
-        public const uint NC_ENC_VERSION_NIP44 = 0x00000002c;
+        //Constant values match the noscrypt.h header
+        public const int NC_SEC_KEY_SIZE                = 0x20;
+        public const int NC_SEC_PUBKEY_SIZE             = 0x20;
+        public const int NC_ENCRYPTION_NONCE_SIZE       = 0x20;
+        public const int NC_PUBKEY_SIZE                 = 0x20;
+        public const int NC_SIGNATURE_SIZE              = 0x40;
+        public const int NC_CONV_KEY_SIZE               = 0x20;
+        public const int NC_MESSAGE_KEY_SIZE            = 0x20;
+        public const int NC_HMAC_KEY_SIZE               = 0x20;
+        public const int NC_ENCRYPTION_MAC_SIZE         = 0x20;
+        public const int NC_CONVERSATION_KEY_SIZE       = 0x20;
+        public const int NC_CTX_ENTROPY_SIZE            = 0x20;
+        public const int NC_SIG_ENTROPY_SIZE            = 0x20;
 
-        public const uint NC_ENC_SET_VERSION = 0x01u;
-        public const uint NC_ENC_SET_NIP44_NONCE = 0x02u;
-        public const uint NC_ENC_SET_NIP44_MAC_KEY = 0x03u;
-        public const uint NC_ENC_SET_NIP04_KEY = 0x04u;
-        public const uint NC_ENC_SET_NIP04_IV = 0x05u;
+        public const uint NC_ENC_VERSION_NIP04          = 0x00000004u;
+        public const uint NC_ENC_VERSION_NIP44          = 0x00000002c;
 
-        public const NCResult NC_SUCCESS = 0;
-        public const byte E_NULL_PTR = 0x01;
-        public const byte E_INVALID_ARG = 0x02;
-        public const byte E_INVALID_CTX = 0x03;
-        public const byte E_ARGUMENT_OUT_OF_RANGE = 0x04;      
-        public const byte E_OPERATION_FAILED = 0x05;
-        public const byte E_VERSION_NOT_SUPPORTED = 0x06;
+        public const uint NC_ENC_SET_VERSION            = 0x01u;
+        public const uint NC_ENC_SET_NIP44_NONCE        = 0x02u;
+        public const uint NC_ENC_SET_NIP44_MAC_KEY      = 0x03u;
+        public const uint NC_ENC_SET_NIP04_KEY          = 0x04u;
+        public const uint NC_ENC_SET_NIP04_IV           = 0x05u;
+
+        //Noscrypt error codes
+        public const NCResult NC_SUCCESS                = 0x00;
+        public const byte E_NULL_PTR                    = 0x01;
+        public const byte E_INVALID_ARG                 = 0x02;
+        public const byte E_INVALID_CTX                 = 0x03;
+        public const byte E_ARGUMENT_OUT_OF_RANGE       = 0x04;      
+        public const byte E_OPERATION_FAILED            = 0x05;
+        public const byte E_VERSION_NOT_SUPPORTED       = 0x06;
 
         private readonly FunctionTable _functions = FunctionTable.BuildFunctionTable(Library);
 
@@ -103,7 +105,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             ArgumentNullException.ThrowIfNull(heap);
 
             //Entropy must be exactly 32 bytes
-            ArgumentOutOfRangeException.ThrowIfNotEqual(size, CTX_ENTROPY_SIZE);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(size, NC_CTX_ENTROPY_SIZE);
 
             //Get struct size
             nuint ctxSize = Functions.NCGetContextStructSize.Invoke();
@@ -155,7 +157,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// This may be done once at app startup and is thread-safe for the rest of the 
         /// application lifetime. 
         /// </summary>
-        /// <param name="library"></param>
         /// <param name="heap">The heap to allocate the context from</param>
         /// <param name="entropy32">The random entropy data to initialize the context with</param>
         /// <returns>The library wrapper handle</returns>
@@ -168,6 +169,29 @@ namespace VNLib.Utils.Cryptography.Noscrypt
                 context: Initialize(heap, entropy32), 
                 ownsContext: true
             );
+        }
+
+        /// <summary>
+        /// Initializes a new NostrCrypto context wraper directly that owns the internal context.
+        /// This may be done once at app startup and is thread-safe for the rest of the 
+        /// application lifetime. 
+        /// </summary>
+        /// <param name="heap">The heap to allocate the context from</param>
+        /// <param name="random">Random source used to generate context entropy</param>
+        /// <returns>The library wrapper handle</returns>
+        public NostrCrypto InitializeCrypto(IUnmangedHeap heap, IRandomSource random)
+        {
+            ArgumentNullException.ThrowIfNull(random);
+
+            //Get random bytes for context entropy
+            Span<byte> entropy = stackalloc byte[NC_CTX_ENTROPY_SIZE];
+            random.GetRandomBytes(entropy);
+
+            NostrCrypto nc = InitializeCrypto(heap, entropy);
+
+            MemoryUtil.InitializeBlock(entropy);
+
+            return nc;
         }
 
         ///<inheritdoc/>
@@ -187,7 +211,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="path">The native library path or name to load</param>
         /// <param name="search">The search path options</param>
         /// <returns>The loaded library instance</returns>
-        public static LibNoscrypt Load(string path, DllImportSearchPath search)
+        /// <exception cref="DllNotFoundException"></exception>
+        public static NoscryptLibrary Load(string path, DllImportSearchPath search)
         {
             //Load the native library
             SafeLibraryHandle handle = SafeLibraryHandle.LoadLibrary(path, search);
@@ -195,7 +220,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             Trace.WriteLine($"Loaded noscrypt library 0x{handle.DangerousGetHandle():x} from {path}");
 
             //Create the wrapper
-            return new LibNoscrypt(handle, true);
+            return new NoscryptLibrary(handle, true);
         }
 
         /// <summary>
@@ -204,7 +229,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         /// <param name="path">The native library path or name to load</param>
         /// <returns>The loaded library instance</returns>
-        public static LibNoscrypt Load(string path) => Load(path, DllImportSearchPath.SafeDirectories);
-       
+        /// <exception cref="DllNotFoundException"></exception>
+        public static NoscryptLibrary Load(string path) => Load(path, DllImportSearchPath.SafeDirectories);
+
+        /// <summary>
+        /// Attempts to load the default noscrypt library from the system search path
+        /// </summary>
+        /// <returns>The loaded library instance</returns>
+        /// <exception cref="DllNotFoundException"></exception>
+        public static NoscryptLibrary LoadDefault() => Load(NoscryptDefaultLibraryName, DllImportSearchPath.SafeDirectories);
     }  
 }

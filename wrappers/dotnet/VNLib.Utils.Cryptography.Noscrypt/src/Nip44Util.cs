@@ -19,7 +19,7 @@ using System.Runtime.InteropServices;
 
 using VNLib.Utils.Memory;
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
@@ -92,14 +92,49 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
             //Copy the plaintext data to the output buffer after the data size
             MemoryUtil.Memmove(
-                in MemoryMarshal.GetReference(plaintextData),
-                0,
-                ref MemoryMarshal.GetReference(output),
-                 sizeof(ushort),
-                (uint)plaintextData.Length
+                src: in MemoryMarshal.GetReference(plaintextData),
+                srcOffset: 0,
+                dst: ref MemoryMarshal.GetReference(output),
+                dstOffset: sizeof(ushort),
+                elementCount: (uint)plaintextData.Length
             );
 
             //We assume the remaining buffer is zeroed out
+        }
+
+        public static void WriteNip44Message(
+            ReadOnlySpan<byte> payloadBuffer, 
+            byte version, 
+            ReadOnlySpan<byte> mac, 
+            Span<byte> outBuffer
+        )
+        {
+            int requiredBufferSize = CalcFinalBufferSize(payloadBuffer.Length);
+
+            //Make sure the output buffer is large enough so we dont overrun it
+            ArgumentOutOfRangeException.ThrowIfLessThan(outBuffer.Length, requiredBufferSize, nameof(outBuffer));
+            ArgumentOutOfRangeException.ThrowIfLessThan(mac.Length, NC_ENCRYPTION_MAC_SIZE, nameof(mac));
+
+            //Write the version number to the first byte
+            outBuffer[0] = version;
+
+            //Copy the payload buffer to the output buffer after the version number
+            MemoryUtil.Memmove(
+                src: in MemoryMarshal.GetReference(payloadBuffer),
+                srcOffset: 0,
+                dst: ref MemoryMarshal.GetReference(outBuffer),
+                dstOffset: 1,
+                elementCount: (uint)payloadBuffer.Length
+            );
+
+            //Copy the mac to the end of the output buffer
+            MemoryUtil.Memmove(
+                src: in MemoryMarshal.GetReference(mac),
+                srcOffset: 0,
+                dst: ref MemoryMarshal.GetReference(outBuffer),
+                dstOffset: (uint)(requiredBufferSize - NC_ENCRYPTION_MAC_SIZE),
+                elementCount: NC_ENCRYPTION_MAC_SIZE
+            );
         }
 
         public static ReadOnlySpan<byte> GetNonceFromPayload(ReadOnlySpan<byte> message)
@@ -139,6 +174,17 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             return plaintextPayload.Slice(sizeof(ushort), ptLength);
         }
 
+        public static bool IsValidPlaintextMessage(ReadOnlySpan<byte> plaintextPayload)
+        {
+            ushort ptLength = BinaryPrimitives.ReadUInt16BigEndian(plaintextPayload);
+            return ptLength == plaintextPayload.Length - sizeof(ushort);
+        }
+
+        public static Range GetPlaintextRange(ReadOnlySpan<byte> plaintextPayload)
+        {
+            ushort ptLength = BinaryPrimitives.ReadUInt16BigEndian(plaintextPayload);
+            return new Range(sizeof(ushort), ptLength);
+        }
     }
 
 }

@@ -13,27 +13,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using System;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
-    /// The NIP44 encryption version used by the Nostr protocol
+    /// Encodes a message signature into it's string representation
     /// </summary>
-    public sealed class NCNip44EncryptionVersion : INostrEncryptionVersion
+    public interface INostrSignatureEncoder
     {
         /// <summary>
-        /// A static nip44 encryption version instance
+        /// Creates a string of the encoded signature data
         /// </summary>
-        public static readonly NCNip44EncryptionVersion Instance = new();
-
-        ///<inheritdoc/>
-        uint INostrEncryptionVersion.Version => NC_ENC_VERSION_NIP44;
-
-        int INostrEncryptionVersion.GetMessageBufferSize(int dataSize) => Nip44Util.CalcFinalBufferSize(dataSize);
-
-        ///<inheritdoc/>
-        int INostrEncryptionVersion.GetPayloadBufferSize(int dataSize) => Nip44Util.CalcBufferSize(dataSize);
+        /// <param name="signature">The signature data to encode into the string</param>
+        /// <returns>The encoded signature string</returns>
+        string GetString(ReadOnlySpan<byte> signature);
     }
 
 }

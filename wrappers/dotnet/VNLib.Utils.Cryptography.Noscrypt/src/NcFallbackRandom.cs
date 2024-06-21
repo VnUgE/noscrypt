@@ -15,22 +15,22 @@
 
 using System;
 
+using VNLib.Hashing;
+
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
-    public readonly ref struct Nip44Message(ReadOnlySpan<byte> payload)
+    /// <summary>
+    /// A fallback crypographic random source used for default
+    /// rng if you wish
+    /// </summary>
+    public sealed class NcFallbackRandom : IRandomSource
     {
-        readonly ReadOnlySpan<byte> _payload = payload;
+        /// <summary>
+        /// Gets the shared instance of the fallback random source
+        /// </summary>
+        public static NcFallbackRandom Shared { get; } = new NcFallbackRandom();
 
-        public ReadOnlySpan<byte> Payload => _payload;
-
-        public ReadOnlySpan<byte> Nonce => Nip44Util.GetNonceFromPayload(_payload);
-
-        public ReadOnlySpan<byte> Ciphertext => Nip44Util.GetCiphertextFromPayload(_payload);
-
-        public ReadOnlySpan<byte> Mac => Nip44Util.GetMacFromPayload(_payload);
-
-        public ReadOnlySpan<byte> NonceAndCiphertext => Nip44Util.GetNonceAndCiphertext(_payload);
-
-        public byte Version => Nip44Util.GetMessageVersion(_payload);
+        /// <inheritdoc/>
+        public void GetRandomBytes(Span<byte> buffer) => RandomHash.GetRandomBytes(buffer);
     }
 }

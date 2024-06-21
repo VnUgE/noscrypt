@@ -13,27 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using System;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
-    /// <summary>
-    /// The NIP44 encryption version used by the Nostr protocol
-    /// </summary>
-    public sealed class NCNip44EncryptionVersion : INostrEncryptionVersion
+    public sealed class HexSignatureEncoder : INostrSignatureEncoder
     {
         /// <summary>
-        /// A static nip44 encryption version instance
+        /// Shared formatter instance for hex signatures
         /// </summary>
-        public static readonly NCNip44EncryptionVersion Instance = new();
+        public static HexSignatureEncoder Instance { get; } = new HexSignatureEncoder();
 
         ///<inheritdoc/>
-        uint INostrEncryptionVersion.Version => NC_ENC_VERSION_NIP44;
-
-        int INostrEncryptionVersion.GetMessageBufferSize(int dataSize) => Nip44Util.CalcFinalBufferSize(dataSize);
-
-        ///<inheritdoc/>
-        int INostrEncryptionVersion.GetPayloadBufferSize(int dataSize) => Nip44Util.CalcBufferSize(dataSize);
+        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToHexString(signature);
     }
 
 }

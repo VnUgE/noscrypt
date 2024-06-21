@@ -16,7 +16,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {

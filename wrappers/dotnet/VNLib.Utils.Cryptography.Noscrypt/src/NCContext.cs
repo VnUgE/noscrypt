@@ -21,17 +21,16 @@ using Microsoft.Win32.SafeHandles;
 using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 
-using static VNLib.Utils.Cryptography.Noscrypt.LibNoscrypt;
+using VNLib.Utils.Cryptography.Noscrypt.@internal;
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
-    /// Represents a context for the native library
+    /// The noscrypt library context
     /// </summary>
-    /// <param name="Heap">The heap the handle was allocated from</param>
-    /// <param name="Library">A reference to the native library</param>
     public sealed class NCContext : SafeHandleZeroOrMinusOneIsInvalid
     {
         private readonly IUnmangedHeap Heap;
@@ -39,9 +38,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <summary>
         /// The library this context was created from
         /// </summary>
-        public LibNoscrypt Library { get; }
+        public NoscryptLibrary Library { get; }
 
-        internal NCContext(IntPtr handle, IUnmangedHeap heap, LibNoscrypt library) :base(true)
+        internal NCContext(IntPtr handle, IUnmangedHeap heap, NoscryptLibrary library) :base(true)
         {
             ArgumentNullException.ThrowIfNull(heap);
             ArgumentNullException.ThrowIfNull(library);
@@ -61,7 +60,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public unsafe void Reinitalize(ref byte entropy, int size)
         {
             //Entropy must be exactly 32 bytes
-            ArgumentOutOfRangeException.ThrowIfNotEqual(size, CTX_ENTROPY_SIZE);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(size, NC_CTX_ENTROPY_SIZE);
 
             this.ThrowIfClosed();
             fixed (byte* p = &entropy)
