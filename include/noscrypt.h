@@ -212,29 +212,17 @@ typedef struct nc_mac_verify {
 */
 
 /*
-* A helper function to cast a buffer to a NCSecretKey struct
-* @param key The buffer to cast
-* @return A pointer to the NCSecretKey struct
+* Casts a buffer pointer to a NCSecretKey pointer
 */
-static _nc_fn_inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
-{
-	return (NCSecretKey*)key;
-}
+#define NCByteCastToSecretKey(key) (NCSecretKey*)key
 
 /*
-* A helper function to cast a buffer to a NCPublicKey struct
-* @param key The buffer to cast
-* @return A pointer to the NCPublicKey struct
+* Casts a buffer pointer to a NCPublicKey pointer
 */
-static _nc_fn_inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
-{
-	return (NCPublicKey*)key;
-}
+#define NCByteCastToPublicKey(key) (NCPublicKey*)key
 
-static _nc_fn_inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition)
-{
-	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
-}
+
+NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPosition);
 
 /*
 * Parses an error code and returns the error code and the argument position 
@@ -243,20 +231,7 @@ that caused the error.
 * @param argPositionOut A pointer to the argument position to write to
 * @return The error code
 */
-static _nc_fn_inline int NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
-{
-	NCResult asPositive;
-	int code;
-
-	/* convert result to a positive value*/
-	asPositive = -result;
-
-	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
-	code = -(asPositive & NC_ERROR_CODE_MASK);
-	*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
-
-	return code;
-}
+NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut);
 
 /*--------------------------------------
 *		LIB CONTEXT API

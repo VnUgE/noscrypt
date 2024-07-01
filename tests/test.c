@@ -378,7 +378,7 @@ static int TestPublicApiArgumentValidation()
     TEST(NCValidateSecretKey(NULL, &secKey),    ARG_ERROR_POS_0)
     TEST(NCValidateSecretKey(ctx, NULL),        ARG_ERROR_POS_1)
     /* Should fail with a zero key */
-	TEST(NCValidateSecretKey(ctx, NCToSecKey(zero32)), E_OPERATION_FAILED)
+	TEST(NCValidateSecretKey(ctx, NCByteCastToSecretKey(zero32)), E_OPERATION_FAILED)
 
     /*Verify sig64 args test*/
     TEST(NCVerifyDigest(NULL, &pubKey, zero32, sig64),     ARG_ERROR_POS_0)
@@ -502,10 +502,10 @@ static int TestKnownKeys(const NCContext* context)
     pubKey2 = FromHexString("421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a", sizeof(NCPublicKey));
    
     /*Test known keys*/
-    TEST(NCValidateSecretKey(context, NCToSecKey(secKey1->data)), NC_SUCCESS);
+    TEST(NCValidateSecretKey(context, NCByteCastToSecretKey(secKey1->data)), NC_SUCCESS);
 
     /* Recover a public key from secret key 1 */
-    TEST(NCGetPublicKey(context, NCToSecKey(secKey1->data), &pubKey), NC_SUCCESS);
+    TEST(NCGetPublicKey(context, NCByteCastToSecretKey(secKey1->data), &pubKey), NC_SUCCESS);
 
     /* Ensure the public key matches the known public key value */
     TEST(memcmp(pubKey1->data, &pubKey, sizeof(pubKey)), 0);

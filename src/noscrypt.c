@@ -442,6 +442,36 @@ Cleanup:
 /*
 * EXTERNAL API FUNCTIONS
 */
+
+
+NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPosition)
+{
+	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
+}
+
+
+NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
+{
+	NCResult asPositive;
+	int code;
+
+	/* convert result to a positive value*/
+	asPositive = -result;
+
+	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
+	code = -(asPositive & NC_ERROR_CODE_MASK);
+	*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
+
+	return code;
+}
+
+/*	=============================
+*	
+*		Context functions
+* 
+*	============================= 
+*/
+
 NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void) 
 {
 	return sizeof(NCContext);
@@ -499,7 +529,13 @@ NC_EXPORT NCResult NC_CC NCDestroyContext(NCContext* ctx)
 	return NC_SUCCESS;
 }
 
-/* KEY Functions */
+/*	=============================
+*
+*		ECDSA functions
+*
+*	=============================
+*/
+
 NC_EXPORT NCResult NC_CC NCGetPublicKey(
 	const NCContext* ctx, 
 	const NCSecretKey* sk, 
@@ -681,7 +717,12 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	return NCVerifyDigest(ctx, pk, digest, sig64);
 }
 
-/* ECDH Functions */
+/*	=============================
+*
+*		ECDH functions
+*
+*	=============================
+*/
 
 NC_EXPORT NCResult NC_CC NCGetSharedSecret(
 	const NCContext* ctx, 
