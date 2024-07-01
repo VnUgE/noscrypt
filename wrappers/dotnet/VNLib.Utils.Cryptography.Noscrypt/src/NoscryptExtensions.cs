@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
@@ -71,14 +72,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             ArgumentNullException.ThrowIfNull(nonce32);
 
             //Spans are easer to forward references from pointers without screwing up arguments
-            EncryptNip44(
-                lib: lib,
+            lib.EncryptNip44(
                 secretKey: in secretKey,
                 publicKey: in publicKey,
-                nonce32: new ReadOnlySpan<byte>(nonce32, NC_ENCRYPTION_NONCE_SIZE),
-                plainText: new ReadOnlySpan<byte>(plainText, (int)size),
-                hmackKeyOut32: new Span<byte>(hmacKeyOut32, NC_HMAC_KEY_SIZE),
-                cipherText: new Span<byte>(cipherText, (int)size)
+                nonce32: in Unsafe.AsRef<byte>(nonce32),
+                plainText: in Unsafe.AsRef<byte>(plainText),               
+                cipherText: ref Unsafe.AsRef<byte>(cipherText),
+                size: size,
+                hmacKeyOut32: ref Unsafe.AsRef<byte>(hmacKeyOut32)
             );
         }
 
@@ -175,14 +176,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             ArgumentNullException.ThrowIfNull(mac32);
             ArgumentNullException.ThrowIfNull(payload);
 
-            //Spans are easer to forward references from pointers without screwing up arguments
-            return VerifyMac(
-                lib: lib,
+            return lib.VerifyMac(
                 secretKey: in secretKey,
                 publicKey: in publicKey,
-                nonce32: new Span<byte>(nonce32, NC_ENCRYPTION_NONCE_SIZE),
-                mac32: new Span<byte>(mac32, NC_ENCRYPTION_MAC_SIZE),
-                payload: new Span<byte>(payload, (int)payloadSize)
+                nonce32: in Unsafe.AsRef<byte>(nonce32),
+                mac32: in Unsafe.AsRef<byte>(mac32),
+                payload: in Unsafe.AsRef<byte>(payload),
+                payloadSize: payloadSize
             );
         }
 
