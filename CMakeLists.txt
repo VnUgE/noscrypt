@@ -17,6 +17,7 @@ project(
 set(_NC_PROJ_NAME "noscrypt")
 
 option(NC_BUILD_TESTS "Build tests" OFF)
+option(NC_ENABLE_UTILS "Enables the sidecar utility library" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
 option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
 option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
@@ -93,6 +94,17 @@ set(NOSCRYPT_HEADERS
 	"src/hkdf.h"
 	"src/nc-crypto.h"
 )
+
+#if utils are enabled, add the source files
+if(NC_ENABLE_UTILS)
+	list(APPEND NOSCRYPT_SRCS "src/noscryptutil.c")
+	list(APPEND NOSCRYPT_HEADERS "include/noscryptutil.h")
+
+	#notify the project that utils are enabled
+	list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_UTILS)
+
+	message(STATUS "Utilities libraries are enabled")
+endif()
 
 #static/shared library
 add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
@@ -366,11 +378,13 @@ if(NC_BUILD_TESTS)
 	#add test executable and link to shared library for more realistic usage
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})
+
 	target_include_directories(nctest PRIVATE include)
 	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
+	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINTIONS})
 
 	enable_testing()
 

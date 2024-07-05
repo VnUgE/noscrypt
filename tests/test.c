@@ -101,6 +101,10 @@ static int InitKepair(const NCContext* context, NCSecretKey* secKey, NCPublicKey
 static int TestKnownKeys(const NCContext* context);
 static int TestCorrectEncryption(const NCContext* context);
 
+#ifdef NC_ENABLE_UTILS
+static int TestUtilFunctions(void);
+#endif
+
 #ifndef NC_INPUT_VALIDATION_OFF
 static int TestPublicApiArgumentValidation(void);
 #endif
@@ -166,6 +170,13 @@ static int RunTests(void)
     {
         return 1;
     }
+
+#ifdef NC_ENABLE_UTILS
+	if (TestUtilFunctions() != 0)
+	{
+		return 1;
+	}
+#endif
 
     TEST(NCDestroyContext(ctx), NC_SUCCESS)
 
@@ -277,6 +288,8 @@ static int TestPublicApiArgumentValidation()
 
     NCEncryptionArgs cryptoData;
 
+    PRINTL("TEST: Public API argument validation tests")
+
     {
         /*
         * Test arguments for encryption properties
@@ -332,6 +345,7 @@ static int TestPublicApiArgumentValidation()
 		TEST(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, NC_NIP04_AES_KEY_SIZE - 1), ARG_RANGE_ERROR_POS_3)
     }
 
+    /* Prep the crypto structure for proper usage */
 	ENSURE(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44) == NC_SUCCESS);
     ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, sizeof(nonce)) == NC_SUCCESS);
     ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, sizeof(hmacKeyOut)) == NC_SUCCESS);
@@ -339,14 +353,13 @@ static int TestPublicApiArgumentValidation()
     /* Assign the encryption material */
     ENSURE(NCSetEncryptionData(&cryptoData, zero32, sig64, sizeof(zero32)) == NC_SUCCESS);
 
-    PRINTL("TEST: Public API argument validation tests")
 
     FillRandomData(ctxRandom, 32);
     FillRandomData(nonce, sizeof(nonce));
 
     /*
     * Alloc context structure on the heap before use. 
-    * THIS WILL LEAK IN THE CURRENT CONFIG ALWAYS FEE UNDER NORMAL CONDITIONS 
+    * THIS WILL LEAK IN THE CURRENT CONFIG ALWAYS FREE UNDER NORMAL CONDITIONS 
     */
     ctx = (NCContext*)malloc(NCGetContextStructSize());
     TASSERT(ctx != NULL)
@@ -540,6 +553,8 @@ static int TestCorrectEncryption(const NCContext* context)
     NCEncryptionArgs cryptoData;
     NCMacVerifyArgs macVerifyArgs;
 
+    PRINTL("TEST: Correct encryption")
+
     ENSURE(NCSetEncryptionProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44) == NC_SUCCESS);
     ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_NONCE, nonce, sizeof(nonce)) == NC_SUCCESS);
     ENSURE(NCSetEncryptionPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, NC_HMAC_KEY_SIZE) == NC_SUCCESS);
@@ -551,8 +566,6 @@ static int TestCorrectEncryption(const NCContext* context)
     macVerifyArgs.mac32 = mac;
     macVerifyArgs.payload = cipherText;
     macVerifyArgs.payloadSize = TEST_ENC_DATA_SIZE;
-
-    PRINTL("TEST: Correct encryption")
 
     /* init a sending and receiving key */
     FillRandomData(&secKey1, sizeof(NCSecretKey));
@@ -589,6 +602,38 @@ static int TestCorrectEncryption(const NCContext* context)
     PRINTL("\nPASSED: Correct encryption tests completed")
     return 0;
 }
+
+#ifdef NC_ENABLE_UTILS
+
+#include <noscryptutil.h>
+
+/*
+* This function is not currently public, but we can access it for testing
+* purposes because it is used to calculate the output buffer size for encryption
+*/
+extern NCResult NCUtilGetEncryptionPaddedSize(uint32_t encVersion, int32_t plaintextSize);
+
+/* Padding tests taken from the nip44 repo vectors.json file */
+const int32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
+const int32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
+
+static int TestUtilFunctions(void)
+{
+	PRINTL("TEST: Util functions")
+
+	for (int i = 0; i < 24; i++)
+    {
+        int32_t totalSize = _padTestExpected[i] + 67;
+
+        TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), _padTestExpected[i]);
+		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), totalSize);
+	}
+
+	PRINTL("PASSED: Util functions tests completed")
+	return 0;
+}
+
+#endif
 
 static void FillRandomData(void* pbBuffer, size_t length)
 {

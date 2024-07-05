@@ -228,7 +228,7 @@ NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPositi
 * Parses an error code and returns the error code and the argument position 
 that caused the error.
 * @param result The error code to parse
-* @param argPositionOut A pointer to the argument position to write to
+* @param argPositionOut A pointer to the argument position to write to (optionall, set to NULL of unobserved)
 * @return The error code
 */
 NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut);

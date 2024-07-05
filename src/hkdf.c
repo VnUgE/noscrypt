@@ -21,22 +21,9 @@
 
 #include "hkdf.h"
 
-/* Include string for memmove */
-#include <string.h>
-
 #define HKDF_MIN(a, b) (a < b ? a : b)
 
 STATIC_ASSERT(HKDF_IN_BUF_SIZE > SHA256_DIGEST_SIZE, "HDK Buffer must be at least the size of the underlying hashing alg output")
-
-static _nc_fn_inline void ncWriteSpanS(span_t* span, uint32_t offset, const uint8_t* data, uint32_t size)
-{
-	DEBUG_ASSERT2(span != NULL, "Expected span to be non-null")
-	DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
-	DEBUG_ASSERT2(offset + size <= span->size, "Expected offset + size to be less than span size")
-
-	/* Copy data to span */
-	memmove(span->data + offset, data, size);
-}
 
 static _nc_fn_inline void debugValidateHandler(const struct nc_hkdf_fn_cb_struct* handler)
 {
@@ -114,7 +101,7 @@ cstatus_t hkdfExpandProcess(
 		DEBUG_ASSERT(tLen <= sizeof(t));
 
 		/* write the T buffer back to okm */
-		ncWriteSpanS(okm, okmOffset, t, tLen);
+		ncSpanWrite(*okm, okmOffset, t, tLen);
 
 		/* shift base okm pointer by T */
 		okmOffset += tLen;

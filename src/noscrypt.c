@@ -32,10 +32,6 @@
 */
 #define ZERO_FILL(x, size) ncCryptoSecureZero(x, size) 
 
-/* Include string for memmove */
-#include <string.h>
-#define MEMMOV(dst, src, size) memmove(dst, src, size)
-
 /*
 * Validation macros
 */
@@ -44,13 +40,14 @@
 	#define CHECK_INVALID_ARG(x, argPos) if(x == NULL) return NCResultWithArgPosition(E_INVALID_ARG, argPos);
 	#define CHECK_NULL_ARG(x, argPos) if(x == NULL) return NCResultWithArgPosition(E_NULL_PTR, argPos);
 	#define CHECK_ARG_RANGE(x, min, max, argPos) if(x < min || x > max) return NCResultWithArgPosition(E_ARGUMENT_OUT_OF_RANGE, argPos);
-	#define CHECK_CONTEXT_STATE(ctx, argPos) CHECK_INVALID_ARG(ctx->secpCtx, argPos)
 #else
 	/* empty macros */
 	#define CHECK_INVALID_ARG(x)
 	#define CHECK_NULL_ARG(x, argPos) 
 	#define CHECK_ARG_RANGE(x, min, max, argPos) 
 #endif /* !NC_DISABLE_INPUT_VALIDATION */
+
+#define CHECK_CONTEXT_STATE(ctx, argPos) CHECK_INVALID_ARG(ctx->secpCtx, argPos)
 
 /*
 * Actual, private defintion of the NCContext structure 
@@ -449,7 +446,6 @@ NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPositi
 	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
 }
 
-
 NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
 {
 	NCResult asPositive;
@@ -460,7 +456,12 @@ NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
 
 	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
 	code = -(asPositive & NC_ERROR_CODE_MASK);
-	*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
+
+	/* Allow argument position assignment to be null */
+	if (argPositionOut) 
+	{
+		*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
+	}
 
 	return code;
 }

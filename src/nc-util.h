@@ -68,6 +68,28 @@
 	#define _overflow_check(x)
 #endif
 
+#ifdef NC_EXTREME_COMPAT
+
+	void _nc_memmove(void* dst, const void* src, uint32_t size)
+	{
+		uint32_t i;
+
+		for (i = 0; i < size; i++)
+		{
+			((uint8_t*)dst)[i] = ((uint8_t*)src)[i];
+		}
+	}
+
+	#define MEMMOV _nc_memmove
+
+#else
+
+	/* Include string for memmove */
+	#include <string.h>
+	#define MEMMOV(dst, src, size) memmove(dst, src, size)
+
+#endif /* NC_EXTREME_COMPAT */
+
 typedef struct memory_span_struct
 {
 	uint8_t* data;
@@ -90,6 +112,30 @@ static _nc_fn_inline void ncSpanInit(span_t* span, uint8_t* data, uint32_t size)
 {
 	span->data = data;
 	span->size = size;
+}
+
+static _nc_fn_inline void ncSpanWrite(span_t span, uint32_t offset, const uint8_t* data, uint32_t size)
+{
+	DEBUG_ASSERT2(span.data != NULL,	"Expected span to be non-null")
+	DEBUG_ASSERT2(data != NULL,			"Expected data to be non-null")
+	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
+
+	/* Copy data to span */
+	MEMMOV(span.data + offset, data, size);
+}
+
+static _nc_fn_inline void ncSpanAppend(span_t span, uint32_t* offset, const uint8_t* data, uint32_t size)
+{
+	DEBUG_ASSERT2(span.data != NULL, "Expected span to be non-null")
+	DEBUG_ASSERT2(offset != NULL, "Expected offset to be non-null")
+	DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
+	DEBUG_ASSERT2(*offset + size <= span.size, "Expected offset + size to be less than span size")
+
+	/* Copy data to span */
+	MEMMOV(span.data + *offset, data, size);
+
+	/* Increment offset */
+	*offset += size;
 }
 
 #endif /* !_NC_UTIL_H */
