@@ -102,7 +102,7 @@ static int TestKnownKeys(const NCContext* context);
 static int TestCorrectEncryption(const NCContext* context);
 
 #ifdef NC_ENABLE_UTILS
-static int TestUtilFunctions(void);
+static int TestUtilFunctions(const NCContext * libCtx);
 #endif
 
 #ifndef NC_INPUT_VALIDATION_OFF
@@ -172,7 +172,7 @@ static int RunTests(void)
     }
 
 #ifdef NC_ENABLE_UTILS
-	if (TestUtilFunctions() != 0)
+	if (TestUtilFunctions(ctx) != 0)
 	{
 		return 1;
 	}
@@ -213,7 +213,7 @@ static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey*
    
     uint8_t sigEntropy[32];
     uint8_t invalidSig[64];
-    HexBytes* digestHex;
+    span_t digestHex;
 
     PRINTL("TEST: Ecdsa")
 
@@ -227,8 +227,8 @@ static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey*
     /* Test signing just the message digest */
     {
 		uint8_t sig[64];
-        TEST(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig), NC_SUCCESS);
-        TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
+        TEST(NCSignDigest(context, secKey, sigEntropy, digestHex.data, sig), NC_SUCCESS);
+        TEST(NCVerifyDigest(context, pubKey, digestHex.data, sig), NC_SUCCESS);
     }
     
     /* Sign and verify the raw message */
@@ -245,7 +245,7 @@ static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey*
 
         /* Ensure operations succeed but dont print them as test cases */
         ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig1) == NC_SUCCESS);
-        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig2) == NC_SUCCESS);
+        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex.data, sig2) == NC_SUCCESS);
 		
         /* Perform test */
         TEST(memcmp(sig1, sig2, 64), 0);
@@ -256,18 +256,18 @@ static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey*
         uint8_t sig[64];
 		
         ENSURE(NCSignData(context, secKey, sigEntropy, (uint8_t*)message, strlen32(message), sig) == NC_SUCCESS);
-        TEST(NCVerifyDigest(context, pubKey, digestHex->data, sig), NC_SUCCESS);
+        TEST(NCVerifyDigest(context, pubKey, digestHex.data, sig), NC_SUCCESS);
 
         /* Now invert test, zero signature to ensure its overwritten */
         ZERO_FILL(sig, sizeof(sig));
 
-        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex->data, sig) == NC_SUCCESS);
+        ENSURE(NCSignDigest(context, secKey, sigEntropy, digestHex.data, sig) == NC_SUCCESS);
         TEST(NCVerifyData(context, pubKey, (uint8_t*)message, strlen32(message), sig), NC_SUCCESS);
 	}
 
     /* test verification of invalid signature */
     {
-        TEST(NCVerifyDigest(context, pubKey, digestHex->data, invalidSig), E_INVALID_ARG);
+        TEST(NCVerifyDigest(context, pubKey, digestHex.data, invalidSig), E_INVALID_ARG);
     }
 
     PRINTL("\nPASSED: Ecdsa tests completed")
@@ -504,7 +504,7 @@ static int TestPublicApiArgumentValidation()
 static int TestKnownKeys(const NCContext* context)
 {   
     NCPublicKey pubKey;
-    HexBytes* secKey1, * pubKey1, * secKey2, * pubKey2;
+    span_t secKey1, pubKey1, secKey2, pubKey2;
 
     PRINTL("TEST: Known keys")
     
@@ -515,18 +515,18 @@ static int TestKnownKeys(const NCContext* context)
     pubKey2 = FromHexString("421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a", sizeof(NCPublicKey));
    
     /*Test known keys*/
-    TEST(NCValidateSecretKey(context, NCByteCastToSecretKey(secKey1->data)), NC_SUCCESS);
+    TEST(NCValidateSecretKey(context, NCByteCastToSecretKey(secKey1.data)), NC_SUCCESS);
 
     /* Recover a public key from secret key 1 */
-    TEST(NCGetPublicKey(context, NCByteCastToSecretKey(secKey1->data), &pubKey), NC_SUCCESS);
+    TEST(NCGetPublicKey(context, NCByteCastToSecretKey(secKey1.data), &pubKey), NC_SUCCESS);
 
     /* Ensure the public key matches the known public key value */
-    TEST(memcmp(pubKey1->data, &pubKey, sizeof(pubKey)), 0);
+    TEST(memcmp(pubKey1.data, &pubKey, sizeof(pubKey)), 0);
 
     /* Repeat with second key */
-    TEST(NCValidateSecretKey(context, (NCSecretKey*)secKey2->data), NC_SUCCESS);
-    TEST(NCGetPublicKey(context, (NCSecretKey*)secKey2->data, &pubKey), NC_SUCCESS);
-    TEST(memcmp(pubKey2->data, &pubKey, sizeof(pubKey)), 0);    
+    TEST(NCValidateSecretKey(context, NCByteCastToSecretKey(secKey2.data)), NC_SUCCESS);
+    TEST(NCGetPublicKey(context, NCByteCastToSecretKey(secKey2.data), &pubKey), NC_SUCCESS);
+    TEST(memcmp(pubKey2.data, &pubKey, sizeof(pubKey)), 0);    
 
     PRINTL("\nPASSED: Known keys tests completed")
     return 0;
@@ -614,10 +614,62 @@ static int TestCorrectEncryption(const NCContext* context)
 extern NCResult NCUtilGetEncryptionPaddedSize(uint32_t encVersion, int32_t plaintextSize);
 
 /* Padding tests taken from the nip44 repo vectors.json file */
-const int32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
-const int32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
+const uint32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
+const uint32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
 
-static int TestUtilFunctions(void)
+static int TestUtilNip44Encryption(
+    const NCContext* libCtx, 
+    span_t sendKey, 
+    span_t recvKey, 
+    span_t nonce, 
+    span_t expected,
+    const char* plainText
+)
+{
+    NCPublicKey recvPubKey;
+    span_t outData;
+
+    ENSURE(NCValidateSecretKey(libCtx, NCByteCastToSecretKey(sendKey.data)) == NC_SUCCESS);
+    ENSURE(NCGetPublicKey(libCtx, NCByteCastToSecretKey(recvKey.data), &recvPubKey) == NC_SUCCESS);
+
+    /* Alloc cipher in nip44 encryption mode */
+    NCUtilCipherContext* ctx = NCUtilCipherAlloc(
+        NC_ENC_VERSION_NIP44, 
+        NC_UTIL_CIPHER_MODE_ENCRYPT | NC_UTIL_CIPHER_ZERO_ON_FREE
+    );
+    
+    ENSURE(ctx != NULL);
+
+    TEST(NCUtilCipherInit(ctx, (const uint8_t*)plainText, strlen(plainText)), NC_SUCCESS);
+
+    /* Nonce is required for nip44 encryption */
+    TEST(NCUtilCipherSetProperty(ctx, NC_ENC_SET_NIP44_NONCE, nonce.data, nonce.size), NC_SUCCESS);
+
+    /* Ciper update should return the  */
+    TEST(NCUtilCipherUpdate(ctx, libCtx, NCByteCastToSecretKey(sendKey.data), &recvPubKey), NC_SUCCESS);
+
+    NCResult cipherOutputSize = NCUtilCipherGetOutputSize(ctx);
+
+    TEST(cipherOutputSize, expected.size);
+
+    outData.data = (uint8_t*)malloc(cipherOutputSize);
+    outData.size = (uint32_t)cipherOutputSize;
+
+    TASSERT(outData.data != NULL);
+
+    /* Read the encrypted payload to test */
+    TEST(NCUtilCipherReadOutput(ctx, outData.data, cipherOutputSize), cipherOutputSize);
+
+    /* Ensure encrypted payload matches */
+    TEST(memcmp(outData.data, expected.data, cipherOutputSize), 0);
+
+    free(outData.data);
+
+    /* Free encryption memory */
+    NCUtilCipherFree(ctx);
+}
+
+static int TestUtilFunctions(const NCContext* libCtx)
 {
 	PRINTL("TEST: Util functions")
 
@@ -628,8 +680,23 @@ static int TestUtilFunctions(void)
         TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), _padTestExpected[i]);
 		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), totalSize);
 	}
+    {
+		PRINTL("TEST: NIP-44 util encryption")
 
-	PRINTL("PASSED: Util functions tests completed")
+	    /* From the nip44 vectors file */
+		span_t sendKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", sizeof(NCSecretKey));
+		span_t recvKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000002", sizeof(NCSecretKey));
+		span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_ENCRYPTION_NONCE_SIZE);
+        span_t payload = FromHexString("02000000000000000000000000000000000000000000000000000000000000000179ed06e5548ad3ff58ca920e6c0b4329f6040230f7e6e5641f20741780f0adc35a09794259929a02bb06ad8e8cf709ee4ccc567e9d514cdf5781af27a3e905e55b1b", 99);
+        const char* plainText = "a";
+
+        if (TestUtilNip44Encryption(libCtx, sendKey, recvKey, nonce, payload, plainText) != 0) 
+        {
+            return 1;
+        }
+    }
+
+	PRINTL("\nPASSED: Util functions tests completed")
 	return 0;
 }
 

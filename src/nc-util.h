@@ -126,9 +126,9 @@ static _nc_fn_inline void ncSpanWrite(span_t span, uint32_t offset, const uint8_
 
 static _nc_fn_inline void ncSpanAppend(span_t span, uint32_t* offset, const uint8_t* data, uint32_t size)
 {
-	DEBUG_ASSERT2(span.data != NULL, "Expected span to be non-null")
-	DEBUG_ASSERT2(offset != NULL, "Expected offset to be non-null")
-	DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
+	DEBUG_ASSERT2(span.data != NULL,	"Expected span to be non-null")
+	DEBUG_ASSERT2(offset != NULL,		"Expected offset to be non-null")
+	DEBUG_ASSERT2(data != NULL,			"Expected data to be non-null")
 	DEBUG_ASSERT2(*offset + size <= span.size, "Expected offset + size to be less than span size")
 
 	/* Copy data to span */
@@ -136,6 +136,19 @@ static _nc_fn_inline void ncSpanAppend(span_t span, uint32_t* offset, const uint
 
 	/* Increment offset */
 	*offset += size;
+}
+
+static _nc_fn_inline span_t ncSpanSlice(span_t span, uint32_t offset, uint32_t size)
+{
+	span_t slice;
+
+	DEBUG_ASSERT2(span.data != NULL,	"Expected span to be non-null");
+	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
+
+	/* Initialize slice, offset input data by the specified offset */
+	ncSpanInit(&slice, span.data + offset, size);
+
+	return slice;
 }
 
 #endif /* !_NC_UTIL_H */
