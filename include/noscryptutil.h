@@ -34,11 +34,16 @@ extern "C" {
 
 #include "noscrypt.h"
 
-#define E_OUT_OF_MEMORY		-10
+#define E_OUT_OF_MEMORY					-10
+
+#define E_CIPHER_INVALID_FORMAT			-11
+#define E_CIPHER_BAD_NONCE				-12
+#define E_CIPHER_MAC_INVALID			-13
 
 #define NC_UTIL_CIPHER_MODE_ENCRYPT		0x00ui32
 #define NC_UTIL_CIPHER_MODE_DECRYPT		0x01ui32
 #define NC_UTIL_CIPHER_ZERO_ON_FREE		0x02ui32
+#define NC_UTIL_CIPHER_MAC_NO_VERIFY	0x04ui32
 
 /*
 * The encryption context structure. This structure is used to store the state 
@@ -76,11 +81,11 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionBufferSize(uint32_t encVersion, uint
 NC_EXPORT NCUtilCipherContext* NC_CC NCUtilCipherAlloc(uint32_t encVersion, uint32_t flags);
 
 /*
-* Initializes the encryption context with the input data and size. This function will 
- internally allocate a the required output buffer for the ciper operation. You may only call
+* Initializes the cipher context with the input data and size. This function will 
+ internally allocate a the required output buffer for the cipher operation. You may only call
  this function once.
 * @param encCtx A valid pointer to an allocated encryption context
-* @param inputData A pointer to the input data for the ciper
+* @param inputData A pointer to the input data for the Cipher
 * @param inputSize The size of the input data
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 the error code and positional argument that caused the error
@@ -131,7 +136,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * get the error code and positional argument that caused the error
 */
-NC_EXPORT NCResult NCUtilCipherSetProperty(
+NC_EXPORT NCResult NC_CC NCUtilCipherSetProperty(
 	NCUtilCipherContext* ctx,
 	uint32_t property,
 	uint8_t* value,
@@ -139,7 +144,16 @@ NC_EXPORT NCResult NCUtilCipherSetProperty(
 );
 
 /*
-* Performs the desired ciper option once. This may either cause an encryption 
+* Gets the flags set on the encryption context during initialization.
+* @param ctx A valid pointer to an encryption context
+* @return The flags set on the encryption context cast to a NCResult, or 
+* an error code if the context is invalid. Use NCParseErrorCode to get the error code
+* and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NC_CC NCUtilCipherGetFlags(const NCUtilCipherContext* ctx);
+
+/*
+* Performs the desired Cipher option once. This may either cause an encryption 
 * or decryption operation to be performed. Regardless of the operation, input data
 * is consumed and output data is produced. 
 * @param encCtx A valid pointer to an initialized encryption context

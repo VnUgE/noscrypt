@@ -843,8 +843,6 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->nonceData, 3)
-	CHECK_INVALID_ARG(args->keyData, 3)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	result = E_OPERATION_FAILED;
 
@@ -852,6 +850,10 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	{		
 		case NC_ENC_VERSION_NIP44:
 		{
+			/* Mac key output is only needed for nip44 */
+			CHECK_INVALID_ARG(args->keyData, 3)
+			CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+
 			/* Compute the shared point */
 			if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 			{

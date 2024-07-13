@@ -151,4 +151,18 @@ static _nc_fn_inline span_t ncSpanSlice(span_t span, uint32_t offset, uint32_t s
 	return slice;
 }
 
+static _nc_fn_inline cspan_t ncSpanSliceC(cspan_t span, uint32_t offset, uint32_t size)
+{
+	cspan_t slice;
+
+	DEBUG_ASSERT2(span.data != NULL, "Expected span to be non-null");
+	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
+
+	/* Initialize slice, offset input data by the specified offset */
+	ncSpanInitC(&slice, span.data + offset, size);
+
+	return slice;
+}
+
+
 #endif /* !_NC_UTIL_H */
