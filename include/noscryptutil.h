@@ -40,10 +40,10 @@ extern "C" {
 #define E_CIPHER_BAD_NONCE				-12
 #define E_CIPHER_MAC_INVALID			-13
 
-#define NC_UTIL_CIPHER_MODE_ENCRYPT		0x00ui32
-#define NC_UTIL_CIPHER_MODE_DECRYPT		0x01ui32
-#define NC_UTIL_CIPHER_ZERO_ON_FREE		0x02ui32
-#define NC_UTIL_CIPHER_MAC_NO_VERIFY	0x04ui32
+#define NC_UTIL_CIPHER_MODE_ENCRYPT		0x00u
+#define NC_UTIL_CIPHER_MODE_DECRYPT		0x01u
+#define NC_UTIL_CIPHER_ZERO_ON_FREE		0x02u
+#define NC_UTIL_CIPHER_MAC_NO_VERIFY	0x04u
 
 /*
 * The encryption context structure. This structure is used to store the state 

@@ -607,15 +607,9 @@ static int TestCorrectEncryption(const NCContext* context)
 
 #include <noscryptutil.h>
 
-/*
-* This function is not currently public, but we can access it for testing
-* purposes because it is used to calculate the output buffer size for encryption
-*/
-extern NCResult NCUtilGetEncryptionPaddedSize(uint32_t encVersion, int32_t plaintextSize);
-
 /* Padding tests taken from the nip44 repo vectors.json file */
-const uint32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
-const uint32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
+static const uint32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
+static const uint32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
 
 static int TestUtilNip44Encryption(
     const NCContext* libCtx, 
@@ -627,7 +621,7 @@ static int TestUtilNip44Encryption(
 )
 {
     NCPublicKey recvPubKey;
-    span_t outData;
+    uint8_t* outData;
 
     ENSURE(NCValidateSecretKey(libCtx, NCByteCastToSecretKey(sendKey.data)) == NC_SUCCESS);
     ENSURE(NCGetPublicKey(libCtx, NCByteCastToSecretKey(recvKey.data), &recvPubKey) == NC_SUCCESS);
@@ -645,25 +639,70 @@ static int TestUtilNip44Encryption(
     /* Nonce is required for nip44 encryption */
     TEST(NCUtilCipherSetProperty(ctx, NC_ENC_SET_NIP44_NONCE, nonce.data, nonce.size), NC_SUCCESS);
 
-    /* Ciper update should return the  */
+    /* Cipher update should return the  */
     TEST(NCUtilCipherUpdate(ctx, libCtx, NCByteCastToSecretKey(sendKey.data), &recvPubKey), NC_SUCCESS);
 
     NCResult cipherOutputSize = NCUtilCipherGetOutputSize(ctx);
 
     TEST(cipherOutputSize, expected.size);
 
-    outData.data = (uint8_t*)malloc(cipherOutputSize);
-    outData.size = (uint32_t)cipherOutputSize;
-
-    TASSERT(outData.data != NULL);
+    outData = (uint8_t*)malloc(cipherOutputSize);
+    TASSERT(outData != NULL);
 
     /* Read the encrypted payload to test */
-    TEST(NCUtilCipherReadOutput(ctx, outData.data, cipherOutputSize), cipherOutputSize);
+    TEST(NCUtilCipherReadOutput(ctx, outData, cipherOutputSize), cipherOutputSize);
 
     /* Ensure encrypted payload matches */
-    TEST(memcmp(outData.data, expected.data, cipherOutputSize), 0);
+    TEST(memcmp(outData, expected.data, cipherOutputSize), 0);
 
-    free(outData.data);
+    free(outData);
+
+    /* Free encryption memory */
+    NCUtilCipherFree(ctx);
+}
+
+static int TestUtilNip44Decryption(
+    const NCContext* libCtx,
+    span_t sendKey,
+    span_t recvKey,
+    span_t payload,
+    const char* expectedPt
+)
+{
+    NCPublicKey recvPubKey;
+    uint8_t* outData;
+
+    ENSURE(NCValidateSecretKey(libCtx, NCByteCastToSecretKey(sendKey.data)) == NC_SUCCESS);
+    ENSURE(NCGetPublicKey(libCtx, NCByteCastToSecretKey(recvKey.data), &recvPubKey) == NC_SUCCESS);
+
+    /* Alloc cipher in nip44 decryption mode */
+    NCUtilCipherContext* ctx = NCUtilCipherAlloc(
+        NC_ENC_VERSION_NIP44,
+        NC_UTIL_CIPHER_MODE_DECRYPT | NC_UTIL_CIPHER_ZERO_ON_FREE
+    );
+
+    ENSURE(ctx != NULL);
+
+    /* submit encrypted payload for ciphertext */
+    TEST(NCUtilCipherInit(ctx, payload.data, payload.size), NC_SUCCESS);
+
+    TEST(NCUtilCipherUpdate(ctx, libCtx, NCByteCastToSecretKey(sendKey.data), &recvPubKey), NC_SUCCESS);
+
+    NCResult plaintextSize = NCUtilCipherGetOutputSize(ctx);
+
+    TEST(plaintextSize, strlen(expectedPt));
+
+    outData = (uint8_t*)malloc(plaintextSize);
+
+    TASSERT(outData != NULL);
+
+    /* Read the encrypted payload to test */
+    TEST(NCUtilCipherReadOutput(ctx, outData, plaintextSize), plaintextSize);
+
+    /* Ensure encrypted payload matches */
+    TEST(memcmp(outData, expectedPt, plaintextSize), 0);
+
+    free(outData);
 
     /* Free encryption memory */
     NCUtilCipherFree(ctx);
@@ -691,6 +730,21 @@ static int TestUtilFunctions(const NCContext* libCtx)
         const char* plainText = "a";
 
         if (TestUtilNip44Encryption(libCtx, sendKey, recvKey, nonce, payload, plainText) != 0) 
+        {
+            return 1;
+        }
+    }
+    {
+        PRINTL("TEST: NIP-44 util decryption");
+
+        /* From the nip44 vectors file */
+        span_t sendKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", sizeof(NCSecretKey));
+        span_t recvKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000002", sizeof(NCSecretKey));
+        span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_ENCRYPTION_NONCE_SIZE);
+        span_t payload = FromHexString("02000000000000000000000000000000000000000000000000000000000000000179ed06e5548ad3ff58ca920e6c0b4329f6040230f7e6e5641f20741780f0adc35a09794259929a02bb06ad8e8cf709ee4ccc567e9d514cdf5781af27a3e905e55b1b", 99);
+        const char* plainText = "a";
+
+        if (TestUtilNip44Decryption(libCtx, sendKey, recvKey, payload, plainText) != 0)
         {
             return 1;
         }

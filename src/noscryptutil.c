@@ -20,7 +20,6 @@
 
 
 #include <stdlib.h>
-#include <math.h>
 
 #include "nc-util.h"
 #include "nc-crypto.h"
@@ -53,8 +52,26 @@
 #endif /* !NC_DISABLE_INPUT_VALIDATION */
 
 
-/* performs a log2 on integer types */
-#define _math_int_log2(x)	(int32_t)log2((double)x)
+#ifdef _NC_IS_WINDOWS
+	
+	#include <math.h>
+
+	/* performs a log2 on integer types */
+	#define _math_int_log2(x)	(uint32_t)log2((double)x)
+
+#else
+	/* 
+	* GCC/clang does not expose log2 so we can use the __builtin_clz
+	* to find leading zeros of an integer and subtract that from 31 
+	* (bit positions) for int32 
+	*/
+	static _nc_fn_inline uint32_t _math_int_log2(uint32_t val)
+	{
+		DEBUG_ASSERT(val < UINT32_MAX);
+
+		return 31 - __builtin_clz(val);
+	}
+#endif
 
 #define MIN_PADDING_SIZE		0x20u
 #define NIP44_VERSION_SIZE		0x01u
@@ -66,10 +83,15 @@
 */
 #define NIP44_MIN_PAYLOAD_SIZE  (NIP44_VERSION_SIZE + 0x20 + 0x02 + 0x20 + 0x02)
 
+/*
+* The minimum ciphertext size is the minimum padded size + the minimum
+* size of the plaintext length field
+*/
+#define NIP44_MIN_CIPHERTEXT_SIZE (MIN_PADDING_SIZE + NIP44_PT_LEN_SIZE)
 
 
 /* Currently were on nip44 version 2 */
-const static uint8_t Nip44VersionValue[1] = { 0x02u };
+static const uint8_t Nip44VersionValue[1] = { 0x02u };
 
 struct nc_util_enc_struct {
 
@@ -217,7 +239,7 @@ static _nc_fn_inline span_t _nip44GetMacOutput(span_t payload)
 
 static _nc_fn_inline cspan_t _nip44ParseMac(cspan_t payload)
 {
-	DEBUG_ASSERT(payload.size > NC_ENCRYPTION_MAC_SIZE);
+	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
 
 	/*
 	* Mac is the final 32 bytes of the ciphertext buffer
@@ -231,30 +253,26 @@ static _nc_fn_inline cspan_t _nip44ParseMac(cspan_t payload)
 
 static _nc_fn_inline cspan_t _nip44ParseCipherText(cspan_t payload)
 {
-	DEBUG_ASSERT(payload.size < NIP44_MIN_PAYLOAD_SIZE);
+	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
 
-	/* slice after the nonce and before the mac segments */
+	/* ct is all of the data after the nonce and before the mac segment */
 	return ncSpanSliceC(
 		payload,
 		NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE,
-		payload.size - NC_ENCRYPTION_MAC_SIZE
+		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE + NC_ENCRYPTION_MAC_SIZE)
 	);
 }
 
 static _nc_fn_inline cspan_t _nip44ParseNonce(cspan_t payload)
 {
-	cspan_t nonceData;
-
-	DEBUG_ASSERT(payload.size > NIP44_MIN_PAYLOAD_SIZE);
+	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
 
 	/* slice after the version and before the mac segments */
-	nonceData = ncSpanSliceC(
+	return ncSpanSliceC(
 		payload,
 		NIP44_VERSION_SIZE,
 		NC_ENCRYPTION_NONCE_SIZE
 	);
-
-	return nonceData;
 }
 
 static NCResult _nip44EncryptCompleteCore(
@@ -325,7 +343,7 @@ static NCResult _nip44EncryptCompleteCore(
 
 	result = NCSetEncryptionData(
 		&encArgs,
-		(payload.data + outPos),
+		(payload.data + outPos),			/* in place encryption */
 		(payload.data + outPos),
 		paddedCtSize + NIP44_PT_LEN_SIZE	/* Plaintext + pt size must be encrypted */
 	);
@@ -458,7 +476,7 @@ static NCResult _nip44DecryptCompleteCore(
 
 	cipherText = _nip44ParseCipherText(cipher->cipherInput);
 	
-	DEBUG_ASSERT2(cipherText.size > 0x20, "Cipertext segment was parsed incorrectly. Too small");
+	DEBUG_ASSERT2(cipherText.size >= MIN_PADDING_SIZE, "Cipertext segment was parsed incorrectly. Too small");
 
 	/* manually sign nonce */
 	encArgs.nonceData = nonce.data;
