@@ -58,7 +58,7 @@ extern "C" {
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllimport)
 		#else
-			#define NC_EXPORT
+			#define NC_EXPORT extern
 		#endif /*  _NC_IS_WINDOWS */
 	#endif /*  !NOSCRYPT_EXPORTING */
 #endif /*  !NC_EXPORT */

@@ -63,7 +63,7 @@ _IMPLSTB NTSTATUS _bcInitSha256(struct _bcrypt_ctx* ctx, DWORD flags)
 	return result;
 }
 
-_IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, const cspan_t* key)
+_IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, cspan_t key)
 {
 	/*
 	 * NOTE: 
@@ -79,8 +79,8 @@ _IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, const cspan_t* key)
 		&ctx->hHash, 
 		NULL, 
 		0, 
-		(uint8_t*)key->data, 
-		key->size, 
+		(uint8_t*)key.data, 
+		key.size, 
 		BCRYPT_HASH_REUSABLE_FLAG	/* Enable reusable for expand function */
 	);
 }
@@ -92,7 +92,7 @@ _IMPLSTB NTSTATUS _bcCreate(struct _bcrypt_ctx* ctx)
 	/* Zero out key span for 0 size and NULL data ptr */
 	SecureZeroMemory(&key, sizeof(cspan_t));
 
-	return _bcCreateHmac(ctx, &key);
+	return _bcCreateHmac(ctx, key);
 }
 
 _IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* data, uint32_t len)
@@ -100,9 +100,9 @@ _IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* d
 	return BCryptHashData(ctx->hHash, (uint8_t*)data, len, 0);
 }
 
-_IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, const cspan_t* data)
+_IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, cspan_t data)
 {
-	return _bcHashDataRaw(ctx, data->data, data->size);
+	return _bcHashDataRaw(ctx, data.data, data.size);
 }
 
 _IMPLSTB NTSTATUS _bcFinishHash(const struct _bcrypt_ctx* ctx, sha256_t digestOut32)
@@ -146,7 +146,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	/* Export function fallack */
 	#define _IMPL_CRYPTO_SHA256_DIGEST			_bcrypt_sha256_digest	
 
-	_IMPLSTB cstatus_t _bcrypt_sha256_digest(const cspan_t* data, sha256_t digestOut32)
+	_IMPLSTB cstatus_t _bcrypt_sha256_digest(cspan_t data, sha256_t digestOut32)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
@@ -177,7 +177,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	/* Export function */
 	#define _IMPL_CRYPTO_SHA256_HMAC				_bcrypt_hmac_sha256	
 	
-	_IMPLSTB cstatus_t _bcrypt_hmac_sha256(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32)
+	_IMPLSTB cstatus_t _bcrypt_hmac_sha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
@@ -213,7 +213,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_bcrypt_fallback_hkdf_expand
 
-	cstatus_t _bcrypt_hkdf_update(void* ctx, const cspan_t* data)
+	cstatus_t _bcrypt_hkdf_update(void* ctx, cspan_t data)
 	{
 		DEBUG_ASSERT(ctx != NULL)
 
@@ -229,7 +229,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 		return CSTATUS_OK;
 	}
 
-	_IMPLSTB cstatus_t _bcrypt_fallback_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
+	_IMPLSTB cstatus_t _bcrypt_fallback_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;

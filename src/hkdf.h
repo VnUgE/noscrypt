@@ -42,7 +42,7 @@
 
 /* typedefs for hdkf callback functions */
 
-typedef cstatus_t (*hmac_hash_fn)(void* ctx, const cspan_t* data);
+typedef cstatus_t (*hmac_hash_fn)(void* ctx, cspan_t data);
 typedef cstatus_t (*hmac_finish_fn)(void* ctx, sha256_t hmacOut32);
 
 struct nc_hkdf_fn_cb_struct
@@ -54,8 +54,8 @@ struct nc_hkdf_fn_cb_struct
 cstatus_t hkdfExpandProcess(
 	const struct nc_hkdf_fn_cb_struct* handler,
 	void* ctx,
-	const cspan_t* info,
-	span_t* okm
+	cspan_t info,
+	span_t okm
 );
 
 #endif /* !_NC_HKDF_H */

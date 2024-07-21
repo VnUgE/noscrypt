@@ -143,21 +143,6 @@ target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/secp256k
 #
 #############################################
 
-#try to load openssl quietly in order to check for its availability
-find_package(OpenSSL QUIET)
-
-#setup default linking to crypto libraries for certain plaftorms. 
-#Windows defaults to bcrypt, openssl otherwise if installed
-if(CRYPTO_LIB STREQUAL "")	
-  if(MSVC)
-	set(CRYPTO_LIB "bcrypt")
-  elseif(OPENSSL_FOUND)
-	set(CRYPTO_LIB "openssl")
-  endif()
-
-  message(STATUS "No crypto library was specified, defaulting to ${CRYPTO_LIB}")
-endif()
-
 #Include mbedtls if enabled
 if(NC_FETCH_MBEDTLS)
 
@@ -185,6 +170,22 @@ if(NC_FETCH_MBEDTLS)
 	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
 
 endif()
+
+#try to load openssl quietly in order to check for its availability
+find_package(OpenSSL QUIET)
+
+#setup default linking to crypto libraries for certain plaftorms. 
+#Windows defaults to bcrypt, openssl otherwise if installed
+if(CRYPTO_LIB STREQUAL "")	
+  if(MSVC)
+	set(CRYPTO_LIB "bcrypt")
+  elseif(OPENSSL_FOUND)
+	set(CRYPTO_LIB "openssl")
+  endif()
+
+  message(STATUS "No crypto library was specified, defaulting to ${CRYPTO_LIB}")
+endif()
+
 
 #if mbedtls linking is enabled target the library
 if(CRYPTO_LIB STREQUAL "mbedtls")

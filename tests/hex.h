@@ -68,6 +68,7 @@ static span_t _fromHexString(const char* hexLiteral, uint32_t strLen)
 
 	if(!hexLiteral)
 	{
+		ncSpanInit(&hexBytes, NULL, 0);
 		return hexBytes;
 	}
 
@@ -125,13 +126,13 @@ static void PrintHexRaw(void* bytes, size_t len)
 */
 static void PrintHexBytes(span_t hexBytes)
 {
-	if (!hexBytes.data)
+	if (ncSpanIsValid(hexBytes))
 	{
-		puts("NULL");
+		PrintHexRaw(hexBytes.data, hexBytes.size);
 	}
 	else
 	{
-		PrintHexRaw(hexBytes.data, hexBytes.size);
+		puts("NULL");		
 	}
 }
 

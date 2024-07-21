@@ -39,11 +39,13 @@ extern "C" {
 #define E_CIPHER_INVALID_FORMAT			-11
 #define E_CIPHER_BAD_NONCE				-12
 #define E_CIPHER_MAC_INVALID			-13
+#define E_CIPHER_NO_OUTPUT				-14
 
 #define NC_UTIL_CIPHER_MODE_ENCRYPT		0x00u
 #define NC_UTIL_CIPHER_MODE_DECRYPT		0x01u
 #define NC_UTIL_CIPHER_ZERO_ON_FREE		0x02u
 #define NC_UTIL_CIPHER_MAC_NO_VERIFY	0x04u
+#define NC_UTIL_CIPHER_REUSEABLE		0x08u
 
 /*
 * The encryption context structure. This structure is used to store the state 
@@ -166,7 +168,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherGetFlags(const NCUtilCipherContext* ctx);
 * so the exact same operation should happen if called again.
 */
 NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
-	const NCUtilCipherContext* encCtx,
+	NCUtilCipherContext* encCtx,
 	const NCContext* libContext,
 	const NCSecretKey* sk,
 	const NCPublicKey* pk

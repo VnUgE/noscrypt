@@ -34,6 +34,23 @@
 	#error "Utilities library must be disabled when using extreme compat mode"
 #endif /* NC_EXTREME_COMPAT */
 
+#define MIN_PADDING_SIZE		0x20u
+#define NIP44_VERSION_SIZE		0x01u
+#define NIP44_PT_LEN_SIZE		sizeof(uint16_t)
+
+/*
+* minimum size for a valid nip44 payload
+* 1 byte version + 32 byte nonce + 32 byte mac + 2 byte ptSize + 32bytes minimum length
+*/
+#define NIP44_MIN_PAYLOAD_SIZE  (NIP44_VERSION_SIZE + 0x20 + 0x02 + 0x20 + 0x02)
+
+/*
+* The minimum ciphertext size is the minimum padded size + the minimum
+* size of the plaintext length field
+*/
+#define NIP44_MIN_CIPHERTEXT_SIZE (MIN_PADDING_SIZE + NIP44_PT_LEN_SIZE)
+
+
 #define _nc_mem_free(x) if(x != NULL) { free(x); x = NULL; }
 #define _nc_mem_alloc(elements, size) calloc(elements, size);
 #define ZERO_FILL ncCryptoSecureZero
@@ -50,7 +67,6 @@
 	#define CHECK_ARG_RANGE(x, min, max, argPos) 
 	#define CHECK_ARG_IS(is, expected, argPos)
 #endif /* !NC_DISABLE_INPUT_VALIDATION */
-
 
 #ifdef _NC_IS_WINDOWS
 	
@@ -73,38 +89,24 @@
 	}
 #endif
 
-#define MIN_PADDING_SIZE		0x20u
-#define NIP44_VERSION_SIZE		0x01u
-#define NIP44_PT_LEN_SIZE		sizeof(uint16_t)
-
-/*
-* minimum size for a valid nip44 payload
-* 1 byte version + 32 byte nonce + 32 byte mac + 2 byte ptSize + 32bytes minimum length
-*/
-#define NIP44_MIN_PAYLOAD_SIZE  (NIP44_VERSION_SIZE + 0x20 + 0x02 + 0x20 + 0x02)
-
-/*
-* The minimum ciphertext size is the minimum padded size + the minimum
-* size of the plaintext length field
-*/
-#define NIP44_MIN_CIPHERTEXT_SIZE (MIN_PADDING_SIZE + NIP44_PT_LEN_SIZE)
-
-
 /* Currently were on nip44 version 2 */
 static const uint8_t Nip44VersionValue[1] = { 0x02u };
+
+struct cipher_buffer_state {
+	
+	cspan_t input;
+	span_t output;
+
+	cspan_t actualOutput;
+};
 
 struct nc_util_enc_struct {
 
 	uint32_t _flags;
 
-	cspan_t cipherInput;
-
-	/* 
-		The data this span points to is allocated during initialization 
-	*/
-	span_t cipherOutput;
-
 	NCEncryptionArgs encArgs;
+
+	struct cipher_buffer_state buffer;
 };
 
 static _nc_fn_inline span_t _ncUtilAllocSpan(uint32_t count, size_t size)
@@ -124,6 +126,11 @@ static _nc_fn_inline span_t _ncUtilAllocSpan(uint32_t count, size_t size)
 	span.size = (uint32_t)count;
 
 	return span;
+}
+
+static _nc_fn_inline void _ncUtilZeroSpan(span_t span)
+{
+	ZERO_FILL(span.data, span.size);
 }
 
 static _nc_fn_inline void _ncUtilFreeSpan(span_t span)
@@ -198,7 +205,7 @@ static _nc_fn_inline uint32_t _calcNip44TotalOutSize(uint32_t inputSize)
 	return bufferSize;
 }
 
-static _nc_fn_inline cspan_t _nip44GetMacData(cspan_t payload)
+static _nc_fn_inline span_t _nip44GetMacData(span_t payload)
 {
 	DEBUG_ASSERT(payload.size > NIP44_VERSION_SIZE + NC_ENCRYPTION_MAC_SIZE);
 
@@ -216,7 +223,7 @@ static _nc_fn_inline cspan_t _nip44GetMacData(cspan_t payload)
 	* macData = ct.size - version.size + mac.size
 	*/
 
-	return ncSpanSliceC(
+	return ncSpanSlice(
 		payload,
 		NIP44_VERSION_SIZE,
 		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_MAC_SIZE)
@@ -237,69 +244,104 @@ static _nc_fn_inline span_t _nip44GetMacOutput(span_t payload)
 	);
 }
 
-static _nc_fn_inline cspan_t _nip44ParseMac(cspan_t payload)
+static _nc_fn_inline int _nip44ParseSegments(
+	cspan_t payload, 
+	cspan_t* nonce,
+	cspan_t* mac,
+	cspan_t* macData,
+	cspan_t* cipherText
+)
 {
-	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
-
-	/*
-	* Mac is the final 32 bytes of the ciphertext buffer
-	*/
-	return ncSpanSliceC(
-		payload,
-		payload.size - NC_ENCRYPTION_MAC_SIZE,
-		NC_ENCRYPTION_MAC_SIZE
-	);
-}
-
-static _nc_fn_inline cspan_t _nip44ParseCipherText(cspan_t payload)
-{
-	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
-
-	/* ct is all of the data after the nonce and before the mac segment */
-	return ncSpanSliceC(
-		payload,
-		NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE,
-		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE + NC_ENCRYPTION_MAC_SIZE)
-	);
-}
-
-static _nc_fn_inline cspan_t _nip44ParseNonce(cspan_t payload)
-{
-	DEBUG_ASSERT(payload.size >= NIP44_MIN_PAYLOAD_SIZE);
+	if (payload.size < NIP44_MIN_PAYLOAD_SIZE)
+	{
+		return 0;
+	}
 
 	/* slice after the version and before the mac segments */
-	return ncSpanSliceC(
+	*nonce = ncSpanSliceC(
 		payload,
 		NIP44_VERSION_SIZE,
 		NC_ENCRYPTION_NONCE_SIZE
 	);
+
+	/*
+	* Mac is the final 32 bytes of the ciphertext buffer
+	*/
+	*mac = ncSpanSliceC(
+		payload,
+		payload.size - NC_ENCRYPTION_MAC_SIZE,
+		NC_ENCRYPTION_MAC_SIZE
+	);
+
+	/*
+	* The mac data is the nonce+ct segment of the buffer for mac computation.
+	*/
+	*macData = ncSpanSliceC(
+		payload,
+		NIP44_VERSION_SIZE,
+		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_MAC_SIZE)
+	);
+
+	/*
+	* Ciphertext is after the nonce segment and before the mac segment
+	*/
+	*cipherText = ncSpanSliceC(
+		payload,
+		NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE,
+		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE + NC_ENCRYPTION_MAC_SIZE)
+	);
+
+	return 1;
 }
+
+
+static _nc_fn_inline void _cipherPublishOutput(NCUtilCipherContext* buffer, uint32_t offset, uint32_t size)
+{
+	span_t slice;
+
+	DEBUG_ASSERT(ncSpanIsValid(buffer->buffer.output));
+
+	if (size == 0)
+	{
+		ncSpanInitC(&buffer->buffer.actualOutput, NULL, 0);
+	}
+	else
+	{
+		/* use slice for debug guards */
+		slice = ncSpanSlice(buffer->buffer.output, offset, size);
+		ncSpanInitC(&buffer->buffer.actualOutput, slice.data, slice.size);
+	}	
+}
+
+/*
+* I want the encryption/decyption functions to be indempodent
+* meaning all mutations that happen can be repeated without
+* side effects. IE no perminent state changes that can't be
+* undone.
+*/
 
 static NCResult _nip44EncryptCompleteCore(
 	const NCContext* libContext,
 	const NCSecretKey* sk,
 	const NCPublicKey* pk,
-	NCEncryptionArgs encArgs,
-	cspan_t plainText,
-	span_t payload
+	NCUtilCipherContext* state
 )
 {
 
 	NCResult result;
-	cspan_t macData, cPayload;
-	span_t macOutput;
-	uint32_t outPos, paddedCtSize;
+	cspan_t plainText;
+	span_t macData, macOutput, payload;
+	uint32_t outPos;
 	uint8_t ptSize[NIP44_PT_LEN_SIZE];
 	uint8_t hmacKeyOut[NC_ENCRYPTION_MAC_SIZE];
+	NCEncryptionArgs encArgs;
 
 	outPos = 0;
+	encArgs = state->encArgs;
+	payload = state->buffer.output;
+	plainText = state->buffer.input;
 
 	DEBUG_ASSERT(encArgs.version == NC_ENC_VERSION_NIP44);
-
-	ncSpanInitC(&cPayload, payload.data, payload.size);
-
-	/* Padded size is required to know how large the CT buffer is for encryption */
-	paddedCtSize = _calcNip44PtPadding(plainText.size);
 
 	/* Start by appending the version number */
 	ncSpanAppend(payload, &outPos, Nip44VersionValue, sizeof(Nip44VersionValue));
@@ -343,9 +385,9 @@ static NCResult _nip44EncryptCompleteCore(
 
 	result = NCSetEncryptionData(
 		&encArgs,
-		(payload.data + outPos),			/* in place encryption */
-		(payload.data + outPos),
-		paddedCtSize + NIP44_PT_LEN_SIZE	/* Plaintext + pt size must be encrypted */
+		ncSpanGetOffset(payload, outPos),	/* in place encryption */
+		ncSpanGetOffset(payload, outPos),
+		NIP44_PT_LEN_SIZE + _calcNip44PtPadding(plainText.size) 	/* Plaintext + pt size must be encrypted */
 	);
 
 	DEBUG_ASSERT(result == NC_SUCCESS);
@@ -363,7 +405,7 @@ static NCResult _nip44EncryptCompleteCore(
 	* the plaintext data, followed by zero padding.
 	*/
 
-	ncSpanWrite(payload, outPos, ptSize, NIP44_PT_LEN_SIZE);
+	ncSpanWrite(payload, outPos, ptSize, sizeof(ptSize));
 
 	ncSpanWrite(
 		payload,
@@ -387,15 +429,15 @@ static NCResult _nip44EncryptCompleteCore(
 		this helper captures that data segment into a span
 	*/
 
-	macData = _nip44GetMacData(cPayload);
+	macData = _nip44GetMacData(payload);
 	macOutput = _nip44GetMacOutput(payload);
 
 	result = NCComputeMac(
 		libContext,
 		hmacKeyOut,
-		macData.data,
+		ncSpanGetOffset(macData, 0),
 		macData.size,
-		macOutput.data
+		ncSpanGetOffset(macOutput, 0)
 	);
 
 	if (result != NC_SUCCESS)
@@ -406,6 +448,9 @@ static NCResult _nip44EncryptCompleteCore(
 	outPos += NC_ENCRYPTION_MAC_SIZE;
 
 	DEBUG_ASSERT2(outPos == payload.size, "Buffer under/overflow detected");
+
+	/* publish all payload bytes to output */
+	_cipherPublishOutput(state, 0, outPos);
 
 	/* zero hmac key before returning */
 	ZERO_FILL(hmacKeyOut, sizeof(hmacKeyOut));
@@ -418,45 +463,55 @@ static NCResult _nip44DecryptCompleteCore(
 	const NCContext* libContext,
 	const NCSecretKey* recvKey,
 	const NCPublicKey* sendKey,
-	const NCUtilCipherContext* cipher
+	NCUtilCipherContext* state
 )
 {
 	NCResult result;
 	NCMacVerifyArgs macArgs;
 	NCEncryptionArgs encArgs;
-	cspan_t macData, macValue, cipherText, nonce;
+	cspan_t macData, macValue, nonce, payload, cipherText;
+	span_t output;
+	uint16_t ptSize;
 
-	DEBUG_ASSERT(libContext && recvKey && sendKey && cipher);
-	DEBUG_ASSERT(cipher->encArgs.version == NC_ENC_VERSION_NIP44);
+	DEBUG_ASSERT(libContext && recvKey && sendKey && state);
+	DEBUG_ASSERT(state->encArgs.version == NC_ENC_VERSION_NIP44);
+	DEBUG_ASSERT(state->buffer.input.size >= NIP44_MIN_PAYLOAD_SIZE);
 
 	/* ensure decryption mode */
-	DEBUG_ASSERT(cipher->_flags & NC_UTIL_CIPHER_MODE_DECRYPT);
+	DEBUG_ASSERT(state->_flags & NC_UTIL_CIPHER_MODE_DECRYPT);
 
 	/* store local stack copy for safe mutation */
-	encArgs = cipher->encArgs;
+	encArgs = state->encArgs;
+	payload = state->buffer.input;
+	output = state->buffer.output;
 
-	nonce = _nip44ParseNonce(cipher->cipherInput);
+	/*
+	* Copy the input buffer to the output buffer because the 
+	* decryption happens in-place and needs a writable buffer
+	* 
+	* After the operation is complete, we will assign the actual plaintext 
+	* data to the actual output buffer
+	*/
+
+	DEBUG_ASSERT2(ncSpanIsValid(output), "Output buffer was not allocated");
+
+	if (!_nip44ParseSegments(payload, &nonce, &macValue, &macData, &cipherText))
+	{
+		return E_CIPHER_INVALID_FORMAT;
+	}
 
 	/* Verify mac if the user allowed it */
-	if ((cipher->_flags & NC_UTIL_CIPHER_MAC_NO_VERIFY) == 0)
+	if ((state->_flags & NC_UTIL_CIPHER_MAC_NO_VERIFY) == 0)
 	{
-		/*
-		* The mac data to verify against is the nonce+ciphertext data
-		* from within the nip44 message payload
-		*/
-
-		macData = _nip44GetMacData(cipher->cipherInput);
-		macValue = _nip44ParseMac(cipher->cipherInput);
-
 		DEBUG_ASSERT(macValue.size == NC_ENCRYPTION_MAC_SIZE);
-		DEBUG_ASSERT(macData.size > NC_ENCRYPTION_NONCE_SIZE + 0x20);
+		DEBUG_ASSERT(macData.size > NC_ENCRYPTION_NONCE_SIZE + MIN_PADDING_SIZE);
 
 		/* Assign the mac data to the mac verify args */
-		macArgs.mac32 = macValue.data;
-		macArgs.nonce32 = nonce.data;
+		macArgs.mac32 = ncSpanGetOffsetC(macValue, 0);
+		macArgs.nonce32 = ncSpanGetOffsetC(nonce, 0);
 		
 		/* payload for verifying a mac in nip44 is the nonce+ciphertext */
-		macArgs.payload = macData.data;
+		macArgs.payload = ncSpanGetOffsetC(macData, 0);
 		macArgs.payloadSize = macData.size;
 
 		/* Verify the mac */
@@ -474,33 +529,28 @@ static NCResult _nip44DecryptCompleteCore(
 		}
 	}
 
-	cipherText = _nip44ParseCipherText(cipher->cipherInput);
-	
-	DEBUG_ASSERT2(cipherText.size >= MIN_PADDING_SIZE, "Cipertext segment was parsed incorrectly. Too small");
-
-	/* manually sign nonce */
-	encArgs.nonceData = nonce.data;
-
-	/*
-	* Remember the decryption operation is symmetric, it reads the input bytes and writes 
-	* directly to the output. 
-	* 
-	* The decryption is performed on the ciphertext segment and we can write the output 
-	* directly the output buffer.
-	* 
-	* The leading 2 bytes will be the encoded plaintext size, followed by the plaintext data
-	* and padding. That's okay. The user will call NCUtilCipherGetOutputSize to get the
-	* actual size of the plaintext, which will exlcude the leading 2 bytes and padding.
+	/* 
+	* manually assign nonce because it's a constant pointer which
+	* is not allowed when calling setproperty 
 	*/
+	encArgs.nonceData = ncSpanGetOffsetC(nonce, 0);
 
-	DEBUG_ASSERT(cipher->cipherOutput.size >= cipherText.size);
-
+	DEBUG_ASSERT2(cipherText.size >= MIN_PADDING_SIZE, "Cipertext segment was parsed incorrectly. Too small");
+	
 	result = NCSetEncryptionData(
 		&encArgs,
-		cipherText.data,
-		cipher->cipherOutput.data,
+		ncSpanGetOffsetC(cipherText, 0),
+		ncSpanGetOffset(output, 0),			/*decrypt ciphertext and write directly to the output buffer */
 		cipherText.size
 	);
+
+	DEBUG_ASSERT(result == NC_SUCCESS);
+
+	/*
+	* If decryption was successful, the data should be written 
+	* directly to the output buffer
+	*/
+	result = NCDecrypt(libContext, recvKey, sendKey, &encArgs);
 
 	if (result != NC_SUCCESS)
 	{
@@ -508,10 +558,31 @@ static NCResult _nip44DecryptCompleteCore(
 	}
 
 	/*
-	* If decryption was successful, the data should be written 
-	* directly to the output buffer
+	* Parse CT length and assign the output buffer.
+	* 
+	* PT size is stored at the beginning of the ciphertext
+	* segment and is 2 bytes in size, big endian.
 	*/
-	result = NCDecrypt(libContext, recvKey, sendKey, &encArgs);
+
+	ptSize = (uint16_t)(output.data[0] << 8 | output.data[1]);
+
+	/*
+	* If the PT is corrupted or set maliciously, it can overrun
+	* the current buffer. The PT size must be less than the
+	* ciphertext size.
+	*/
+	if (!ncSpanIsValidRange(output, NIP44_PT_LEN_SIZE, ptSize))
+	{
+		return E_OPERATION_FAILED;
+	}
+
+	/*
+	* actual output span should now point to the decrypted plaintext
+	* data segment
+	*/
+	_cipherPublishOutput(state, NIP44_PT_LEN_SIZE, ptSize);
+
+	DEBUG_ASSERT(state->buffer.actualOutput.size < cipherText.size);
 
 	return result;
 }
@@ -582,13 +653,13 @@ NC_EXPORT void NC_CC NCUtilCipherFree(NCUtilCipherContext* encCtx)
 	* If zero on free flag is set, we can zero all output memory 
 	* before returning the buffer back to the heap
 	*/
-	if ((encCtx->_flags & NC_UTIL_CIPHER_ZERO_ON_FREE) > 0 && encCtx->cipherOutput.data) 
+	if ((encCtx->_flags & NC_UTIL_CIPHER_ZERO_ON_FREE) > 0 && ncSpanIsValid(encCtx->buffer.output)) 
 	{
-		ZERO_FILL(encCtx->cipherOutput.data, encCtx->cipherOutput.size);
+		_ncUtilZeroSpan(encCtx->buffer.output);
 	}
 
-	/* Free output buffers */
-	_ncUtilFreeSpan(encCtx->cipherOutput);
+	/* Free output buffers (null buffers are allowed) */
+	_ncUtilFreeSpan(encCtx->buffer.output);
 
 	/* context can be released */
 	_nc_mem_free(encCtx);
@@ -604,14 +675,12 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 
 	CHECK_NULL_ARG(encCtx, 0);
 	CHECK_NULL_ARG(inputData, 1);
-	/* The output state must not have alraedy been allocated */
-	CHECK_ARG_IS(encCtx->cipherOutput.data == NULL, 0);
 
 	if ((encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
 	{
 		/*
 		* Validate the input data for proper format for 
-		* the current cipher version
+		* the current state version
 		*/
 		switch (encCtx->encArgs.version)
 		{
@@ -652,7 +721,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	{
 		/*
 		* Calculate the correct output size to store the encryption
-		* data for the given cipher version
+		* data for the given state version
 		*/
 		outputSize = NCUtilGetEncryptionBufferSize(encCtx->encArgs.version, inputSize);
 	}
@@ -662,15 +731,48 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 		return outputSize;
 	}
 
-	/* Alloc output buffer within the struct */
-	encCtx->cipherOutput = _ncUtilAllocSpan((uint32_t)outputSize, sizeof(uint8_t));
+	/*
+	* If the buffer was previously allocated, the reuseable flag
+	* must be set to allow the buffer to be re-used for another
+	* operation.
+	*/
 
-	if (!encCtx->cipherOutput.data)
+	if (ncSpanIsValid(encCtx->buffer.output))
+	{
+		CHECK_ARG_IS((encCtx->_flags & NC_UTIL_CIPHER_REUSEABLE) > 0, 0);
+
+		/*
+		* if the existing buffer is large enough to hold the new 
+		* data reuse it, otherwise free it and allocate a new buffer
+		*/
+
+		if (outputSize <= encCtx->buffer.output.size)
+		{
+			_ncUtilZeroSpan(encCtx->buffer.output);
+
+			goto AssignInputAndExit;
+		}
+		else
+		{
+			_ncUtilFreeSpan(encCtx->buffer.output);
+		}
+	}
+
+	/* Alloc output buffer within the struct */
+	encCtx->buffer.output = _ncUtilAllocSpan((uint32_t)outputSize, sizeof(uint8_t));
+
+	if (!ncSpanIsValid(encCtx->buffer.output))
 	{
 		return E_OUT_OF_MEMORY;
 	}
 
-	ncSpanInitC(&encCtx->cipherInput, inputData, inputSize);
+AssignInputAndExit:
+
+	/* Confirm output was allocated */
+	DEBUG_ASSERT(ncSpanIsValid(encCtx->buffer.output));
+
+	/* Assign the input data span to point to the assigned input data */
+	ncSpanInitC(&encCtx->buffer.input, inputData, inputSize);
 
 	return NC_SUCCESS;
 }
@@ -684,48 +786,14 @@ NC_EXPORT NCResult NC_CC NCUtilCipherGetFlags(const NCUtilCipherContext* ctx)
 
 NC_EXPORT NCResult NC_CC NCUtilCipherGetOutputSize(const NCUtilCipherContext* encCtx)
 {
-	uint16_t nip44PtSize;
-
 	CHECK_NULL_ARG(encCtx, 0);
 
-	/*
-	* if nip44 decryption is desired, the output buffer will be 
-	* overallocated. It will also contain some padding bytes
-	* so we need to parse the plaintext size from the buffer
-	* and return that as the output size.
-	*/
-	if (encCtx->encArgs.version == NC_ENC_VERSION_NIP44 
-		&& (encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+	if (!ncSpanIsValidC(encCtx->buffer.actualOutput))
 	{
-
-		/* ensure the output has been allocated correctly */
-		if (encCtx->cipherOutput.size < NIP44_PT_LEN_SIZE)
-		{
-			return E_INVALID_CONTEXT;
-		}
-
-		/*
-		* If a decryption operation was performed the leading 2 bytes will
-		* be the big-endian encoded plaintext size. This function should 
-		* return the size of the plaintext data, not the entire buffer.
-		*/
-
-		nip44PtSize = (encCtx->cipherOutput.data[0] << 8) | encCtx->cipherOutput.data[1];
-
-		/*
-		* If improperly decryption/formatted, the pt size may be some really large 
-		* number when decoded, so make sure it doesn't point to a location outside
-		* the buffer, that would be invalid
-		*/
-		if (nip44PtSize > (encCtx->cipherOutput.size - NIP44_PT_LEN_SIZE))
-		{
-			return E_CIPHER_INVALID_FORMAT;
-		}
-
-		return (NCResult)nip44PtSize;
+		return E_CIPHER_NO_OUTPUT;
 	}
 
-	return (NCResult)(encCtx->cipherOutput.size);
+	return (NCResult)(encCtx->buffer.actualOutput.size);
 }
 
 NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
@@ -734,55 +802,24 @@ NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
 	uint32_t outputSize
 )
 {
-	NCResult result;
+	CHECK_NULL_ARG(encCtx, 0);
+	CHECK_NULL_ARG(output, 1);
 
-	CHECK_NULL_ARG(encCtx, 0)
-	CHECK_NULL_ARG(output, 1)
-
-	/*
-	* Again if in nip44 decrypt mode we only want the 
-	* actual plaintext data
-	*/
-
-	if (encCtx->encArgs.version == NC_ENC_VERSION_NIP44
-		&& (encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+	if (!ncSpanIsValidC(encCtx->buffer.actualOutput))
 	{
-		result = NCUtilCipherGetOutputSize(encCtx);
-		
-		if (result < 0) 
-		{
-			return result;
-		}
-
-		DEBUG_ASSERT((result + NIP44_PT_LEN_SIZE) < encCtx->cipherOutput.size);
-
-		/* Make sure the output buffer is large enough */
-		CHECK_ARG_RANGE(outputSize, result, UINT32_MAX, 2);
-
-		/*
-		* Plaintext data sits directly after the length bytes 
-		* and up to the length of the plaintext size
-		*/
-		MEMMOV(
-			output,
-			encCtx->cipherOutput.data + NIP44_PT_LEN_SIZE,
-			(uint32_t)result
-		);
-
-		return result;
+		return E_CIPHER_NO_OUTPUT;
 	}
-	else
-	{
-		CHECK_ARG_RANGE(outputSize, encCtx->cipherOutput.size, UINT32_MAX, 2);
 
-		MEMMOV(
-			output,
-			encCtx->cipherOutput.data,
-			encCtx->cipherOutput.size
-		);
+	/* Buffer must be as large as the output data  */
+	CHECK_ARG_RANGE(outputSize, encCtx->buffer.actualOutput.size, UINT32_MAX, 2);
 
-		return (NCResult)encCtx->cipherOutput.size;
-	}
+	ncSpanReadC(
+		encCtx->buffer.actualOutput,
+		output,
+		outputSize
+	);
+
+	return (NCResult)encCtx->buffer.actualOutput.size;
 }
 
 NC_EXPORT NCResult NCUtilCipherSetProperty(
@@ -804,7 +841,7 @@ NC_EXPORT NCResult NCUtilCipherSetProperty(
 }
 
 NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
-	const NCUtilCipherContext* encCtx,
+	NCUtilCipherContext* encCtx,
 	const NCContext* libContext,
 	const NCSecretKey* sk,
 	const NCPublicKey* pk
@@ -816,14 +853,17 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 	CHECK_NULL_ARG(pk, 3);
 
 	/* Make sure input & output buffers have been assigned/allocated */
-	if (encCtx->cipherOutput.data == NULL)
+	if (!ncSpanIsValid(encCtx->buffer.output))
 	{
 		return E_INVALID_CONTEXT;
 	}
-	if (encCtx->cipherInput.data == NULL)
+	if (!ncSpanIsValidC(encCtx->buffer.input))
 	{
 		return E_INVALID_CONTEXT;
 	}
+
+	/* Reset output data pointer incase it has been moved */
+	_cipherPublishOutput(encCtx, 0, 0);
 
 	switch (encCtx->encArgs.version)
 	{
@@ -841,14 +881,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 				return E_CIPHER_BAD_NONCE;
 			}
 
-			return _nip44EncryptCompleteCore(
-				libContext,
-				sk,
-				pk,
-				encCtx->encArgs,
-				encCtx->cipherInput,
-				encCtx->cipherOutput
-			);
+			return _nip44EncryptCompleteCore(libContext, sk, pk, encCtx);
 		}
 
 	default:

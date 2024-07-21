@@ -42,16 +42,15 @@ static _nc_fn_inline void debugValidateHandler(const struct nc_hkdf_fn_cb_struct
 cstatus_t hkdfExpandProcess(
 	const struct nc_hkdf_fn_cb_struct* handler,
 	void* ctx,
-	const cspan_t* info,
-	span_t* okm
+	cspan_t info,
+	span_t okm
 )
 {
 	cstatus_t result;
-
-	uint8_t counter;
-	uint32_t tLen, okmOffset;
-	uint8_t t[HKDF_IN_BUF_SIZE];
 	cspan_t tSpan, counterSpan;
+	uint32_t tLen, okmOffset;
+	uint8_t counter[1];
+	uint8_t t[HKDF_IN_BUF_SIZE];
 
 	debugValidateHandler(handler);
 
@@ -59,18 +58,18 @@ cstatus_t hkdfExpandProcess(
 
 	tLen = 0;				/* T(0) is an empty string(zero length) */
 	okmOffset = 0;
-	counter = 1;			/* counter is offset by 1 for init */
+	counter[0] = 1;			/* counter is offset by 1 for init */
 	result = CSTATUS_FAIL;	/* Start in fail state */
 
 	/* counter as a span */
-	ncSpanInitC(&counterSpan, &counter, sizeof(counter));
+	ncSpanInitC(&counterSpan, counter, sizeof(counter));
 
 	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
-	while (okmOffset < okm->size)
+	while (okmOffset < okm.size)
 	{
 		ncSpanInitC(&tSpan, t, tLen);
 
-		if (handler->update(ctx, &tSpan) != CSTATUS_OK)
+		if (handler->update(ctx, tSpan) != CSTATUS_OK)
 		{
 			goto Exit;
 		}
@@ -80,7 +79,7 @@ cstatus_t hkdfExpandProcess(
 			goto Exit;
 		}
 
-		if (handler->update(ctx, &counterSpan) != CSTATUS_OK)
+		if (handler->update(ctx, counterSpan) != CSTATUS_OK)
 		{
 			goto Exit;
 		}
@@ -96,18 +95,15 @@ cstatus_t hkdfExpandProcess(
 		}
 
 		/* tlen becomes the hash size or remaining okm size */
-		tLen = HKDF_MIN(okm->size - okmOffset, SHA256_DIGEST_SIZE);
+		tLen = HKDF_MIN(okm.size - okmOffset, SHA256_DIGEST_SIZE);
 
 		DEBUG_ASSERT(tLen <= sizeof(t));
 
-		/* write the T buffer back to okm */
-		ncSpanWrite(*okm, okmOffset, t, tLen);
-
-		/* shift base okm pointer by T */
-		okmOffset += tLen;
+		/* write the T buffer back to okm and advance okmOffset by tLen */
+		ncSpanAppend(okm, &okmOffset, t, tLen);
 
 		/* increment counter */
-		counter++;
+		(*counter)++;
 	}
 
 	result = CSTATUS_OK;	/* HMAC operation completed, so set success */

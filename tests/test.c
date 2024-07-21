@@ -617,7 +617,7 @@ static int TestUtilNip44Encryption(
     span_t recvKey, 
     span_t nonce, 
     span_t expected,
-    const char* plainText
+    span_t plainText
 )
 {
     NCPublicKey recvPubKey;
@@ -634,7 +634,7 @@ static int TestUtilNip44Encryption(
     
     ENSURE(ctx != NULL);
 
-    TEST(NCUtilCipherInit(ctx, (const uint8_t*)plainText, strlen(plainText)), NC_SUCCESS);
+    TEST(NCUtilCipherInit(ctx, plainText.data, plainText.size), NC_SUCCESS);
 
     /* Nonce is required for nip44 encryption */
     TEST(NCUtilCipherSetProperty(ctx, NC_ENC_SET_NIP44_NONCE, nonce.data, nonce.size), NC_SUCCESS);
@@ -659,6 +659,8 @@ static int TestUtilNip44Encryption(
 
     /* Free encryption memory */
     NCUtilCipherFree(ctx);
+
+    return 0;
 }
 
 static int TestUtilNip44Decryption(
@@ -666,7 +668,7 @@ static int TestUtilNip44Decryption(
     span_t sendKey,
     span_t recvKey,
     span_t payload,
-    const char* expectedPt
+	span_t expectedPt
 )
 {
     NCPublicKey recvPubKey;
@@ -690,7 +692,7 @@ static int TestUtilNip44Decryption(
 
     NCResult plaintextSize = NCUtilCipherGetOutputSize(ctx);
 
-    TEST(plaintextSize, strlen(expectedPt));
+    TEST(plaintextSize, expectedPt.size);
 
     outData = (uint8_t*)malloc(plaintextSize);
 
@@ -700,12 +702,14 @@ static int TestUtilNip44Decryption(
     TEST(NCUtilCipherReadOutput(ctx, outData, plaintextSize), plaintextSize);
 
     /* Ensure encrypted payload matches */
-    TEST(memcmp(outData, expectedPt, plaintextSize), 0);
+    TEST(memcmp(outData, expectedPt.data, plaintextSize), 0);
 
     free(outData);
 
     /* Free encryption memory */
     NCUtilCipherFree(ctx);
+
+    return 0;
 }
 
 static int TestUtilFunctions(const NCContext* libCtx)
@@ -727,7 +731,7 @@ static int TestUtilFunctions(const NCContext* libCtx)
 		span_t recvKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000002", sizeof(NCSecretKey));
 		span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_ENCRYPTION_NONCE_SIZE);
         span_t payload = FromHexString("02000000000000000000000000000000000000000000000000000000000000000179ed06e5548ad3ff58ca920e6c0b4329f6040230f7e6e5641f20741780f0adc35a09794259929a02bb06ad8e8cf709ee4ccc567e9d514cdf5781af27a3e905e55b1b", 99);
-        const char* plainText = "a";
+		span_t plainText = FromHexString("61", 1);
 
         if (TestUtilNip44Encryption(libCtx, sendKey, recvKey, nonce, payload, plainText) != 0) 
         {
@@ -740,9 +744,8 @@ static int TestUtilFunctions(const NCContext* libCtx)
         /* From the nip44 vectors file */
         span_t sendKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", sizeof(NCSecretKey));
         span_t recvKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000002", sizeof(NCSecretKey));
-        span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_ENCRYPTION_NONCE_SIZE);
         span_t payload = FromHexString("02000000000000000000000000000000000000000000000000000000000000000179ed06e5548ad3ff58ca920e6c0b4329f6040230f7e6e5641f20741780f0adc35a09794259929a02bb06ad8e8cf709ee4ccc567e9d514cdf5781af27a3e905e55b1b", 99);
-        const char* plainText = "a";
+		span_t plainText = FromHexString("61", 1);
 
         if (TestUtilNip44Decryption(libCtx, sendKey, recvKey, payload, plainText) != 0)
         {

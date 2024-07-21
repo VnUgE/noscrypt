@@ -134,7 +134,7 @@ _IMPLSTB cstatus_t _dummyAesFunc(
 
 		#define _IMPL_CRYPTO_SHA256_HKDF_EXTRACT		_fallbackHkdfExtract
 
-		_IMPLSTB cstatus_t _fallbackHkdfExtract(const cspan_t* salt, const cspan_t* ikm, sha256_t prk)
+		_IMPLSTB cstatus_t _fallbackHkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 		{
 			return _IMPL_CRYPTO_SHA256_HMAC(salt, ikm, prk);
 		}
@@ -217,11 +217,11 @@ uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size
 	return _IMPL_CRYPTO_FIXED_TIME_COMPARE(a, b, size);
 }
 
-cstatus_t ncCryptoDigestSha256(const cspan_t* data, sha256_t digestOut32)
+cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(data != NULL && data->data != NULL,	"Expected data to be non-null")
-	DEBUG_ASSERT2(digestOut32 != NULL,					"Expected digestOut32 to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
+	DEBUG_ASSERT2(digestOut32 != NULL,	"Expected digestOut32 to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_DIGEST
 	#error "No SHA256 implementation defined"
@@ -230,12 +230,12 @@ cstatus_t ncCryptoDigestSha256(const cspan_t* data, sha256_t digestOut32)
 	return _IMPL_CRYPTO_SHA256_DIGEST(data, digestOut32);
 }
 
-cstatus_t ncCryptoHmacSha256(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32)
+cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(key != NULL && key->data != NULL,			"Expected key to be non-null")
-	DEBUG_ASSERT2(data != NULL && data->data != NULL,		"Expected data to be non-null")
-	DEBUG_ASSERT2(hmacOut32 != NULL && data->data != NULL,	"Expected hmacOut32 to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(key),	"Expected key to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
+	DEBUG_ASSERT2(hmacOut32 != NULL,	"Expected hmacOut32 to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_HMAC
 	#error "No SHA256 HMAC implementation defined"
@@ -244,12 +244,12 @@ cstatus_t ncCryptoHmacSha256(const cspan_t* key, const cspan_t* data, sha256_t h
 	return _IMPL_CRYPTO_SHA256_HMAC(key, data, hmacOut32);
 }
 
-cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span_t* okm)
+cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(prk != NULL && prk->data != NULL,		"Expected prk to be non-null")
-	DEBUG_ASSERT2(info != NULL && info->data != NULL,	"Expected info to be non-null")
-	DEBUG_ASSERT2(okm != NULL && okm->data != NULL,		"Expected okm to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(prk),	"Expected prk to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(info),	"Expected info to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValid(okm),	"Expected okm to be non-null")
 
 	/*
 	* RFC 5869: 2.3
@@ -258,7 +258,7 @@ cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span
 	* important as the counter is 1 byte, so it cannot overflow
 	*/
 
-	if(okm->size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
+	if(okm.size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
 	{
 		return CSTATUS_FAIL;
 	}
@@ -270,12 +270,12 @@ cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span
 	return _IMPL_CRYPTO_SHA256_HKDF_EXPAND(prk, info, okm);
 }
 
-cstatus_t ncCryptoSha256HkdfExtract(const cspan_t* salt, const cspan_t* ikm, sha256_t prk)
+cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(salt != NULL, "Expected salt to be non-null")
-	DEBUG_ASSERT2(ikm  != NULL, "Expected ikm to be non-null")
-	DEBUG_ASSERT2(prk  != NULL, "Expected prk to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(salt), "Expected salt to be non-null")
+	DEBUG_ASSERT2(ncSpanIsValidC(ikm),	"Expected ikm to be non-null")
+	DEBUG_ASSERT2(prk != NULL,			"Expected prk to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_HKDF_EXTRACT
 	#error "No SHA256 HKDF extract implementation defined"

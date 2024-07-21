@@ -244,7 +244,9 @@ static _nc_fn_inline NCResult _computeConversationKey(
 	ncSpanInitC(&saltSpan, Nip44ConstantSalt, sizeof(Nip44ConstantSalt));
 	ncSpanInitC(&ikmSpan, sharedSecret->value, NC_SHARED_SEC_SIZE);
 	
-	return ncCryptoSha256HkdfExtract(&saltSpan, &ikmSpan, ck->value) == CSTATUS_OK ? NC_SUCCESS : E_OPERATION_FAILED;
+	return ncCryptoSha256HkdfExtract(saltSpan, ikmSpan, ck->value) == CSTATUS_OK 
+		? NC_SUCCESS 
+		: E_OPERATION_FAILED;
 }
 
 
@@ -286,7 +288,7 @@ static _nc_fn_inline cstatus_t _getMessageKey(
 	ncSpanInit(&okmSpan, messageKey->value, sizeof(struct message_key));				/* Output produces a message key (write it directly to struct memory) */
 	
 	/* Nonce is the info */
-	return ncCryptoSha256HkdfExpand(&prkSpan, &nonce, &okmSpan);
+	return ncCryptoSha256HkdfExpand(prkSpan, nonce, okmSpan);
 }
 
 static _nc_fn_inline NCResult _encryptNip44Ex(
@@ -380,7 +382,7 @@ static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE],
 
 	ncSpanInitC(&keySpan, key, NC_HMAC_KEY_SIZE);
 
-	return ncCryptoHmacSha256(&keySpan, &payload, hmacOut);
+	return ncCryptoHmacSha256(keySpan, payload, hmacOut);
 }
 
 static NCResult _verifyMacEx(
@@ -650,7 +652,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	ncSpanInitC(&dataSpan, data, dataSize);
 
 	/* Compute sha256 of the data before signing */
-	if(ncCryptoDigestSha256(&dataSpan, digest) != CSTATUS_OK)
+	if(ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
 	{
 		return E_INVALID_ARG;
 	}
@@ -708,7 +710,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	ncSpanInitC(&dataSpan, data, dataSize);
 
 	/* Compute sha256 of the data before verifying */
-	if (ncCryptoDigestSha256(&dataSpan, digest) != CSTATUS_OK)
+	if (ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
 	{
 		return E_INVALID_ARG;
 	}
