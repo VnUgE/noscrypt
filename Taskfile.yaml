@@ -139,7 +139,16 @@ tasks:
     desc: "Packs up the project source code and creates a tarball in the builds binary directory"
     vars:
       TARGET_SOURCE: '{{.PROJECT_DIR}}/{{.BINARY_DIR}}/{{.PROJECT_NAME}}-src.tgz'
-      SOURCE_FILES: [ CMakeLists.txt, Taskfile.yaml, src, include, license, tests, vendor, readme.md, CMakePresets.json ]
+      SOURCE_FILES: 
+        CMakeLists.txt
+        Taskfile.yaml
+        src
+        include
+        license
+        tests
+        vendor
+        readme.md
+        CMakePresets.json
 
     cmds:
       #tar up the source

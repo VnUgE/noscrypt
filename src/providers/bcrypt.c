@@ -223,7 +223,8 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 	cstatus_t _bcrypt_hkdf_finish(void* ctx, sha256_t hmacOut32)
 	{
-		DEBUG_ASSERT(ctx != NULL)
+		DEBUG_ASSERT(ctx != NULL);
+		DEBUG_ASSERT(hmacOut32 != NULL);
 
 		BC_FAIL(_bcFinishHash((struct _bcrypt_ctx*)ctx, hmacOut32))
 		return CSTATUS_OK;

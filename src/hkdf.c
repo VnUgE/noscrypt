@@ -61,7 +61,7 @@ cstatus_t hkdfExpandProcess(
 	counter[0] = 1;			/* counter is offset by 1 for init */
 	result = CSTATUS_FAIL;	/* Start in fail state */
 
-	/* counter as a span */
+	/* span over counter value that points to the counter buffer */
 	ncSpanInitC(&counterSpan, counter, sizeof(counter));
 
 	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
