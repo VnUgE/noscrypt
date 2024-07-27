@@ -85,7 +85,7 @@ extern "C" {
 * https://github.com/nostr-protocol/nips/blob/master/44.md#decryption
 */
 #define NIP44_MIN_ENC_MESSAGE_SIZE		0x01
-#define NIP44_MAX_ENC_MESSAGE_SIZE		0xffff
+#define NIP44_MAX_ENC_MESSAGE_SIZE		UINT16_MAX
 
 #define NC_ENC_VERSION_NIP04			0x04
 #define NC_ENC_VERSION_NIP44			0x2c

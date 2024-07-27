@@ -45,6 +45,12 @@
 #define NIP44_MIN_PAYLOAD_SIZE  (NIP44_VERSION_SIZE + 0x20 + 0x02 + 0x20 + 0x02)
 
 /*
+* Max payload size is the maximum size of the encrypted message
+* 1 byte version + 32 byte nonce + 32 byte mac + maximum ciphertext size
+*/
+#define NIP44_MAX_PAYLOAD_SIZE (NIP44_VERSION_SIZE + 0x20 + 0x20 + NIP44_MAX_ENC_MESSAGE_SIZE)
+
+/*
 * The minimum ciphertext size is the minimum padded size + the minimum
 * size of the plaintext length field
 */
@@ -607,6 +613,11 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint
 
 	case NC_ENC_VERSION_NIP44:
 
+		/*
+		* Ensure the plaintext size if a nip44 message does not exceed the maximum size
+		*/
+		CHECK_ARG_IS(plaintextSize - 1 <= NIP44_MAX_ENC_MESSAGE_SIZE, 1);
+
 		return (NCResult)(_calcNip44PtPadding(plaintextSize));
 	}
 }
@@ -696,12 +707,12 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 		{
 			if (inputSize < NIP44_MIN_PAYLOAD_SIZE)
 			{
-				return E_CIPHER_INVALID_FORMAT;
+				return E_CIPHER_BAD_INPUT_SIZE;
 			}
 
-			if (inputSize > NIP44_MAX_ENC_MESSAGE_SIZE)
+			if (inputSize > NIP44_MAX_PAYLOAD_SIZE)
 			{
-				return E_CIPHER_INVALID_FORMAT;
+				return E_CIPHER_BAD_INPUT_SIZE;
 			}
 
 			/* Ensure the first byte is a valid version */
@@ -732,12 +743,14 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 		* data for the given state version
 		*/
 		outputSize = NCUtilGetEncryptionBufferSize(encCtx->encArgs.version, inputSize);
+
+		if (outputSize < 0)
+		{
+			return E_CIPHER_BAD_INPUT_SIZE;
+		}
 	}
 
-	if (outputSize <= 0)
-	{
-		return outputSize;
-	}
+	DEBUG_ASSERT(outputSize > 0);
 
 	/*
 	* If the buffer was previously allocated, the reuseable flag

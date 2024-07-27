@@ -40,6 +40,8 @@ extern "C" {
 #define E_CIPHER_BAD_NONCE				-12
 #define E_CIPHER_MAC_INVALID			-13
 #define E_CIPHER_NO_OUTPUT				-14
+#define E_CIPHER_BAD_INPUT				-15
+#define E_CIPHER_BAD_INPUT_SIZE			-16
 
 #define NC_UTIL_CIPHER_MODE_ENCRYPT		0x00u
 #define NC_UTIL_CIPHER_MODE_DECRYPT		0x01u
