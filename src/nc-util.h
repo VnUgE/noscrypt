@@ -90,6 +90,10 @@
 
 #endif /* NC_EXTREME_COMPAT */
 
+#ifndef EMPTY_SPANS
+	#define EMPTY_SPANS 1
+#endif
+
 typedef struct memory_span_struct
 {
 	uint8_t* data;
@@ -136,6 +140,20 @@ static _nc_fn_inline void ncSpanInit(span_t* span, uint8_t* data, uint32_t size)
 
 static _nc_fn_inline const uint8_t* ncSpanGetOffsetC(cspan_t span, uint32_t offset)
 {
+
+#if EMPTY_SPANS
+	
+	/* 
+	* Allow passing null pointers for empty spans, if enabled, 
+	* otherwise debug guards will catch empty spans
+	*/
+	if (span.size == 0 && offset == 0)
+	{
+		return NULL;
+	}
+
+#endif /* !EMPTY_SPANS */
+
 	DEBUG_ASSERT2(ncSpanIsValidC(span), "Expected span to be non-null");
 	DEBUG_ASSERT2(offset < span.size,	"Expected offset to be less than span size");
 
@@ -144,10 +162,23 @@ static _nc_fn_inline const uint8_t* ncSpanGetOffsetC(cspan_t span, uint32_t offs
 
 static _nc_fn_inline uint8_t* ncSpanGetOffset(span_t span, uint32_t offset)
 {
-	DEBUG_ASSERT2(ncSpanIsValid(span), "Expected span to be non-null");
-	DEBUG_ASSERT2(offset < span.size, "Expected offset to be less than span size");
+	cspan_t cspan;	
+	ncSpanInitC(&cspan, span.data, span.size);
+	return (uint8_t*)ncSpanGetOffsetC(cspan, offset);
+}
 
-	return span.data + offset;
+static _nc_fn_inline uint32_t ncSpanGetSizeC(cspan_t span)
+{
+	return ncSpanIsValidC(span) 
+		? span.size
+		: 0;
+}
+
+static _nc_fn_inline uint32_t ncSpanGetSize(span_t span)
+{
+	return ncSpanIsValid(span)
+		? span.size
+		: 0;
 }
 
 static _nc_fn_inline void ncSpanWrite(span_t span, uint32_t offset, const uint8_t* data, uint32_t size)

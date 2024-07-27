@@ -79,8 +79,8 @@ _IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, cspan_t key)
 		&ctx->hHash, 
 		NULL, 
 		0, 
-		(uint8_t*)key.data, 
-		key.size, 
+		(uint8_t*)ncSpanGetOffsetC(key, 0), 
+		ncSpanGetSizeC(key),
 		BCRYPT_HASH_REUSABLE_FLAG	/* Enable reusable for expand function */
 	);
 }
@@ -102,7 +102,11 @@ _IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* d
 
 _IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, cspan_t data)
 {
-	return _bcHashDataRaw(ctx, data.data, data.size);
+	return _bcHashDataRaw(
+		ctx, 
+		ncSpanGetOffsetC(data, 0),
+		ncSpanGetSizeC(data)
+	);
 }
 
 _IMPLSTB NTSTATUS _bcFinishHash(const struct _bcrypt_ctx* ctx, sha256_t digestOut32)
@@ -118,8 +122,8 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	/* Close the algorithm provider */
 	if (ctx->hAlg) BCryptCloseAlgorithmProvider(ctx->hAlg, 0);
 
-	ctx->hAlg = NULL;
 	ctx->hHash = NULL;
+	ctx->hAlg = NULL;	
 }
 
 #ifndef _IMPL_SECURE_ZERO_MEMSET
@@ -213,7 +217,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_bcrypt_fallback_hkdf_expand
 
-	cstatus_t _bcrypt_hkdf_update(void* ctx, cspan_t data)
+	static cstatus_t _bcrypt_hkdf_update(void* ctx, cspan_t data)
 	{
 		DEBUG_ASSERT(ctx != NULL)
 
@@ -221,7 +225,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 		return CSTATUS_OK;
 	}
 
-	cstatus_t _bcrypt_hkdf_finish(void* ctx, sha256_t hmacOut32)
+	static cstatus_t _bcrypt_hkdf_finish(void* ctx, sha256_t hmacOut32)
 	{
 		DEBUG_ASSERT(ctx != NULL);
 		DEBUG_ASSERT(hmacOut32 != NULL);

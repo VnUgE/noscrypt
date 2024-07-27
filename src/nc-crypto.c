@@ -292,10 +292,10 @@ cstatus_t ncCryptoChacha20(
 	uint32_t dataSize
 )
 {
-	DEBUG_ASSERT2(key != NULL,		"Expected key to be non-null")
-	DEBUG_ASSERT2(nonce != NULL,	"Expected nonce to be non-null")
-	DEBUG_ASSERT2(input != NULL,	"Expected input to be non-null")
-	DEBUG_ASSERT2(output != NULL,	"Expected output to be non-null")
+	DEBUG_ASSERT2(key != NULL,		"Expected key to be non-null");
+	DEBUG_ASSERT2(nonce != NULL,	"Expected nonce to be non-null");
+	DEBUG_ASSERT2(input != NULL,	"Expected input to be non-null");
+	DEBUG_ASSERT2(output != NULL,	"Expected output to be non-null");
 
 #ifndef _IMPL_CHACHA20_CRYPT
 	#error "No chacha20 implementation defined"

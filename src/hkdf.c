@@ -95,7 +95,7 @@ cstatus_t hkdfExpandProcess(
 		}
 
 		/* tlen becomes the hash size or remaining okm size */
-		tLen = HKDF_MIN(okm.size - okmOffset, SHA256_DIGEST_SIZE);
+		tLen = HKDF_MIN(ncSpanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
 
 		DEBUG_ASSERT(tLen <= sizeof(t));
 

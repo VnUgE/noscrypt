@@ -816,7 +816,12 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 			return E_VERSION_NOT_SUPPORTED;
 
 		case NC_ENC_VERSION_NIP44:
-			return _encryptNip44Ex(ctx, (struct conversation_key*)conversationKey, args->keyData, args);
+			return _encryptNip44Ex(
+				ctx, 
+				(struct conversation_key*)conversationKey, 
+				args->keyData, 
+				args
+			);
 
 		default:
 			return E_VERSION_NOT_SUPPORTED;
