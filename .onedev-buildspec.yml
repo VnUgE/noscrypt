@@ -11,7 +11,7 @@ jobs:
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !PushRepository
     name: Codeberg push sync
-    remoteUrl: https://codeberg.com/VnUgE/noscrypt.git
+    remoteUrl: https://codeberg.org/VnUgE/noscrypt.git
     userName: VnUgE
     passwordSecret: codeberg-access-token
     force: true

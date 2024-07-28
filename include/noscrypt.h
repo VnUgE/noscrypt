@@ -76,7 +76,7 @@ extern "C" {
 #define NC_CONV_KEY_SIZE				0x20
 #define NC_HMAC_KEY_SIZE				0x20
 #define NC_ENCRYPTION_MAC_SIZE			0x20
-#define NC_MESSAGE_KEY_SIZE NIP44_MESSAGE_KEY_SIZE
+#define NC_MESSAGE_KEY_SIZE				NIP44_MESSAGE_KEY_SIZE
 #define NC_NIP04_AES_IV_SIZE			0x10	/* AES IV size is 16 bytes (aka cipher block size) */
 #define NC_NIP04_AES_KEY_SIZE			0x20	/* AES 256 key size */
 
