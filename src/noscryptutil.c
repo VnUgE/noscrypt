@@ -469,7 +469,6 @@ static NCResult _nip44EncryptCompleteCore(
 	/* zero hmac key before returning */
 	ZERO_FILL(hmacKeyOut, sizeof(hmacKeyOut));
 
-	/* Notify the caller how many bytes were written */
 	return NC_SUCCESS;
 }
 
@@ -598,7 +597,7 @@ static NCResult _nip44DecryptCompleteCore(
 
 	DEBUG_ASSERT(ncSpanGetSizeC(state->buffer.actualOutput) < cipherText.size);
 
-	return result;
+	return NC_SUCCESS;
 }
 
 NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint32_t plaintextSize)
