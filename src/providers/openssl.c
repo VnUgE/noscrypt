@@ -2,7 +2,7 @@
 * Copyright (c) 2024 Vaughn Nugent
 *
 * Package: noscrypt
-* File: impl/openssl.c
+* File: providers/openssl.c
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -290,7 +290,10 @@
 		DEBUG_ASSERT2(ncSpanGetSize(output) <= ncSpanGetSizeC(input), "Output buffer must be equal or larger than the input buffer");
 		DEBUG_ASSERT(cipher != NULL);
 
-		result = CSTATUS_FAIL;		
+		DEBUG_ASSERT((uint32_t)EVP_CIPHER_get_key_length(cipher) == ncSpanGetSizeC(key));
+		DEBUG_ASSERT((uint32_t)EVP_CIPHER_iv_length(cipher) == ncSpanGetSizeC(iv));
+
+		result = CSTATUS_FAIL;
 
 		ctx = EVP_CIPHER_CTX_new();
 
@@ -356,13 +359,25 @@
 	{
 		cstatus_t result;
 		EVP_CIPHER* cipher;
+		uint8_t chaChaIv[CHACHA_NONCE_SIZE + 4];
 		cspan_t keySpan, nonceSpan, inputSpan;
 		span_t outputSpan;
 
 		result = CSTATUS_FAIL;
 
+		/*
+		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
+		* counter value is preprended to the nonce to make up the 16 byte 
+		* size.
+		*
+		* The counter is always set to 0 for the nonce.
+		*/
+
+		ncCryptoSecureZero(chaChaIv, sizeof(chaChaIv));
+		MEMMOV(chaChaIv + 4, nonce, CHACHA_NONCE_SIZE);
+
 		ncSpanInitC(&keySpan, key, CHACHA_KEY_SIZE);
-		ncSpanInitC(&nonceSpan, nonce, CHACHA_NONCE_SIZE);
+		ncSpanInitC(&nonceSpan, chaChaIv, sizeof(chaChaIv));
 		ncSpanInitC(&inputSpan, input, dataLen);
 		ncSpanInit(&outputSpan, output, dataLen);
 
