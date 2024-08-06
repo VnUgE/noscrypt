@@ -176,6 +176,7 @@ tasks:
       - task: dev-update-monocypher
       - task: dev-update-mbedtls-headers
       - task: dev-update-openssl-headers
+      - task: dev-set-secp256-headers
 
   dev-update-monocypher:
     vars:
@@ -204,13 +205,13 @@ tasks:
 
      - git clone --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
 
-     - for: [ 'include/mbedtls', 'include/psa' ]
+     - for: [ 'include/mbedtls' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{.MBEDTLS_DIR}}/include'
 
   dev-update-openssl-headers:
     vars:
-      OPENSSL_GIT_URL: 'git://git.openssl.org/openssl.git'
-      OPENSSL_GIT_BRANCH: 'master'
+      OPENSSL_GIT_URL: 'https://github.com/openssl/openssl'
+      OPENSSL_GIT_BRANCH: 'openssl-3.3.1'
       OPENSSL_DIR: 'vendor/openssl'
       TMP_DIR: '.update/openssl'
     cmds:
