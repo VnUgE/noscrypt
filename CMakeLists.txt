@@ -51,7 +51,7 @@ if(NC_FETCH_SECP256K1)
 	FetchContent_Declare(
 	  libsecp256k1
 	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				e3a885d42a7800c1ccebad94ad1e2b82c4df5c65 # release-0.5.0
+	  GIT_TAG				642c885b6102725e25623738529895a95addc4f4 # release-0.5.1
 	  GIT_PROGRESS			TRUE
 	)
 
