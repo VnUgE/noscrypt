@@ -132,7 +132,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
 );
 
 /*
-* Sets a property on the encryption context. Equivalent to calling NCSetEncryptionPropertyEx
+* Sets a property on the encryption context. Equivalent to calling NCEncryptionSetPropertyEx
 * @param ctx A valid pointer to an encryption context
 * @param property The property to set
 * @param value A pointer to the value to set
@@ -175,6 +175,15 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 	const NCSecretKey* sk,
 	const NCPublicKey* pk
 );
+
+/*
+* Gets the size of the IV(nonce) required for the encryption context.
+* @param encCtx A valid pointer to an initialized encryption context
+* @return The size of the IV in bytes, or a negative error code if the context 
+* is invalid, or the version is not supported. Use NCParseErrorCode to get the error code
+* and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NC_CC NCUtilCipherGetIvSize(const NCUtilCipherContext* encCtx);
 
 #ifdef __cplusplus
 }
