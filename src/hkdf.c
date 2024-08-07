@@ -21,22 +21,9 @@
 
 #include "hkdf.h"
 
-/* Include string for memmove */
-#include <string.h>
-
 #define HKDF_MIN(a, b) (a < b ? a : b)
 
 STATIC_ASSERT(HKDF_IN_BUF_SIZE > SHA256_DIGEST_SIZE, "HDK Buffer must be at least the size of the underlying hashing alg output")
-
-static _nc_fn_inline void ncWriteSpanS(span_t* span, uint32_t offset, const uint8_t* data, uint32_t size)
-{
-	DEBUG_ASSERT2(span != NULL, "Expected span to be non-null")
-	DEBUG_ASSERT2(data != NULL, "Expected data to be non-null")
-	DEBUG_ASSERT2(offset + size <= span->size, "Expected offset + size to be less than span size")
-
-	/* Copy data to span */
-	memmove(span->data + offset, data, size);
-}
 
 static _nc_fn_inline void debugValidateHandler(const struct nc_hkdf_fn_cb_struct* handler)
 {
@@ -55,16 +42,15 @@ static _nc_fn_inline void debugValidateHandler(const struct nc_hkdf_fn_cb_struct
 cstatus_t hkdfExpandProcess(
 	const struct nc_hkdf_fn_cb_struct* handler,
 	void* ctx,
-	const cspan_t* info,
-	span_t* okm
+	cspan_t info,
+	span_t okm
 )
 {
 	cstatus_t result;
-
-	uint8_t counter;
-	uint32_t tLen, okmOffset;
-	uint8_t t[HKDF_IN_BUF_SIZE];
 	cspan_t tSpan, counterSpan;
+	uint32_t tLen, okmOffset;
+	uint8_t counter[1];
+	uint8_t t[HKDF_IN_BUF_SIZE];
 
 	debugValidateHandler(handler);
 
@@ -72,18 +58,18 @@ cstatus_t hkdfExpandProcess(
 
 	tLen = 0;				/* T(0) is an empty string(zero length) */
 	okmOffset = 0;
-	counter = 1;			/* counter is offset by 1 for init */
+	counter[0] = 1;			/* counter is offset by 1 for init */
 	result = CSTATUS_FAIL;	/* Start in fail state */
 
-	/* counter as a span */
-	ncSpanInitC(&counterSpan, &counter, sizeof(counter));
+	/* span over counter value that points to the counter buffer */
+	ncSpanInitC(&counterSpan, counter, sizeof(counter));
 
 	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
-	while (okmOffset < okm->size)
+	while (okmOffset < okm.size)
 	{
 		ncSpanInitC(&tSpan, t, tLen);
 
-		if (handler->update(ctx, &tSpan) != CSTATUS_OK)
+		if (handler->update(ctx, tSpan) != CSTATUS_OK)
 		{
 			goto Exit;
 		}
@@ -93,7 +79,7 @@ cstatus_t hkdfExpandProcess(
 			goto Exit;
 		}
 
-		if (handler->update(ctx, &counterSpan) != CSTATUS_OK)
+		if (handler->update(ctx, counterSpan) != CSTATUS_OK)
 		{
 			goto Exit;
 		}
@@ -109,18 +95,15 @@ cstatus_t hkdfExpandProcess(
 		}
 
 		/* tlen becomes the hash size or remaining okm size */
-		tLen = HKDF_MIN(okm->size - okmOffset, SHA256_DIGEST_SIZE);
+		tLen = HKDF_MIN(ncSpanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
 
 		DEBUG_ASSERT(tLen <= sizeof(t));
 
-		/* write the T buffer back to okm */
-		ncWriteSpanS(okm, okmOffset, t, tLen);
-
-		/* shift base okm pointer by T */
-		okmOffset += tLen;
+		/* write the T buffer back to okm and advance okmOffset by tLen */
+		ncSpanAppend(okm, &okmOffset, t, tLen);
 
 		/* increment counter */
-		counter++;
+		(*counter)++;
 	}
 
 	result = CSTATUS_OK;	/* HMAC operation completed, so set success */

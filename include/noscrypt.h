@@ -58,7 +58,7 @@ extern "C" {
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllimport)
 		#else
-			#define NC_EXPORT
+			#define NC_EXPORT extern
 		#endif /*  _NC_IS_WINDOWS */
 	#endif /*  !NOSCRYPT_EXPORTING */
 #endif /*  !NC_EXPORT */
@@ -76,15 +76,16 @@ extern "C" {
 #define NC_CONV_KEY_SIZE				0x20
 #define NC_HMAC_KEY_SIZE				0x20
 #define NC_ENCRYPTION_MAC_SIZE			0x20
-#define NC_MESSAGE_KEY_SIZE NIP44_MESSAGE_KEY_SIZE
-#define NC_NIP04_AES_IV_SIZE			0x10	/* AES IV size is 16 bytes (block size) */
+#define NC_MESSAGE_KEY_SIZE				NIP44_MESSAGE_KEY_SIZE
+#define NC_NIP04_AES_IV_SIZE			0x10	/* AES IV size is 16 bytes (aka cipher block size) */
+#define NC_NIP04_AES_KEY_SIZE			0x20	/* AES 256 key size */
 
 /*
 * From spec
 * https://github.com/nostr-protocol/nips/blob/master/44.md#decryption
 */
 #define NIP44_MIN_ENC_MESSAGE_SIZE		0x01
-#define NIP44_MAX_ENC_MESSAGE_SIZE		0xffff
+#define NIP44_MAX_ENC_MESSAGE_SIZE		UINT16_MAX
 
 #define NC_ENC_VERSION_NIP04			0x04
 #define NC_ENC_VERSION_NIP44			0x2c
@@ -110,6 +111,20 @@ extern "C" {
 #define E_ARGUMENT_OUT_OF_RANGE		-4
 #define E_OPERATION_FAILED			-5
 #define E_VERSION_NOT_SUPPORTED		-6
+
+
+/*
+* ENCRYPTION ALTERATION PROPERTEIS
+* 
+* Codes for assigning values to an NCEncryptionArgs 
+* structure.
+*/
+
+#define NC_ENC_SET_VERSION			0x01
+#define NC_ENC_SET_NIP44_NONCE		0x02
+#define NC_ENC_SET_NIP44_MAC_KEY	0x03
+#define NC_ENC_SET_NIP04_KEY		0x04
+#define NC_ENC_SET_NIP04_IV			0x05
 
 
 /* A compressed resul/return value, negative values 
@@ -149,11 +164,11 @@ data buffers and required nonce used for the stream cipher.
 typedef struct nc_encryption_struct {
 
 	/* The nonce used for the stream cipher. */
-	const uint8_t* nonce32;
+	const uint8_t* nonceData;
 
 	/* Writes the hmac key to the buffer during encryption events.
 	Set to NULL on decryption */
-	uint8_t* hmacKeyOut32;
+	uint8_t* keyData;
 
 	/* The input data buffer to encrypt/decrypt */
 	const uint8_t* inputData;
@@ -197,51 +212,26 @@ typedef struct nc_mac_verify {
 */
 
 /*
-* A helper function to cast a buffer to a NCSecretKey struct
-* @param key The buffer to cast
-* @return A pointer to the NCSecretKey struct
+* Casts a buffer pointer to a NCSecretKey pointer
 */
-static _nc_fn_inline NCSecretKey* NCToSecKey(uint8_t key[NC_SEC_KEY_SIZE])
-{
-	return (NCSecretKey*)key;
-}
+#define NCByteCastToSecretKey(key) (NCSecretKey*)key
 
 /*
-* A helper function to cast a buffer to a NCPublicKey struct
-* @param key The buffer to cast
-* @return A pointer to the NCPublicKey struct
+* Casts a buffer pointer to a NCPublicKey pointer
 */
-static _nc_fn_inline NCPublicKey* NCToPubKey(uint8_t key[NC_PUBKEY_SIZE])
-{
-	return (NCPublicKey*)key;
-}
+#define NCByteCastToPublicKey(key) (NCPublicKey*)key
 
-static _nc_fn_inline NCResult NCResultWithArgPosition(NCResult err, uint8_t argPosition)
-{
-	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
-}
+
+NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPosition);
 
 /*
 * Parses an error code and returns the error code and the argument position 
 that caused the error.
 * @param result The error code to parse
-* @param argPositionOut A pointer to the argument position to write to
+* @param argPositionOut A pointer to the argument position to write to (optionall, set to NULL of unobserved)
 * @return The error code
 */
-static _nc_fn_inline int NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
-{
-	NCResult asPositive;
-	int code;
-
-	/* convert result to a positive value*/
-	asPositive = -result;
-
-	/* Get the error code from the lower 8 bits and the argument position from the upper 8 bits*/
-	code = -(asPositive & NC_ERROR_CODE_MASK);
-	*argPositionOut = (asPositive >> NC_ARG_POSITION_OFFSET) & 0xFF;
-
-	return code;
-}
+NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut);
 
 /*--------------------------------------
 *		LIB CONTEXT API
@@ -576,6 +566,57 @@ NC_EXPORT NCResult NCComputeMac(
 	const uint8_t* payload,
 	uint32_t payloadSize,
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
+);
+
+
+/*
+* A special function that configures custom properties on
+* the NCEncryptionArgs structure for a given operation.
+* @param args A pointer to the encryption arguments structure
+* @param property The ID property to set
+* @param value The value to set the property to as a 32-bit integer
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NCSetEncryptionProperty(
+	NCEncryptionArgs* args, 
+	uint32_t property,
+	uint32_t value
+);
+
+/*
+* A special function that configures custom properties on
+* the NCEncryptionArgs structure for a given operation.
+* 
+* @param args A pointer to the encryption arguments structure
+* @param property The ID property to set
+* @param value The value to set the property to as a byte buffer
+* @param valueLen The length of the value buffer
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NCSetEncryptionPropertyEx(
+	NCEncryptionArgs* args,
+	uint32_t property,
+	uint8_t* value,
+	uint32_t valueLen
+);
+
+/*
+* Sets the encryption data buffers for the encryption/decryption 
+* operation. 
+* @param args A pointer to the encryption arguments structure
+* @param input The input data buffer
+* @param output The output data buffer
+* @param dataSize The size of the data buffers
+* @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
+* the error code and positional argument that caused the error.
+*/
+NC_EXPORT NCResult NCSetEncryptionData(
+	NCEncryptionArgs* args,
+	const uint8_t* input,
+	uint8_t* output,
+	uint32_t dataSize
 );
 
 #ifdef __cplusplus

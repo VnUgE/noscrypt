@@ -17,6 +17,7 @@ project(
 set(_NC_PROJ_NAME "noscrypt")
 
 option(NC_BUILD_TESTS "Build tests" OFF)
+option(NC_ENABLE_UTILS "Enables the sidecar utility library" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
 option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
 option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
@@ -50,7 +51,7 @@ if(NC_FETCH_SECP256K1)
 	FetchContent_Declare(
 	  libsecp256k1
 	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				e3a885d42a7800c1ccebad94ad1e2b82c4df5c65 # release-0.5.0
+	  GIT_TAG				642c885b6102725e25623738529895a95addc4f4 # release-0.5.1
 	  GIT_PROGRESS			TRUE
 	)
 
@@ -94,6 +95,17 @@ set(NOSCRYPT_HEADERS
 	"src/nc-crypto.h"
 )
 
+#if utils are enabled, add the source files
+if(NC_ENABLE_UTILS)
+	list(APPEND NOSCRYPT_SRCS "src/noscryptutil.c")
+	list(APPEND NOSCRYPT_HEADERS "include/noscryptutil.h")
+
+	#notify the project that utils are enabled
+	list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_UTILS)
+
+	message(STATUS "Utilities libraries are enabled")
+endif()
+
 #static/shared library
 add_library(${_NC_PROJ_NAME} SHARED ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
 add_library(${_NC_PROJ_NAME}_static STATIC ${NOSCRYPT_SRCS} ${NOSCRYPT_HEADERS})
@@ -131,19 +143,6 @@ target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/secp256k
 #
 #############################################
 
-#try to load openssl quietly in order to check for its availability
-find_package(OpenSSL QUIET)
-
-#setup default linking to crypto libraries for certain plaftorms. 
-#Windows defaults to bcrypt, openssl otherwise if installed
-if(CRYPTO_LIB STREQUAL "")	
-  if(MSVC)
-	set(CRYPTO_LIB "bcrypt")
-  elseif(OPENSSL_FOUND)
-	set(CRYPTO_LIB "openssl")
-  endif()
-endif()
-
 #Include mbedtls if enabled
 if(NC_FETCH_MBEDTLS)
 
@@ -171,6 +170,22 @@ if(NC_FETCH_MBEDTLS)
 	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
 
 endif()
+
+#try to load openssl quietly in order to check for its availability
+find_package(OpenSSL QUIET)
+
+#setup default linking to crypto libraries for certain plaftorms. 
+#Windows defaults to bcrypt, openssl otherwise if installed
+if(CRYPTO_LIB STREQUAL "")	
+  if(MSVC)
+	set(CRYPTO_LIB "bcrypt")
+  elseif(OPENSSL_FOUND)
+	set(CRYPTO_LIB "openssl")
+  endif()
+
+  message(STATUS "No crypto library was specified, defaulting to ${CRYPTO_LIB}")
+endif()
+
 
 #if mbedtls linking is enabled target the library
 if(CRYPTO_LIB STREQUAL "mbedtls")
@@ -364,11 +379,13 @@ if(NC_BUILD_TESTS)
 	#add test executable and link to shared library for more realistic usage
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})
+
 	target_include_directories(nctest PRIVATE include)
 	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
+	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINTIONS})
 
 	enable_testing()
 

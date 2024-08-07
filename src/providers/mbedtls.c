@@ -2,7 +2,7 @@
 * Copyright (c) 2024 Vaughn Nugent
 *
 * Package: noscrypt
-* File: mbedtls.c
+* File: providers/mbedtls.c
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -95,13 +95,13 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	
 	#define _IMPL_CRYPTO_SHA256_DIGEST			_mbed_sha256_digest	
 
-	_IMPLSTB cstatus_t _mbed_sha256_digest(const cspan_t* data, sha256_t digestOut32)
+	_IMPLSTB cstatus_t _mbed_sha256_digest(cspan_t data, sha256_t digestOut32)
 	{
-		_overflow_check(data->size)
+		_overflow_check(data.size)
 
 		return mbedtls_sha256(
-			data->data, 
-			data->size, 
+			data.data, 
+			data.size, 
 			digestOut32, 
 			0				/* Set 0 for sha256 mode */
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
@@ -114,19 +114,19 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	#define _IMPL_CRYPTO_SHA256_HMAC			_mbed_sha256_hmac
 
-	_IMPLSTB cstatus_t _mbed_sha256_hmac(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32)
+	_IMPLSTB cstatus_t _mbed_sha256_hmac(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	{
-		_overflow_check(data->size)
+		_overflow_check(data.size)
 
 		/* Keys should never be large enough for this to matter, but sanity check. */
-		DEBUG_ASSERT2(key->size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")
+		DEBUG_ASSERT2(key.size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")
 
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
-			key->data, 
-			key->size,
-			data->data, 
-			data->size,
+			key.data, 
+			key.size,
+			data.data, 
+			data.size,
 			hmacOut32
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
@@ -137,21 +137,21 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_mbed_sha256_hkdf_expand
 
-	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(const cspan_t* prk, const cspan_t* info, span_t* okm)
+	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
 	{
 		/* These sizes should never be large enough to overflow on <64bit platforms, but sanity check */
-		DEBUG_ASSERT(okm->size < SIZE_MAX)
-		DEBUG_ASSERT(prk->size < SIZE_MAX)
-		DEBUG_ASSERT(info->size < SIZE_MAX)
+		DEBUG_ASSERT(okm.size < SIZE_MAX)
+		DEBUG_ASSERT(prk.size < SIZE_MAX)
+		DEBUG_ASSERT(info.size < SIZE_MAX)
 
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
-			prk->data, 
-			prk->size,
-			info->data, 
-			info->size,
-			okm->data, 
-			okm->size
+			prk.data, 
+			prk.size,
+			info.data, 
+			info.size,
+			okm.data, 
+			okm.size
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
