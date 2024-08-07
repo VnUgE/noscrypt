@@ -275,7 +275,7 @@
 
 	#define _IMPL_CHACHA20_CRYPT _ossl_chacha20_crypt
 
-	_IMPLSTB cstatus_t _ossl_chacha20_cipher_core(
+	_IMPLSTB cstatus_t _ossl_cipher_core(
 		const EVP_CIPHER* cipher,
 		cspan_t key,
 		cspan_t iv,
@@ -388,7 +388,7 @@
 			goto Cleanup;
 		}
 
-		result = _ossl_chacha20_cipher_core(
+		result = _ossl_cipher_core(
 			cipher, 
 			keySpan, 
 			nonceSpan, 
