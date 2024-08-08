@@ -665,6 +665,10 @@ NC_EXPORT NCUtilCipherContext* NC_CC NCUtilCipherAlloc(uint32_t encVersion, uint
 
 	if (encCtx != NULL)
 	{
+		/* 
+		* Technically I should be using the NCEncSetProperty but this 
+		* is an acceptable shortcut for now, may break in future 
+		*/
 		encCtx->encArgs.version = encVersion;
 		encCtx->_flags = flags;
 	}
@@ -706,7 +710,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	CHECK_NULL_ARG(encCtx, 0);
 	CHECK_NULL_ARG(inputData, 1);
 
-	if ((encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+	if ((encCtx->_flags & NC_UTIL_CIPHER_MODE) == NC_UTIL_CIPHER_MODE_DECRYPT)
 	{
 		/*
 		* Validate the input data for proper format for 
@@ -854,7 +858,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
 	return (NCResult)encCtx->buffer.actualOutput.size;
 }
 
-NC_EXPORT NCResult NCUtilCipherSetProperty(
+NC_EXPORT NCResult NC_CC NCUtilCipherSetProperty(
 	NCUtilCipherContext* ctx,
 	uint32_t property,
 	uint8_t* value,
@@ -901,7 +905,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 	{
 	case NC_ENC_VERSION_NIP44:
 
-		if ((encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+		if ((encCtx->_flags & NC_UTIL_CIPHER_MODE) == NC_UTIL_CIPHER_MODE_DECRYPT)
 		{
 			return _nip44DecryptCompleteCore(libContext, sk, pk, encCtx);
 		}
