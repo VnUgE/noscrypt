@@ -68,7 +68,6 @@ extern "C" {
 */
 #define BIP340_PUBKEY_HEADER_BYTE		0x02
 #define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 = 76 */
-#define NC_ENCRYPTION_NONCE_SIZE		0x20
 #define NC_SEC_KEY_SIZE					0x20
 #define NC_PUBKEY_SIZE					0x20
 #define NC_CONTEXT_ENTROPY_SIZE			0x20
@@ -77,8 +76,9 @@ extern "C" {
 #define NC_HMAC_KEY_SIZE				0x20
 #define NC_ENCRYPTION_MAC_SIZE			0x20
 #define NC_MESSAGE_KEY_SIZE				NIP44_MESSAGE_KEY_SIZE
-#define NC_NIP04_AES_IV_SIZE			0x10	/* AES IV size is 16 bytes (aka cipher block size) */
 #define NC_NIP04_AES_KEY_SIZE			0x20	/* AES 256 key size */
+#define NC_NIP44_IV_SIZE				0x20	/* 32 bytes */
+#define NC_NIP04_IV_SIZE				0x10	/* 16 bytes */
 
 /*
 * From spec
@@ -121,10 +121,9 @@ extern "C" {
 */
 
 #define NC_ENC_SET_VERSION			0x01
-#define NC_ENC_SET_NIP44_NONCE		0x02
+#define NC_ENC_SET_IV				0x02
 #define NC_ENC_SET_NIP44_MAC_KEY	0x03
 #define NC_ENC_SET_NIP04_KEY		0x04
-#define NC_ENC_SET_NIP04_IV			0x05
 
 
 /* A compressed resul/return value, negative values 
@@ -578,7 +577,7 @@ NC_EXPORT NCResult NCComputeMac(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCSetEncryptionProperty(
+NC_EXPORT NCResult NCEncryptionSetProperty(
 	NCEncryptionArgs* args, 
 	uint32_t property,
 	uint32_t value
@@ -595,7 +594,7 @@ NC_EXPORT NCResult NCSetEncryptionProperty(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCSetEncryptionPropertyEx(
+NC_EXPORT NCResult NCEncryptionSetPropertyEx(
 	NCEncryptionArgs* args,
 	uint32_t property,
 	uint8_t* value,
@@ -612,12 +611,19 @@ NC_EXPORT NCResult NCSetEncryptionPropertyEx(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCSetEncryptionData(
+NC_EXPORT NCResult NCEncryptionSetData(
 	NCEncryptionArgs* args,
 	const uint8_t* input,
 	uint8_t* output,
 	uint32_t dataSize
 );
+
+/*
+* Gets the size of the encryption nonce (iv) for the given encryption version
+* @param version The encryption version to get the nonce size for
+* @return The size of the nonce in bytes, or 0 if the version is not supported
+*/
+NC_EXPORT uint32_t NCEncryptionGetIvSize(uint32_t version);
 
 #ifdef __cplusplus
 }

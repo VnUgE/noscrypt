@@ -37,6 +37,7 @@
 #define MIN_PADDING_SIZE		0x20u
 #define NIP44_VERSION_SIZE		0x01u
 #define NIP44_PT_LEN_SIZE		sizeof(uint16_t)
+#define NIP44_NONCE_SIZE		NC_NIP44_IV_SIZE
 
 /*
 * minimum size for a valid nip44 payload
@@ -200,7 +201,7 @@ static _nc_fn_inline uint32_t _calcNip44TotalOutSize(uint32_t inputSize)
 
 	bufferSize = NIP44_VERSION_SIZE;
 
-	bufferSize += NC_ENCRYPTION_NONCE_SIZE;
+	bufferSize += NIP44_NONCE_SIZE;
 
 	bufferSize += NIP44_PT_LEN_SIZE;
 
@@ -267,7 +268,7 @@ static _nc_fn_inline int _nip44ParseSegments(
 	*nonce = ncSpanSliceC(
 		payload,
 		NIP44_VERSION_SIZE,
-		NC_ENCRYPTION_NONCE_SIZE
+		NIP44_NONCE_SIZE
 	);
 
 	/*
@@ -293,8 +294,8 @@ static _nc_fn_inline int _nip44ParseSegments(
 	*/
 	*cipherText = ncSpanSliceC(
 		payload,
-		NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE,
-		payload.size - (NIP44_VERSION_SIZE + NC_ENCRYPTION_NONCE_SIZE + NC_ENCRYPTION_MAC_SIZE)
+		NIP44_VERSION_SIZE + NIP44_NONCE_SIZE,
+		payload.size - (NIP44_VERSION_SIZE + NIP44_NONCE_SIZE + NC_ENCRYPTION_MAC_SIZE)
 	);
 
 	return 1;
@@ -357,12 +358,23 @@ static NCResult _nip44EncryptCompleteCore(
 
 	ZERO_FILL(hmacKeyOut, sizeof(hmacKeyOut));
 
+	/* Get the nonce/iv size so we know how much nonce data to write */
+	result = NCUtilCipherGetIvSize(state);
+	DEBUG_ASSERT(result > 0);
+
 	/* Start by appending the version number */
 	ncSpanAppend(message, &outPos, Nip44VersionValue, sizeof(Nip44VersionValue));
 
 	/* next is nonce data */
-	ncSpanAppend(message, &outPos, encArgs.nonceData, NC_ENCRYPTION_NONCE_SIZE);
-	DEBUG_ASSERT(outPos == 1 + NC_ENCRYPTION_NONCE_SIZE);
+	ncSpanAppend(message, &outPos, encArgs.nonceData, (uint32_t)result);
+
+	/* 
+	* Assert the output points to the end of the nonce segment 
+	* for nip44 this is exactly 33 bytes. This assert also doubles
+	* to check the output of NCUtilCipherGetIvSize() to ensure
+	* it's returning the correct size for nip44
+	*/
+	DEBUG_ASSERT(outPos == 1 + NIP44_NONCE_SIZE);
 
 	/*
 	* Assign the hmac key from the stack buffer. Since the args structure
@@ -372,7 +384,7 @@ static NCResult _nip44EncryptCompleteCore(
 	* addresses.
 	*/
 
-	result = NCSetEncryptionPropertyEx(
+	result = NCEncryptionSetPropertyEx(
 		&encArgs,
 		NC_ENC_SET_NIP44_MAC_KEY,
 		hmacKeyOut,
@@ -397,7 +409,7 @@ static NCResult _nip44EncryptCompleteCore(
 	* plainText size field.
 	*/
 
-	result = NCSetEncryptionData(
+	result = NCEncryptionSetData(
 		&encArgs,
 		ncSpanGetOffset(message, outPos),	/* in place encryption */
 		ncSpanGetOffset(message, outPos),
@@ -517,7 +529,7 @@ static NCResult _nip44DecryptCompleteCore(
 	if ((state->_flags & NC_UTIL_CIPHER_MAC_NO_VERIFY) == 0)
 	{
 		DEBUG_ASSERT(ncSpanGetSizeC(macValue) == NC_ENCRYPTION_MAC_SIZE);
-		DEBUG_ASSERT(ncSpanGetSizeC(macData) > NC_ENCRYPTION_NONCE_SIZE + MIN_PADDING_SIZE);
+		DEBUG_ASSERT(ncSpanGetSizeC(macData) > NIP44_NONCE_SIZE + MIN_PADDING_SIZE);
 
 		/* Assign the mac data to the mac verify args */
 		macArgs.mac32 = ncSpanGetOffsetC(macValue, 0);
@@ -550,7 +562,7 @@ static NCResult _nip44DecryptCompleteCore(
 
 	DEBUG_ASSERT2(cipherText.size >= MIN_PADDING_SIZE, "Cipertext segment was parsed incorrectly. Too small");
 	
-	result = NCSetEncryptionData(
+	result = NCEncryptionSetData(
 		&encArgs,
 		ncSpanGetOffsetC(cipherText, 0),
 		ncSpanGetOffset(output, 0),			/*decrypt ciphertext and write directly to the output buffer */
@@ -653,6 +665,10 @@ NC_EXPORT NCUtilCipherContext* NC_CC NCUtilCipherAlloc(uint32_t encVersion, uint
 
 	if (encCtx != NULL)
 	{
+		/* 
+		* Technically I should be using the NCEncSetProperty but this 
+		* is an acceptable shortcut for now, may break in future 
+		*/
 		encCtx->encArgs.version = encVersion;
 		encCtx->_flags = flags;
 	}
@@ -694,7 +710,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	CHECK_NULL_ARG(encCtx, 0);
 	CHECK_NULL_ARG(inputData, 1);
 
-	if ((encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+	if ((encCtx->_flags & NC_UTIL_CIPHER_MODE) == NC_UTIL_CIPHER_MODE_DECRYPT)
 	{
 		/*
 		* Validate the input data for proper format for 
@@ -842,7 +858,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherReadOutput(
 	return (NCResult)encCtx->buffer.actualOutput.size;
 }
 
-NC_EXPORT NCResult NCUtilCipherSetProperty(
+NC_EXPORT NCResult NC_CC NCUtilCipherSetProperty(
 	NCUtilCipherContext* ctx,
 	uint32_t property,
 	uint8_t* value,
@@ -852,7 +868,7 @@ NC_EXPORT NCResult NCUtilCipherSetProperty(
 	CHECK_NULL_ARG(ctx, 0)
 
 	/* All other arguments are verified */
-	return NCSetEncryptionPropertyEx(
+	return NCEncryptionSetPropertyEx(
 		&ctx->encArgs, 
 		property, 
 		value, 
@@ -889,7 +905,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 	{
 	case NC_ENC_VERSION_NIP44:
 
-		if ((encCtx->_flags & NC_UTIL_CIPHER_MODE_DECRYPT) > 0)
+		if ((encCtx->_flags & NC_UTIL_CIPHER_MODE) == NC_UTIL_CIPHER_MODE_DECRYPT)
 		{
 			return _nip44DecryptCompleteCore(libContext, sk, pk, encCtx);
 		}
@@ -907,4 +923,17 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 	default:
 		return E_VERSION_NOT_SUPPORTED;
 	}
+}
+
+NC_EXPORT NCResult NC_CC NCUtilCipherGetIvSize(const NCUtilCipherContext* encCtx)
+{
+	uint32_t ivSize;
+
+	CHECK_NULL_ARG(encCtx, 0);
+
+	ivSize = NCEncryptionGetIvSize(encCtx->encArgs.version);
+
+	return ivSize == 0
+		? E_VERSION_NOT_SUPPORTED
+		: (NCResult)ivSize;
 }
