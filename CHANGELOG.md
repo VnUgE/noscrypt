@@ -14,10 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Utilities for padding calculations
 - Prints the name of the configured crypto backend during build
 - Many internal hardening improvments (span pass-by-value, span validation functions)
+- `NCEncryptionGetIvSize()` function to determine the size of the IV for a chosen encryption spec (nip04 or nip44)
 
 ### Fixed
 - OpenSSL EVP incorrect cipher initialization vector
 - OpenSSL HKDF incorrect key derivation when switching to EVP api
+- Some missing calling convention macros for public api functions
 
 ### Changed
 - Updated libsecp256k1 to v0.5.1
@@ -27,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added helper functions to alter the `NCEncryptionArgs` api. Altering fields directly is now deprecated.
 - Public API visibility for non-Windows platforms now defaults to `extern`
 - **Breaking:** Changed the `nonce32` and `hmacKeyOut32` properties of the `NCEncryptionArgs` struct to `nonceData` and `keyData` respectively. ABI is still compatible, but API has changed. Again mutating this structure manually is now deprecated.
+- Unified some API naming conventions for better consistency
+
+### Removed
+- `NC_ENCRYPTION_NONCE_SIZE` macro for better forward compatability
+- `NC_NIP04_AES_IV_SIZE` macro for better forward compatability 
 
 ## [0.1.2] - 2024-05-29
 
