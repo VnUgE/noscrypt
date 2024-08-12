@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.3-beta] - 2024-08-6
+## [0.1.3] - 2024-08-12
 
 ### Added
 - Utilities sidecar library for easy note encryption (noscryptutil.h)
@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NCContext structure defintion.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.3-beta...HEAD
-[0.1.3-beta]: https://github.com/VnUgE/noscrypt/compare/v0.1.2...v0.1.3-beta
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/VnUgE/noscrypt/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/VnUgE/noscrypt/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/VnUgE/noscrypt/compare/v0.1.0...v0.1.1
