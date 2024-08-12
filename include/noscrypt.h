@@ -125,6 +125,27 @@ extern "C" {
 #define NC_ENC_SET_NIP44_MAC_KEY	0x03
 #define NC_ENC_SET_NIP04_KEY		0x04
 
+/*
+* API NOTES:
+* 
+* - Decisions on integer width
+*   Since noscrypt will target general purpose processors and embedded 
+*   systems (future) I didn't want to risk word size issues causing under/overflow
+*   for the time being, so a fixed integer width was used and internal code
+*   supports and guards against the platform default integer width (size_t)
+* 
+*   I'd like to support 64bit stuff, but really the underlying systems don't 
+*   need to support that size buffer, nor do I expect platforms to have more than
+*   4GB sized buffers (int32_t), it's just not practial and most work is on 
+*   digests anyway. 
+* 
+* - Decisions on unsigned vs signed
+*   Yeah, I know this is a popular squabble in C land, but implementation details
+*   should not trouble the user. If I expect an unsigned int, then it should be 
+*   explicit, negative number guards are cumbersom to handle return codes with
+*   that IMO most engineers don't bother doing anyway or doing well at the very
+*   least, so I'm using unsgined integers. Sorry, not sorry.
+*/
 
 /* A compressed resul/return value, negative values 
 are failure, 0 is success and positive values are 

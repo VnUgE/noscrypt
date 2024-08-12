@@ -193,13 +193,10 @@ static _nc_fn_inline void ncSpanWrite(span_t span, uint32_t offset, const uint8_
 
 static _nc_fn_inline void ncSpanAppend(span_t span, uint32_t* offset, const uint8_t* data, uint32_t size)
 {
-	DEBUG_ASSERT2(ncSpanIsValid(span),	"Expected span to be non-null")
 	DEBUG_ASSERT2(offset != NULL,		"Expected offset to be non-null")
-	DEBUG_ASSERT2(data != NULL,			"Expected data to be non-null")
-	DEBUG_ASSERT2(*offset + size <= span.size, "Expected offset + size to be less than span size")
 
-	/* Copy data to span */
-	MEMMOV(span.data + *offset, data, size);
+	/* Copy data to span (also performs argument assertions) */
+	ncSpanWrite(span, *offset, data, size);
 
 	/* Increment offset */
 	*offset += size;
@@ -213,7 +210,11 @@ static _nc_fn_inline span_t ncSpanSlice(span_t span, uint32_t offset, uint32_t s
 	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
 
 	/* Initialize slice, offset input data by the specified offset */
-	ncSpanInit(&slice, span.data + offset, size);
+	ncSpanInit(
+		&slice, 
+		ncSpanGetOffset(span, offset), 
+		size
+	);
 
 	return slice;
 }
@@ -226,7 +227,11 @@ static _nc_fn_inline cspan_t ncSpanSliceC(cspan_t span, uint32_t offset, uint32_
 	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
 
 	/* Initialize slice, offset input data by the specified offset */
-	ncSpanInitC(&slice, span.data + offset, size);
+	ncSpanInitC(
+		&slice, 
+		ncSpanGetOffsetC(span, offset), 
+		size
+	);
 
 	return slice;
 }

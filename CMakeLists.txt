@@ -421,9 +421,20 @@ install(TARGETS ${_NC_PROJ_NAME}_static
     INCLUDES DESTINATION include
 )
 
-install(FILES 
-	include/noscrypt.h
+SET(NC_INSTALL_HEADERS 
+	include/noscrypt.h	#static install headers
 	include/platform.h
+)
+
+if(NC_ENABLE_UTILS)
+	LIST(APPEND 
+		NC_INSTALL_HEADERS
+		include/noscryptutil.h
+	)
+endif()
+
+install(FILES 
+	${NC_INSTALL_HEADERS}
 	DESTINATION noscrypt
 )
 
