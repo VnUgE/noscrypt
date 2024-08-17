@@ -63,7 +63,7 @@ The following table lists the supported platforms and cryptography libraries tha
 GitHub is simply a mirror for my projects. Extended documentation, pre-compiled binaries and source code bundles are always available on my website, along with PGP signatures and checksums.    
 
 - **[Documentation](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)**  
-- **[Signed builds and sourc ecode](https://www.vaughnnugent.com/resources/software/modules/noscrypt)**  
+- **[Signed builds and source code](https://www.vaughnnugent.com/resources/software/modules/noscrypt)**  
 
 ### Getting the package
 There are 3 ways to get the source code to build this project.  

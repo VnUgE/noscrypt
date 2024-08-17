@@ -42,13 +42,13 @@ uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size
 
 void ncCryptoSecureZero(void* ptr, uint32_t size);
 
-cstatus_t ncCryptoDigestSha256(const cspan_t* data, sha256_t digestOut32);
+cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32);
 
-cstatus_t ncCryptoHmacSha256(const cspan_t* key, const cspan_t* data, sha256_t hmacOut32);
+cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32);
 
-cstatus_t ncCryptoSha256HkdfExpand(const cspan_t* prk, const cspan_t* info, span_t* okm);
+cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm);
 
-cstatus_t ncCryptoSha256HkdfExtract(const cspan_t* salt, const cspan_t* ikm, sha256_t prk);
+cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk);
 
 cstatus_t ncCryptoChacha20(
 	const uint8_t key[CHACHA_KEY_SIZE],

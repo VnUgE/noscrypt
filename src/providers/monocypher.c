@@ -2,7 +2,7 @@
 * Copyright (c) 2024 Vaughn Nugent
 *
 * Package: noscrypt
-* File: impl/monocypher.c
+* File: providers/monocypher.c
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
