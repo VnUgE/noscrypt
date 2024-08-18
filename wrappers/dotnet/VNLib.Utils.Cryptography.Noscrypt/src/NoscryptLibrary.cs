@@ -16,10 +16,12 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+
 using VNLib.Utils.Memory;
 using VNLib.Utils.Native;
 using VNLib.Utils.Extensions;
 
+using VNLib.Utils.Cryptography.Noscrypt.Random;
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
 
 using NCResult = System.Int64;
@@ -39,7 +41,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         //Constant values match the noscrypt.h header
         public const int NC_SEC_KEY_SIZE                = 0x20;
         public const int NC_SEC_PUBKEY_SIZE             = 0x20;
-        public const int NC_ENCRYPTION_NONCE_SIZE       = 0x20;
         public const int NC_PUBKEY_SIZE                 = 0x20;
         public const int NC_SIGNATURE_SIZE              = 0x40;
         public const int NC_CONV_KEY_SIZE               = 0x20;
@@ -54,19 +55,37 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public const uint NC_ENC_VERSION_NIP44          = 0x00000002c;
 
         public const uint NC_ENC_SET_VERSION            = 0x01u;
-        public const uint NC_ENC_SET_NIP44_NONCE        = 0x02u;
+        public const uint NC_ENC_SET_IV                 = 0x02u;
         public const uint NC_ENC_SET_NIP44_MAC_KEY      = 0x03u;
         public const uint NC_ENC_SET_NIP04_KEY          = 0x04u;
-        public const uint NC_ENC_SET_NIP04_IV           = 0x05u;
 
-        //Noscrypt error codes
         public const NCResult NC_SUCCESS                = 0x00;
-        public const byte E_NULL_PTR                    = 0x01;
-        public const byte E_INVALID_ARG                 = 0x02;
-        public const byte E_INVALID_CTX                 = 0x03;
-        public const byte E_ARGUMENT_OUT_OF_RANGE       = 0x04;      
-        public const byte E_OPERATION_FAILED            = 0x05;
-        public const byte E_VERSION_NOT_SUPPORTED       = 0x06;
+
+        public enum NCErrorCodes : long
+        {
+            NC_SUCCESS                  = 0,
+
+            //Generic argument related errors
+            E_NULL_PTR                  = 1,
+            E_INVALID_ARG               = 2,
+            E_INVALID_CTX               = 3,
+            E_ARGUMENT_OUT_OF_RANGE     = 4,
+            E_OPERATION_FAILED          = 5,
+            E_VERSION_NOT_SUPPORTED     = 6,
+
+            //Cipher errors
+            E_CIPHER_INVALID_FORMAT     = 11,
+            E_CIPHER_BAD_NONCE          = 12,
+            E_CIPHER_MAC_INVALID        = 13,
+            E_CIPHER_NO_OUTPUT          = 14,
+            E_CIPHER_BAD_INPUT          = 15,
+            E_CIPHER_BAD_INPUT_SIZE     = 16
+        }
+
+        //Cipher flags
+        public const uint NC_UTIL_CIPHER_MODE           = 0x01u;
+
+
 
         private readonly FunctionTable _functions = FunctionTable.BuildFunctionTable(Library);
 

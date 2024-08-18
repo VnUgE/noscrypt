@@ -18,13 +18,13 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
+using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
-
     /// <summary>
     /// A default implementation of the <see cref="INostrCrypto"/> interface
     /// </summary>
@@ -39,78 +39,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         private ref readonly FunctionTable Functions => ref context.Library.Functions;
 
         ///<inheritdoc/>
-        public void DecryptNip44(
-            ref readonly NCSecretKey secretKey, 
-            ref readonly NCPublicKey publicKey, 
-            ref readonly byte nonce32, 
-            ref readonly byte cipherText, 
-            ref byte plainText,
-            uint size
-        )
-        {
-            Check();
-
-            ThrowIfNullRef(in nonce32, nameof(nonce32));
-        
-            fixed (NCSecretKey* pSecKey = &secretKey)
-            fixed (NCPublicKey* pPubKey = &publicKey)
-            fixed (byte* pCipherText = &cipherText, pTextPtr = &plainText, pNonce = &nonce32)
-            {              
-                NCEncryptionArgs data = new();
-              
-                //Version set first otherwise errors will occur
-                SetEncProperty(&data, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44);
-                //Only the nonce must be set, the hmac key is not needed for decryption
-                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_NONCE, pNonce, NC_ENCRYPTION_NONCE_SIZE);
-                SetEncData(&data, pTextPtr, pCipherText, size);
-
-                NCResult result = Functions.NCDecrypt.Invoke(context.DangerousGetHandle(), pSecKey, pPubKey, &data);
-                NCUtil.CheckResult<FunctionTable.NCDecryptDelegate>(result, true);
-            }
-        }
-
-        ///<inheritdoc/>
-        public void EncryptNip44(
-            ref readonly NCSecretKey secretKey,
-            ref readonly NCPublicKey publicKey,
-            ref readonly byte nonce32,
-            ref readonly byte plainText,
-            ref byte cipherText,
-            uint size,
-            ref byte hmackKeyOut32
-        )
-        {
-            Check();
-
-            ThrowIfNullRef(in nonce32, nameof(nonce32));
-           
-            fixed (NCSecretKey* pSecKey = &secretKey)
-            fixed (NCPublicKey* pPubKey = &publicKey)
-            fixed (byte* pCipherText = &cipherText, 
-                pTextPtr = &plainText, 
-                pHmacKeyOut = &hmackKeyOut32, 
-                pNonce = &nonce32
-            )
-            {
-                NCEncryptionArgs data = new();
-
-                /*
-                 * Use the extended api to set properties correctly and validate them.
-                 * 
-                 * The version MUST be set before continuing to set properties
-                 * 
-                 * Since pointers are used, they must be only be set/accessed inside 
-                 * this fixed statement.
-                 */
-                SetEncProperty(&data, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44);
-                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_MAC_KEY, pHmacKeyOut, NC_HMAC_KEY_SIZE);
-                SetEncPropertyEx(&data, NC_ENC_SET_NIP44_NONCE, pNonce, NC_ENCRYPTION_NONCE_SIZE);
-                SetEncData(&data, pTextPtr, pCipherText, size);
-
-                NCResult result = Functions.NCEncrypt.Invoke(context.DangerousGetHandle(), pSecKey, pPubKey, &data);
-                NCUtil.CheckResult<FunctionTable.NCEncryptDelegate>(result, true);
-            }
-        }
+        public NoscryptCipher AllocCipher(NoscryptCipherVersion version, NoscryptCipherFlags flags) => new (context, version, flags);
 
         ///<inheritdoc/>
         public void GetPublicKey(ref readonly NCSecretKey secretKey, ref NCPublicKey publicKey)
@@ -192,63 +121,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             }
         }
 
-        ///<inheritdoc/>
-        public bool VerifyMac(
-            ref readonly NCSecretKey secretKey, 
-            ref readonly NCPublicKey publicKey, 
-            ref readonly byte nonce32, 
-            ref readonly byte mac32, 
-            ref readonly byte payload, 
-            uint payloadSize
-        )
-        {
-            Check();
-
-            //Check pointers we need to use
-            ThrowIfNullRef(in nonce32, nameof(nonce32));
-            ThrowIfNullRef(in mac32, nameof(mac32));
-            ThrowIfNullRef(in payload, nameof(payload));
-
-            fixed (NCSecretKey* pSecKey = &secretKey)
-            fixed (NCPublicKey* pPubKey = &publicKey)
-            fixed (byte* pPayload = &payload, pMac = &mac32, pNonce = &nonce32)
-            {
-
-                NCMacVerifyArgs args = new()
-                {
-                    payloadSize = payloadSize,
-                    payload = pPayload,
-                    mac32 = pMac,
-                    nonce32 = pNonce
-                };
-
-                //Exec and bypass failure
-                NCResult result = Functions.NCVerifyMac.Invoke(context.DangerousGetHandle(), pSecKey, pPubKey, &args);
-                NCUtil.CheckResult<FunctionTable.NCVerifyMacDelegate>(result, false);
-
-                //Result should be success if the hmac is valid
-                return result == NC_SUCCESS;
-            }
-        }
-
-        ///<inheritdoc/>
-        public void ComputeMac(
-            ref readonly byte hmacKey32, 
-            ref readonly byte payload, 
-            uint payloadSize, 
-            ref byte hmacOut32
-        )
-        {
-            Check();
-
-            //Library will check for null pointers, since they are all arguments
-            fixed (byte* pKey = &hmacKey32, pPayload = &payload, pOut = &hmacOut32)
-            {
-                NCResult result = Functions.NCComputeMac.Invoke(context.DangerousGetHandle(), pKey, pPayload, payloadSize, pOut);
-                NCUtil.CheckResult<FunctionTable.NCComputeMacDelegate>(result, true);
-            }
-        }
-
 #if DEBUG
 
         /// <summary>
@@ -275,33 +147,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         }
 
 #endif
-
-
-        private void SetEncPropertyEx(NCEncryptionArgs* args, uint prop, byte* value, uint valueLen)
-        {
-            NCResult result = Functions.NCSetEncryptionPropertyEx(args, prop, value, valueLen);
-            NCUtil.CheckResult<FunctionTable.NCSetEncryptionPropertyExDelegate>(result, true);
-        }
-
-        private void SetEncProperty(NCEncryptionArgs* args, uint prop, uint value)
-        {
-            NCResult result = Functions.NCSetEncryptionProperty(args, prop, value);
-            NCUtil.CheckResult<FunctionTable.NCSetEncryptionPropertyExDelegate>(result, true);
-        }
-
-        private void SetEncData(NCEncryptionArgs* args, byte* input, byte* output, uint dataLen)
-        {
-            /*
-             * WARNING:
-             * For now this a short-cut for setting the input and output data pointers
-             * technically this still works and avoids the PInvoke call, but this may
-             * change in the future.
-             */
-            args->dataSize = dataLen;
-            args->inputData = input;
-            args->outputData = output;
-        }
-
         ///<inheritdoc/>
         protected override void Free()
         {

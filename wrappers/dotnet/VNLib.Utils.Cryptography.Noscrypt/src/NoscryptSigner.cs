@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-
+using VNLib.Utils.Cryptography.Noscrypt.Random;
 using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 

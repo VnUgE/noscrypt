@@ -16,11 +16,10 @@
 using System;
 using System.Runtime.InteropServices;
 
-using VNLib.Utils;
 using VNLib.Utils.Native;
 using VNLib.Utils.Extensions;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Random
 {
 
     /// <summary>

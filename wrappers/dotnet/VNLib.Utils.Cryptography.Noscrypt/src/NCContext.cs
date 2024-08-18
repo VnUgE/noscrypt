@@ -33,7 +33,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// </summary>
     public sealed class NCContext : SafeHandleZeroOrMinusOneIsInvalid
     {
-        private readonly IUnmangedHeap Heap;
+        internal readonly IUnmangedHeap Heap;
 
         /// <summary>
         /// The library this context was created from

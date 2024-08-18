@@ -34,13 +34,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         public readonly NCValidateSecretKeyDelegate NCValidateSecretKey;
         public readonly NCSignDataDelegate NCSignData;
         public readonly NCVerifyDataDelegate NCVerifyData;
-        public readonly NCEncryptDelegate NCEncrypt;
-        public readonly NCDecryptDelegate NCDecrypt;
-        public readonly NCVerifyMacDelegate NCVerifyMac;
-        public readonly NCComputeMacDelegate NCComputeMac;
-        public readonly NCSetEncryptionDataDelegate NCSetEncryptionData;
-        public readonly NCSetEncryptionPropertyDelegate NCSetEncryptionProperty;
-        public readonly NCSetEncryptionPropertyExDelegate NCSetEncryptionPropertyEx;
+        public readonly NCUtilCipherAllocDelegate NCUtilCipherAlloc;
+        public readonly NCUtilCipherFreeDelegate NCUtilCipherFree;
+        public readonly NCUtilCipherInitDelegate NCUtilCipherInit;
+        public readonly NCUtilCipherGetFlagsDelegate NCUtilCipherGetFlags;
+        public readonly NCUtilCipherGetOutputSizeDelegate NCUtilCipherGetOutputSize;
+        public readonly NCUtilCipherReadOutputDelegate NCUtilCipherReadOutput;
+        public readonly NCUtilCipherSetPropertyDelegate NCUtilCipherSetProperty;
+        public readonly NCUtilCipherUpdateDelegate NCUtilCipherUpdate;
+        public readonly NCUtilCipherGetIvSizeDelegate NCUtilCipherGetIvSize;
+
 
 #if DEBUG
         public readonly NCGetConversationKeyDelegate NCGetConversationKey;
@@ -59,13 +62,17 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             NCVerifyData = library.DangerousGetFunction<NCVerifyDataDelegate>();
             NCSignData = library.DangerousGetFunction<NCSignDataDelegate>();
             NCVerifyData = library.DangerousGetFunction<NCVerifyDataDelegate>();
-            NCEncrypt = library.DangerousGetFunction<NCEncryptDelegate>();
-            NCDecrypt = library.DangerousGetFunction<NCDecryptDelegate>();
-            NCVerifyMac = library.DangerousGetFunction<NCVerifyMacDelegate>();
-            NCComputeMac = library.DangerousGetFunction<NCComputeMacDelegate>();
-            NCSetEncryptionData = library.DangerousGetFunction<NCSetEncryptionDataDelegate>();
-            NCSetEncryptionProperty = library.DangerousGetFunction<NCSetEncryptionPropertyDelegate>();
-            NCSetEncryptionPropertyEx = library.DangerousGetFunction<NCSetEncryptionPropertyExDelegate>();
+            
+            //Cipher util library functions
+            NCUtilCipherAlloc = library.DangerousGetFunction<NCUtilCipherAllocDelegate>();
+            NCUtilCipherFree = library.DangerousGetFunction<NCUtilCipherFreeDelegate>();
+            NCUtilCipherInit = library.DangerousGetFunction<NCUtilCipherInitDelegate>();
+            NCUtilCipherGetFlags = library.DangerousGetFunction<NCUtilCipherGetFlagsDelegate>();
+            NCUtilCipherGetOutputSize = library.DangerousGetFunction<NCUtilCipherGetOutputSizeDelegate>();
+            NCUtilCipherReadOutput = library.DangerousGetFunction<NCUtilCipherReadOutputDelegate>();
+            NCUtilCipherSetProperty = library.DangerousGetFunction<NCUtilCipherSetPropertyDelegate>();
+            NCUtilCipherUpdate = library.DangerousGetFunction<NCUtilCipherUpdateDelegate>();
+            NCUtilCipherGetIvSize = library.DangerousGetFunction<NCUtilCipherGetIvSizeDelegate>();
 
 #if DEBUG
             NCGetConversationKey = library.DangerousGetFunction<NCGetConversationKeyDelegate>();
@@ -114,28 +121,35 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         [SafeMethodName("NCVerifyData")]
         internal delegate NCResult NCVerifyDataDelegate(IntPtr ctx, NCPublicKey* sk, byte* data, uint dataSize, byte* sig64);
 
-        [SafeMethodName("NCEncrypt")]
-        internal delegate NCResult NCEncryptDelegate(IntPtr ctx, NCSecretKey* sk, NCPublicKey* pk, NCEncryptionArgs* data);
-
-        [SafeMethodName("NCDecrypt")]
-        internal delegate NCResult NCDecryptDelegate(IntPtr ctx, NCSecretKey* sk, NCPublicKey* pk, NCEncryptionArgs* data);
-
-        [SafeMethodName("NCVerifyMac")]
-        internal delegate NCResult NCVerifyMacDelegate(IntPtr ctx, NCSecretKey* sk, NCPublicKey* pk, NCMacVerifyArgs* args);
-
-        [SafeMethodName("NCComputeMac")]
-        internal delegate NCResult NCComputeMacDelegate(IntPtr ctx, byte* hmacKey32, byte* payload, uint payloadSize, byte* hmacOut32);
-
         [SafeMethodName("NCGetConversationKey")]
-        internal delegate NCResult NCGetConversationKeyDelegate(nint ctx, NCSecretKey* sk, NCPublicKey* pk, byte* keyOut32);
+        internal delegate NCResult NCGetConversationKeyDelegate(IntPtr ctx, NCSecretKey* sk, NCPublicKey* pk, byte* keyOut32);
 
-        [SafeMethodName("NCSetEncryptionProperty")]
-        internal delegate NCResult NCSetEncryptionPropertyDelegate(NCEncryptionArgs* args, uint property, uint value);
 
-        [SafeMethodName("NCSetEncryptionPropertyEx")]
-        internal delegate NCResult NCSetEncryptionPropertyExDelegate(NCEncryptionArgs* args, uint property, byte* value, uint valueLen);
+        [SafeMethodName("NCUtilCipherAlloc")]
+        internal delegate IntPtr NCUtilCipherAllocDelegate(uint version, uint flags);
 
-        [SafeMethodName("NCSetEncryptionData")]
-        internal delegate NCResult NCSetEncryptionDataDelegate(NCEncryptionArgs* args, byte* input, byte* output, uint dataSize);
+        [SafeMethodName("NCUtilCipherFree")]
+        internal delegate void NCUtilCipherFreeDelegate(IntPtr cipher);
+
+        [SafeMethodName("NCUtilCipherInit")]
+        internal delegate NCResult NCUtilCipherInitDelegate(IntPtr cipher, byte* inputData, uint inputLen);
+
+        [SafeMethodName("NCUtilCipherGetFlags")]
+        internal delegate NCResult NCUtilCipherGetFlagsDelegate(IntPtr cipher);
+
+        [SafeMethodName("NCUtilCipherGetOutputSize")]
+        internal delegate NCResult NCUtilCipherGetOutputSizeDelegate(IntPtr cipher);
+
+        [SafeMethodName("NCUtilCipherReadOutput")]
+        internal delegate NCResult NCUtilCipherReadOutputDelegate(IntPtr cipher, byte* outputData, uint outputLen);
+
+        [SafeMethodName("NCUtilCipherSetProperty")]
+        internal delegate NCResult NCUtilCipherSetPropertyDelegate(IntPtr cipher, uint property, byte* value, uint valueLen);
+
+        [SafeMethodName("NCUtilCipherUpdate")]
+        internal delegate NCResult NCUtilCipherUpdateDelegate(IntPtr cipher, IntPtr libContext, NCSecretKey* secKey, NCPublicKey* pubKey);
+
+        [SafeMethodName("NCUtilCipherGetIvSize")]
+        internal delegate NCResult NCUtilCipherGetIvSizeDelegate(IntPtr cipher);
     }
 }

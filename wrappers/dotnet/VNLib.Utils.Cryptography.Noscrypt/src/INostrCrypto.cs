@@ -15,6 +15,8 @@
 
 using System;
 
+using VNLib.Utils.Cryptography.Noscrypt.Encryption;
+
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     public interface INostrCrypto
@@ -37,6 +39,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         bool ValidateSecretKey(ref readonly NCSecretKey secretKey);
+
+        /// <summary>
+        /// Allocates a new cipher instance with the supplied options.
+        /// </summary>
+        /// <param name="version">The cipher specification version</param>
+        /// <param name="flags">The cipher initialziation flags</param>
+        /// <returns>The cipher instance</returns>
+        NoscryptCipher AllocCipher(NoscryptCipherVersion version, NoscryptCipherFlags flags);
 
         /// <summary>
         /// Signs the supplied data with the secret key and random32 nonce, then writes
@@ -73,92 +83,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             ref readonly byte data, 
             uint dataSize, 
             ref readonly byte sig64
-        );
-
-        /// <summary>
-        /// Computes a nip44 message authentication code (MAC) using the supplied key and payload.
-        /// </summary>
-        /// <param name="hmacKey32">The key returned during a 
-        /// <see cref="Encrypt(ref readonly NCSecretKey, ref readonly NCPublicKey, ref readonly byte, ref readonly byte, ref byte, uint, ref byte)"/>
-        /// </param>
-        /// <param name="payload">A pointer to a buffer </param>
-        /// <param name="payloadSize">The size of the buffer to compute the mac of, in bytes</param>
-        /// <param name="hmacOut32">A pointer to the 32byte buffer to write the mac to</param>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        void ComputeMac(
-            ref readonly byte hmacKey32,
-            ref readonly byte payload,
-            uint payloadSize,
-            ref byte hmacOut32
-        );
-
-        /// <summary>
-        /// Verifies a nip44 message authentication code (MAC) against the supplied key and payload. 
-        /// </summary>
-        /// <param name="secretKey">A pointer to the receiver's secret key</param>
-        /// <param name="publicKey">A pointer to senders the public key</param>
-        /// <param name="nonce32">A pointer to the 32byte nonce buffer</param>
-        /// <param name="mac32">A pointer to the 32byte message buffer</param>
-        /// <param name="payload">A pointer to the message buffer</param>
-        /// <param name="payloadSize">The size in bytes of the payload buffer</param>
-        /// <returns>True if the message authentication code (MAC) matches, false otherwise </returns>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        bool VerifyMac(
-            ref readonly NCSecretKey secretKey, 
-            ref readonly NCPublicKey publicKey, 
-            ref readonly byte nonce32,
-            ref readonly byte mac32,
-            ref readonly byte payload,
-            uint payloadSize
-        );
-
-        /// <summary>
-        /// Encrypts a message using the supplied secret key, public key, and nonce. When this function
-        /// returns, the cipherText buffer will contain the encrypted message, and the hmacKeyOut32 buffer
-        /// will contain the key used to compute the message authentication code (MAC).
-        /// <para>
-        /// NOTE: The cipherText buffer must be at least as large as the plaintext buffer. The 
-        /// size parameter must be the size of the number of bytes to encrypt.
-        /// </para>
-        /// </summary>
-        /// <param name="secretKey">A pointer to the receiver's secret key</param>
-        /// <param name="publicKey">A pointer to senders the public key</param>
-        /// <param name="nonce32">A pointer to the 32byte nonce used for message encryption</param>
-        /// <param name="plainText">A pointer to the plaintext buffer to encrypt</param>
-        /// <param name="cipherText">A pointer to the cyphertext buffer to write encrypted data to (must be as large or larger than the plaintext buffer)</param>
-        /// <param name="size">The size of the data to encrypt</param>
-        /// <param name="hmacKeyOut32"></param>
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        void EncryptNip44(
-            ref readonly NCSecretKey secretKey, 
-            ref readonly NCPublicKey publicKey, 
-            ref readonly byte nonce32, 
-            ref readonly byte plainText, 
-            ref byte cipherText,
-            uint size,
-            ref byte hmacKeyOut32
-        );
-
-        /// <summary>
-        /// Decrypts a message using the supplied secret key, public key, and the original message 
-        /// nonce.
-        /// </summary>
-        /// <param name="secretKey">A pointer to the receiver's secret key</param>
-        /// <param name="publicKey">A pointer to senders the public key</param>
-        /// <param name="nonce32">A pointer to the 32byte nonce used for message encryption</param>
-        /// <param name="plainText">A pointer to the plaintext buffer to write plaintext data to (must be as large or larger than the ciphertext buffer)</param>
-        /// <param name="cipherText">A pointer to the cyphertext buffer to read encrypted data from</param>
-        /// <param name="size">The size of the buffer to decrypt</param>
-        void DecryptNip44(
-            ref readonly NCSecretKey secretKey, 
-            ref readonly NCPublicKey publicKey, 
-            ref readonly byte nonce32, 
-            ref readonly byte cipherText, 
-            ref byte plainText,
-            uint size
         );
     }
 }

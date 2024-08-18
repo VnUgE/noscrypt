@@ -127,35 +127,34 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
             // Error code are only 8 bits, if an argument error occured, the
             // argument number will be in the next upper 8 bits
-            byte errorCode = (byte)(asPositive & 0xFF);
+            NCErrorCodes errorCode = (NCErrorCodes)(asPositive & 0xFF);
             byte argNumber = (byte)((asPositive >> 8) & 0xFF);
 
             switch (errorCode)
             {
-                case E_NULL_PTR:
+                case NCErrorCodes.E_NULL_PTR:
                     RaiseNullArgExceptionForArgumentNumber<T>(argNumber);
                     break;
-                case E_INVALID_ARG:
+                case NCErrorCodes.E_INVALID_ARG:
                     RaiseArgExceptionForArgumentNumber<T>(argNumber);
                     break;
-                case E_ARGUMENT_OUT_OF_RANGE:
+                case NCErrorCodes.E_ARGUMENT_OUT_OF_RANGE:
                     RaiseOORExceptionForArgumentNumber<T>(argNumber);
                     break;
-                case E_INVALID_CTX:
+                case NCErrorCodes.E_INVALID_CTX:
                     throw new InvalidOperationException("The library context object is null or invalid");
-                case E_OPERATION_FAILED:
+                case NCErrorCodes.E_OPERATION_FAILED:
                     RaiseOperationFailedException(raiseOnFailure);
                     break;
-                case E_VERSION_NOT_SUPPORTED:
+                case NCErrorCodes.E_VERSION_NOT_SUPPORTED:
                     throw new NotSupportedException("The requested version is not supported");
 
                 default:
                     if(raiseOnFailure)
                     {
-                        throw new InvalidOperationException($"The operation failed for an unknown reason, code: {errorCode:x}");
+                        throw new InvalidOperationException($"The operation failed with error, code: {errorCode} for arugment {argNumber:x}");
                     }
                     break;
-
             }
         }
 

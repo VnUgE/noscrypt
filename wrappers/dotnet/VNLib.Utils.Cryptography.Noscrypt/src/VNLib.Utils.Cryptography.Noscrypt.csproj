@@ -21,8 +21,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0122" />
-    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0122" />
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0124" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0124" />
   </ItemGroup>
 
 </Project>

@@ -17,18 +17,18 @@ using System;
 
 using VNLib.Hashing;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Random
 {
     /// <summary>
     /// A fallback crypographic random source used for default
     /// rng if you wish
     /// </summary>
-    public sealed class NcFallbackRandom : IRandomSource
+    public sealed class NCFallbackRandom : IRandomSource
     {
         /// <summary>
         /// Gets the shared instance of the fallback random source
         /// </summary>
-        public static NcFallbackRandom Shared { get; } = new NcFallbackRandom();
+        public static NCFallbackRandom Shared { get; } = new NCFallbackRandom();
 
         /// <inheritdoc/>
         public void GetRandomBytes(Span<byte> buffer) => RandomHash.GetRandomBytes(buffer);

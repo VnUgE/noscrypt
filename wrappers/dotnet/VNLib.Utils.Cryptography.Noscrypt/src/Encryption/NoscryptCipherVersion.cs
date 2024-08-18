@@ -15,25 +15,22 @@
 
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 {
     /// <summary>
-    /// The NIP44 encryption version used by the Nostr protocol
+    /// The Noscrypt utility cipher encryption 
+    /// standard version
     /// </summary>
-    public sealed class NCNip44EncryptionVersion : INostrEncryptionVersion
+    public enum NoscryptCipherVersion : uint
     {
         /// <summary>
-        /// A static nip44 encryption version instance
+        /// Tells the cipher to use the NIP04 encryption standard
         /// </summary>
-        public static readonly NCNip44EncryptionVersion Instance = new();
+        Nip04 = NC_ENC_VERSION_NIP04,
 
-        ///<inheritdoc/>
-        uint INostrEncryptionVersion.Version => NC_ENC_VERSION_NIP44;
-
-        int INostrEncryptionVersion.GetMessageBufferSize(int dataSize) => Nip44Util.CalcFinalBufferSize(dataSize);
-
-        ///<inheritdoc/>
-        int INostrEncryptionVersion.GetPayloadBufferSize(int dataSize) => Nip44Util.CalcBufferSize(dataSize);
+        /// <summary>
+        /// Tells the cipher to use the NIP44 encryption standard
+        /// </summary>
+        Nip44 = NC_ENC_VERSION_NIP44
     }
-
 }

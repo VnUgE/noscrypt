@@ -15,7 +15,7 @@
 
 using System;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Random
 {
     /// <summary>
     /// Represents a generator for random data, that fills abinary buffer with random bytes
