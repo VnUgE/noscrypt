@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+ - [#8](https://www.vaughnnugent.com/Resources/Software/Modules/noscrypt-issues?id=51) - an issue where nip44 encryption fails on reusable cipher instances
+
 ## [0.1.3] - 2024-08-12
 
 ### Added
