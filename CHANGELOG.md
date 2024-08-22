@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
- - [#8](https://www.vaughnnugent.com/Resources/Software/Modules/noscrypt-issues?id=51) - an issue where nip44 encryption fails on reusable cipher instances
+### Added
+- C# .NET 8.0 library wrapper for noscrypt
+- NIP44 vector testing for encryption
+ 
+## [0.1.4]
 
-## [0.1.3] - 2024-08-12
+### Fixed
+- [#8](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?id=51) - an issue where nip44 encryption fails on reusable cipher instances
+
+## [0.1.3]
 
 ### Added
-- Utilities sidecar library for easy note encryption (noscryptutil.h)
+- Utilities sidecar library for easy note encryption [(noscryptutil.h)](https://github.com/VnUgE/noscrypt/blob/v0.1.3/include/noscryptutil.h)
 - Utilities for padding calculations
 - Prints the name of the configured crypto backend during build
 - Many internal hardening improvments (span pass-by-value, span validation functions)
@@ -38,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NC_ENCRYPTION_NONCE_SIZE` macro for better forward compatability
 - `NC_NIP04_AES_IV_SIZE` macro for better forward compatability 
 
-## [0.1.2] - 2024-05-29
+## [0.1.2]
 
 ### Added
 
@@ -63,7 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NCContext structure defintion.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.3...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/VnUgE/noscrypt/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/VnUgE/noscrypt/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/VnUgE/noscrypt/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/VnUgE/noscrypt/compare/v0.1.0...v0.1.1
