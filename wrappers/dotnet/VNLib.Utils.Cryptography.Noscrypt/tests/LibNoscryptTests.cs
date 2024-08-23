@@ -17,6 +17,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
     {
 
         const string NoscryptLibWinDebug = @"../../../../../../../build/windows/Debug/noscrypt.dll";
+        const string NoscryptLinuxDebug = @"../../../../../../../build/linux/libnoscrypt.so";
 
 
         //Keys generated using npx noskey package
@@ -36,7 +37,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestInitialize]
         public void Initialize()
         {
-            _testLib = NoscryptLibrary.Load(NoscryptLibWinDebug);
+            _testLib = Environment.OSVersion.Platform switch
+            {
+                PlatformID.Win32NT => NoscryptLibrary.Load(NoscryptLibWinDebug),
+                PlatformID.Unix => NoscryptLibrary.Load(NoscryptLinuxDebug),
+                _ => throw new PlatformNotSupportedException()
+            };
+
             _testVectors = JsonDocument.Parse(File.ReadAllText(Nip44VectorTestFile));
         }
 

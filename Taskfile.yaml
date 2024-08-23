@@ -54,6 +54,12 @@ tasks:
        vars: { BUILD_CONFIG: 'Debug' }
      - cmd: cd {{.CMAKE_BUILD_DIR}} && ctest -C Debug --verbose --output-on-failure
 
+  test-full:
+    desc: '(dotnet required) builds, and tests noscrypt using the .NET library test suite'
+    cmds:
+     - task: test
+     - cmd: dotnet test --logger 'console;verbosity=detailed'
+
   compile:
     internal: true
     cmds:
