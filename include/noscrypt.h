@@ -156,7 +156,7 @@ typedef int64_t NCResult;
 /*
  An secp256k1 secret key (aka private key buffer)
 */
-typedef struct secret_key_struct {
+typedef struct nc_secret_key_struct {
 
 	uint8_t key[NC_SEC_KEY_SIZE];
 
@@ -165,7 +165,7 @@ typedef struct secret_key_struct {
 /*
   An x-only secp256k1 public key
 */
-typedef struct xonly_pubkey_struct {
+typedef struct nc_xonly_pubkey_struct {
 
 	uint8_t key[NC_PUBKEY_SIZE];
 

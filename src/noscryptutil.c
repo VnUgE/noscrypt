@@ -672,6 +672,19 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionBufferSize(uint32_t encVersion, uint
 }
 
 
+NC_EXPORT NCContext* NC_CC NCUtilContextAlloc(void)
+{
+	/* Dynamically allocate context aligned and zeroed */
+	return (NCContext*)_nc_mem_alloc(1, NCGetContextStructSize());
+}
+
+
+NC_EXPORT void NC_CC NCUtilContextFree(NCContext* ctx)
+{
+	_nc_mem_free(ctx);
+}
+
+
 NC_EXPORT NCUtilCipherContext* NC_CC NCUtilCipherAlloc(uint32_t encVersion, uint32_t flags)
 {
 	NCUtilCipherContext* encCtx;

@@ -66,6 +66,10 @@
 
 #include "hex.h"
 
+#ifdef NC_ENABLE_UTILS
+    #include <noscryptutil.h>
+#endif
+
 /*Pre-computed constants for argument errors */
 #define ARG_ERROR_POS_0 E_NULL_PTR
 #define ARG_ERROR(pos) NCResultWithArgPosition(E_NULL_PTR, pos) 
@@ -365,7 +369,13 @@ static int TestPublicApiArgumentValidation()
     * Alloc context structure on the heap before use. 
     * THIS WILL LEAK IN THE CURRENT CONFIG ALWAYS FREE UNDER NORMAL CONDITIONS 
     */
+
+#ifdef NOSCRYPTUTIL_H
+    ctx = NCUtilContextAlloc();
+#else
     ctx = (NCContext*)malloc(NCGetContextStructSize());
+#endif
+
     TASSERT(ctx != NULL)
 
     /*Test null context*/
@@ -608,9 +618,7 @@ static int TestCorrectEncryption(const NCContext* context)
     return 0;
 }
 
-#ifdef NC_ENABLE_UTILS
-
-#include <noscryptutil.h>
+#ifdef NOSCRYPTUTIL_H
 
 /* Padding tests taken from the nip44 repo vectors.json file */
 static const uint32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
