@@ -78,6 +78,19 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint
 NC_EXPORT NCResult NC_CC NCUtilGetEncryptionBufferSize(uint32_t encVersion, uint32_t plaintextSize);
 
 /*
+* Allocates a new library context structure dynamically on the heap and returns a pointer to 
+* it. The library context must be freed with NCUtilContextFree when it is no longer needed.
+* @return A valid pointer to a new library context or NULL if the operation failed
+*/
+NC_EXPORT NCContext* NC_CC NCUtilContextAlloc(void);
+
+/*
+* Frees the library context structure and clears the memory it points to.
+* @param ctx A valid pointer to a library context memory
+*/
+NC_EXPORT void NC_CC NCUtilContextFree(NCContext* ctx);
+
+/*
 * Allocates a new encryption context and sets the encryption version and flags. The encryption context
 * must be freed with NCUtilCipherFree when it is no longer needed.
 * @param encVersion The encryption specification version to use

@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - NIP44 vector testing for encryption
+- `NCUtilContextAlloc()` and `NCUtilContextFree()` utilities for dynamic library context allocation
+
+### Changed
+- Public and Secret key structure definition names have been correctly namespaced __(no breaking changes)__  
  
 ## [0.1.4]
 
