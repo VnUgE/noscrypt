@@ -120,6 +120,9 @@ tasks:
       BUILD_DIR: 'build/win-x64'
     
     cmds:
+    #remove deps dir to avoid conflicts with vnbuild
+     - defer: powershell rm -Recurse -Force "{{ .BUILD_DIR }}/_deps"
+
     #invoke cmake build 
      - cmake -S . -B {{.BUILD_DIR}} -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DNC_BUILD_TESTS=OFF
      - cmake --build {{.BUILD_DIR}} --config Release  
