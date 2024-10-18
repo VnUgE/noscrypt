@@ -1,6 +1,5 @@
-version: 35
+version: 36
 jobs:
-
 - name: Git mirror push
   steps:
   - !PushRepository
@@ -27,15 +26,75 @@ jobs:
   retryDelay: 30
   timeout: 3600
 
-- name: Build and publish
-  jobExecutor: primary-shell-executor
+- name: Unit Testing
   steps:
   - !CheckoutStep
-    name: Code checkout
+    name: checkout
     cloneCredential: !DefaultCredential {}
     withLfs: false
     withSubmodules: false
-    checkoutPath: '@project_name@/'
+    checkoutPath: '@project_name@'
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: run unit tests
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        cd @project_name@
+        task -t Module.Taskfile.yaml test
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: '** -master'
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+- name: Staging build
+  steps:
+  - !CheckoutStep
+    name: checkout
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@'
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild build
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild build -S --verbose
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: VNBuild mock publish
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        vnbuild publish --sign
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: develop master
+  jobDependencies:
+  - jobName: Unit Testing
+    requireSuccessful: true
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+
+- name: Publish on tag
+  steps:
+  - !CheckoutStep
+    name: checkout
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@'
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: VNBuild build
@@ -59,9 +118,9 @@ jobs:
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
-  - !BranchUpdateTrigger
+  - !TagCreateTrigger
     branches: master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  timeout: 3600
+  timeout: 14400

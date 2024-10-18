@@ -17,11 +17,16 @@ tasks:
     cmds:
      - git reset --hard  
      - git remote update
-     - git pull origin {{.BRANCH_NAME}} --verify-signatures 
+     - git pull origin {{ .BRANCH_NAME }} --verify-signatures 
      
      #updates the project versions for all inlcuded .NET projects
      - dotnet-gitversion.exe /updateprojectfiles
 
+  test:
+    desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
+    cmds:
+     - cmd: task test -- -DNC_ENABLE_UTILS=ON
+     - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
 
 #called by build pipeline to build module
   build:
@@ -32,7 +37,6 @@ tasks:
     cmds:
      #git archive in the module directory
      - git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
-
 
   #called by build pipeline to clean module
   clean:
