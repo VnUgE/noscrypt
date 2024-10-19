@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -9,7 +9,7 @@
     <RootNamespace>VNLib.Utils.Cryptography.Noscrypt</RootNamespace>
     <AssemblyName>VNLib.Utils.Cryptography.Noscrypt</AssemblyName>
   </PropertyGroup>
-
+  
   <PropertyGroup>
     <Authors>Vaughn Nugent</Authors>
     <Company>Vaughn Nugent</Company>
@@ -19,10 +19,22 @@
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/noscryot/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
   </PropertyGroup>
-
+  
   <ItemGroup>
-    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0124" />
-    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0124" />
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0202" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0202" />
+  </ItemGroup>
+  
 </Project>

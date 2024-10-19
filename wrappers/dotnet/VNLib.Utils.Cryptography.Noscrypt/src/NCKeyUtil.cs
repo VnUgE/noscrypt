@@ -14,18 +14,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
+using VNLib.Utils.Extensions;
+using VNLib.Utils.Cryptography.Noscrypt.@internal;
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
-
-    public static class NCUtil
+    /// <summary>
+    /// Contains utility methods for working with nostr keys
+    /// </summary>
+    public static unsafe class NCKeyUtil
     {
         /// <summary>
         /// Gets a span of bytes from the current secret key 
@@ -115,79 +118,68 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             return ref Unsafe.As<byte, NCPublicKey>(ref asBytes);
         }
 
-        internal static void CheckResult<T>(NCResult result, bool raiseOnFailure) where T : Delegate
+        /// <summary>
+        /// Gets a nostr public key from a secret key.
+        /// </summary>
+        /// <param name="secretKey">A reference to the secret key to get the public key from</param>
+        /// <param name="publicKey">A reference to the public key structure to write the recovered key to</param>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void GetPublicKey(
+            NCContext context,
+            ref readonly NCSecretKey secretKey,
+            ref NCPublicKey publicKey
+        )
         {
-            //Only negative values are errors
-            if (result >= NC_SUCCESS)
+            Check(context);
+
+            fixed (NCSecretKey* pSecKey = &secretKey)
+            fixed (NCPublicKey* pPubKey = &publicKey)
             {
-                return;
-            }
+                NCResult result = GetTable(context).NCGetPublicKey(
+                    context.DangerousGetHandle(),
+                    pSecKey,
+                    pPubKey
+                );
 
-            NCResult asPositive = -result;
-
-            // Error code are only 8 bits, if an argument error occured, the
-            // argument number will be in the next upper 8 bits
-            NCErrorCodes errorCode = (NCErrorCodes)(asPositive & 0xFF);
-            byte argNumber = (byte)((asPositive >> 8) & 0xFF);
-
-            switch (errorCode)
-            {
-                case NCErrorCodes.E_NULL_PTR:
-                    RaiseNullArgExceptionForArgumentNumber<T>(argNumber);
-                    break;
-                case NCErrorCodes.E_INVALID_ARG:
-                    RaiseArgExceptionForArgumentNumber<T>(argNumber);
-                    break;
-                case NCErrorCodes.E_ARGUMENT_OUT_OF_RANGE:
-                    RaiseOORExceptionForArgumentNumber<T>(argNumber);
-                    break;
-                case NCErrorCodes.E_INVALID_CTX:
-                    throw new InvalidOperationException("The library context object is null or invalid");
-                case NCErrorCodes.E_OPERATION_FAILED:
-                    RaiseOperationFailedException(raiseOnFailure);
-                    break;
-                case NCErrorCodes.E_VERSION_NOT_SUPPORTED:
-                    throw new NotSupportedException("The requested version is not supported");
-
-                default:
-                    if(raiseOnFailure)
-                    {
-                        throw new InvalidOperationException($"The operation failed with error, code: {errorCode} for arugment {argNumber:x}");
-                    }
-                    break;
+                NCUtil.CheckResult<FunctionTable.NCGetPublicKeyDelegate>(result, raiseOnFailure: true);
             }
         }
 
-        private static void RaiseOperationFailedException(bool raise)
+        /// <summary>
+        /// Validates a secret key is in a valid format. 
+        /// </summary>
+        /// <param name="secretKey">A readonly reference to key structure to validate</param>
+        /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool ValidateSecretKey(
+            NCContext context,
+            ref readonly NCSecretKey secretKey
+        )
         {
-            if (raise)
+            Check(context);
+
+            fixed (NCSecretKey* pSecKey = &secretKey)
             {
-                throw new InvalidOperationException("The operation failed for an unknown reason");
+                NCResult result = GetTable(context).NCValidateSecretKey(
+                    context.DangerousGetHandle(),
+                    pSecKey
+                );
+
+                NCUtil.CheckResult<FunctionTable.NCValidateSecretKeyDelegate>(result, raiseOnFailure: false);
+
+                return result == NC_SUCCESS;
             }
         }
 
-        private static void RaiseNullArgExceptionForArgumentNumber<T>(int argNumber) where T : Delegate
+        private static void Check(NCContext? context)
         {
-            //Get delegate parameters
-            Type type = typeof(T);
-            ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentNullException(arg.Name, "Argument is null or invalid cannot continue");
+            ArgumentNullException.ThrowIfNull(context);
+            context.ThrowIfClosed();
         }
 
-        private static void RaiseArgExceptionForArgumentNumber<T>(int argNumber) where T : Delegate
-        {
-            //Get delegate parameters
-            Type type = typeof(T);
-            ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentException("Argument is null or invalid cannot continue", arg.Name);
-        }
-
-        private static void RaiseOORExceptionForArgumentNumber<T>(int argNumber) where T : Delegate
-        {
-            //Get delegate parameters
-            Type type = typeof(T);
-            ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentOutOfRangeException(arg.Name, "Argument is out of range of acceptable values");
-        }
+        private static ref readonly FunctionTable GetTable(NCContext ctx)
+            => ref ctx.Library.Functions;
     }
 }

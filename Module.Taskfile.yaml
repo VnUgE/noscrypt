@@ -18,21 +18,40 @@ tasks:
      - git reset --hard  
      - git remote update
      - git pull origin {{ .BRANCH_NAME }} --verify-signatures 
-     
-     #updates the project versions for all inlcuded .NET projects
-     - dotnet-gitversion.exe /updateprojectfiles
 
   test:
     desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
     cmds:
-     - cmd: task test -- -DNC_ENABLE_UTILS=ON
+     #ensure the debug library has been built for the current system before project tests are executed
+     - cmd: task build-debug -- -DNC_ENABLE_UTILS=ON
+     - task: test-dotnet
+  
+     #runs the test suite inside wsl linux environment
+     - cmd: echo 'Running WSL tests {{ if eq OS "windows" }}TRUE{{ else }}FALSE{{ end }}'
+       silent: true
      - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
+       platforms: [ windows ]
+
+  test-dotnet:
+    vars:
+      LIB_NAME: '{{ if eq OS "windows" }}noscrypt.dll{{ else }}libnoscrypt{{ end }}'
+      LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
+    
+    cmds:
+     - cmd: echo "running tests for {{ .PROJECT_NAME }}" 
+       silent: true
+     - cmd: dotnet test 
+        {{ .CLI_ARGS }}
+        --logger "console;verbosity=detailed"
+        --framework {{ .FRAMEWORK | default "net8.0" }}   
+        --configuration {{ .CONFIGURATION | default "Debug" }}     
+        --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
+        --environment 'NOSCRYPT_DLL_PATH="{{ osClean .LIB_PATH }}"'
 
 #called by build pipeline to build module
   build:
-    cmds:
-     - echo "building module {{.MODULE_NAME}}"   
-
+    cmds: []
+     
   publish:
     cmds:
      #git archive in the module directory

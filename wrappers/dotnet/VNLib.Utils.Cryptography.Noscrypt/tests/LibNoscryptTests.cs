@@ -1,25 +1,15 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using System;
-using System.Text;
-using System.Text.Json;
-
 using VNLib.Hashing;
 using VNLib.Utils.Memory;
-using VNLib.Utils.Extensions;
-using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
+using VNLib.Utils.Cryptography.Noscrypt.Singatures;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 {
     [TestClass()]
     public class LibNoscryptTests : IDisposable
     {
-
-        const string NoscryptLibWinDebug = @"../../../../../../../build/windows/Debug/noscrypt.dll";
-        const string NoscryptLinuxDebug = @"../../../../../../../build/linux/libnoscrypt.so";
-
-
         //Keys generated using npx noskey package
         const string TestPrivateKeyHex = "98c642360e7163a66cee5d9a842b252345b6f3f3e21bd3b7635d5e6c20c7ea36";
         const string TestPublicKeyHex = "0db15182c4ad3418b4fbab75304be7ade9cfa430a21c1c5320c9298f54ea5406";
@@ -27,56 +17,40 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         const string TestPrivateKeyHex2 = "3032cb8da355f9e72c9a94bbabae80ca99d3a38de1aed094b432a9fe3432e1f2";
         const string TestPublicKeyHex2 = "421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a";
 
-        const string Nip44VectorTestFile = "nip44.vectors.json";
-
 #nullable disable
         private NoscryptLibrary _testLib;
-        private JsonDocument _testVectors;
 #nullable enable
 
         [TestInitialize]
         public void Initialize()
         {
-            _testLib = Environment.OSVersion.Platform switch
-            {
-                PlatformID.Win32NT => NoscryptLibrary.Load(NoscryptLibWinDebug),
-                PlatformID.Unix => NoscryptLibrary.Load(NoscryptLinuxDebug),
-                _ => throw new PlatformNotSupportedException()
-            };
-
-            _testVectors = JsonDocument.Parse(File.ReadAllText(Nip44VectorTestFile));
+            _testLib = NoscryptLibrary.LoadDefault();
         }
-
 
         [TestMethod()]
         public void InitializeTest()
         {
-            //Random context seed
-            ReadOnlySpan<byte> seed = RandomHash.GetRandomBytes(32);
-
             //Init new context and interface
-            NCContext context = _testLib.Initialize(MemoryUtil.Shared, seed);
-
-            using NostrCrypto crypto = new(context, true);
+            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
         }
 
         [TestMethod()]
         public void ValidateSecretKeyTest()
         {
             //Random context seed
-            ReadOnlySpan<byte> seed = RandomHash.GetRandomBytes(32);
             ReadOnlySpan<byte> secretKey = RandomHash.GetRandomBytes(32);
             Span<byte> publicKey = stackalloc byte[32];
 
-            using NostrCrypto crypto = _testLib.InitializeCrypto(MemoryUtil.Shared, seed);
+            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
 
             //validate the secret key
-            Assert.IsTrue(crypto.ValidateSecretKey(in NCUtil.AsSecretKey(secretKey)));
+            Assert.IsTrue(NCKeyUtil.ValidateSecretKey(context, in NCKeyUtil.AsSecretKey(secretKey)));
 
             //Generate the public key
-            crypto.GetPublicKey(
-                in NCUtil.AsSecretKey(secretKey),
-                ref NCUtil.AsPublicKey(publicKey)
+            NCKeyUtil.GetPublicKey(
+                context,
+                in NCKeyUtil.AsSecretKey(secretKey),
+                ref NCKeyUtil.AsPublicKey(publicKey)
             );
 
             //Make sure the does not contain all zeros
@@ -86,33 +60,31 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestMethod()]
         public void TestGetPublicKey()
         {
-            //Random context seed
-            ReadOnlySpan<byte> seed = RandomHash.GetRandomBytes(32);
-
-            using NostrCrypto crypto = _testLib.InitializeCrypto(MemoryUtil.Shared, seed);
+            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
 
             //Test known key 1
             TestKnownKeys(
-                crypto,
+                context,
                 Convert.FromHexString(TestPrivateKeyHex),
                 Convert.FromHexString(TestPublicKeyHex)
             );
 
             //Test known key 2
             TestKnownKeys(
-                crypto,
+                context,
                 Convert.FromHexString(TestPrivateKeyHex2),
                 Convert.FromHexString(TestPublicKeyHex2)
             );
 
 
-            static void TestKnownKeys(NostrCrypto lib, ReadOnlySpan<byte> knownSec, ReadOnlySpan<byte> kownPub)
+            static void TestKnownKeys(NCContext context, ReadOnlySpan<byte> knownSec, ReadOnlySpan<byte> kownPub)
             {
                 NCPublicKey pubKey;
 
                 //Invoke test function
-                lib.GetPublicKey(
-                    in NCUtil.AsSecretKey(knownSec),
+                NCKeyUtil.GetPublicKey(
+                    context,
+                    in NCKeyUtil.AsSecretKey(knownSec),
                     ref pubKey
                 );
 
@@ -125,176 +97,104 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestMethod()]
         public void TestPublicApiArgValidations()
         {
-            //Random context seed
-            ReadOnlySpan<byte> seed = RandomHash.GetRandomBytes(32);
+            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
 
-            using NostrCrypto crypto = _testLib.InitializeCrypto(MemoryUtil.Shared, seed);
-
+            byte[] bin16 = new byte[16];
+            byte[] bin32 = new byte[32];
+            byte[] bin64 = new byte[64];
             NCSecretKey secKey = default;
             NCPublicKey pubKey = default;
 
             //noThrow (its a bad sec key but it should not throw)
-            crypto.ValidateSecretKey(ref secKey);
-            Assert.ThrowsException<ArgumentNullException>(() => crypto.ValidateSecretKey(ref NCSecretKey.NullRef));
+            NCKeyUtil.ValidateSecretKey(context, in secKey);
+            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(null!, ref NCSecretKey.NullRef));
+            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(context, ref NCSecretKey.NullRef));
 
             //public key
-            Assert.ThrowsException<ArgumentNullException>(() => crypto.GetPublicKey(ref NCSecretKey.NullRef, ref pubKey));
-            Assert.ThrowsException<ArgumentNullException>(() => crypto.GetPublicKey(in secKey, ref NCPublicKey.NullRef));
-        }
+            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(null!, in secKey, ref pubKey));
+            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, ref NCSecretKey.NullRef, ref pubKey));
+            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, in secKey, ref NCPublicKey.NullRef));
 
-        [TestMethod()]
-        public void CorrectEncryptionTest()
-        {
-            using NostrCrypto nc = _testLib.InitializeCrypto(MemoryUtil.Shared, RandomHash.GetRandomBytes(32));
+            /*
+             *       VERIFY DATA
+             */
+            //Null context 
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                NCSignatureUtil.VerifyData(null!, ref pubKey, bin32, bin64)
+            );
 
-            using NoscryptCipher cipher = nc.AllocCipher(NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault);
+            //Null pubkey
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                NCSignatureUtil.VerifyData(context, ref NCPublicKey.NullRef, bin32, bin64)
+            );
 
-            using IMemoryHandle<byte> ctBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
+            //No data buffer
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.VerifyData(context, ref pubKey, [], bin64)
+            );
 
-            foreach (EncryptionVector v in GetEncryptionVectors())
-            {              
+            //No signature
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.VerifyData(context, ref pubKey, bin32, [])
+            );
 
-                ReadOnlySpan<byte> secKey1 = Convert.FromHexString(v.sec1);
-                ReadOnlySpan<byte> secKey2 = Convert.FromHexString(v.sec2);
-                ReadOnlySpan<byte> plainText = Encoding.UTF8.GetBytes(v.plaintext);
-                ReadOnlySpan<byte> nonce = Convert.FromHexString(v.nonce);
-                ReadOnlySpan<byte> message = Convert.FromBase64String(v.payload);
-              
-                NCPublicKey pub2;
+            //Signature too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+               NCSignatureUtil.VerifyData(context, ref pubKey, bin32, bin32)
+           );
 
-                //Recover public keys
-                nc.GetPublicKey(in NCUtil.AsSecretKey(secKey2), ref pub2);
+            /*
+             *      SIGN DATA
+             */
 
-                //Assign existing nonce
-                nonce.CopyTo(cipher.IvBuffer);
+            //Null context
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                NCSignatureUtil.SignData(null!, ref secKey, bin32, bin32, bin64)
+            );
 
-                cipher.Update(
-                    in NCUtil.AsSecretKey(secKey1),
-                    in pub2,
-                    plainText
-                );
+            //Null secret key
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                NCSignatureUtil.SignData(context, ref NCSecretKey.NullRef, bin32, bin32, bin64)
+            );
 
-                Span<byte> outputBuffer = ctBuffer.AsSpan(0, cipher.GetOutputSize());
+            //No entropy
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.SignData(context, ref secKey, [], bin32, bin64)
+            );
 
-                Assert.AreEqual<int>(cipher.ReadOutput(outputBuffer), message.Length);
+            //No data
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.SignData(context, ref secKey, bin32, [], bin64)
+            );
 
-                //Make sure the cipher text matches the expected payload
-                if (!outputBuffer.SequenceEqual(message))
-                {
-                    Console.WriteLine($"Input data: {v.plaintext}");
-                    Console.WriteLine($" \n{Convert.ToHexString(outputBuffer)}\n{Convert.ToHexString(message)}");
-                    Assert.Fail($"Cipher text does not match expected message");
-                }
-            }
-        }
+            //No signature
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.SignData(context, ref secKey, bin32, bin32, [])
+            );
 
-        [TestMethod()]
-        public void CorrectDecryptionTest()
-        {
-            using NostrCrypto nc = _testLib.InitializeCrypto(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            //Signature too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.SignData(context, ref secKey, bin32, bin32, bin32)
+            );  
 
-            using NoscryptCipher msgCipher = nc.AllocCipher(NoscryptCipherVersion.Nip44, NoscryptCipherFlags.DecryptDefault);
+            //Entropy too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                NCSignatureUtil.SignData(context, ref secKey, bin16, bin32, bin32)
+            );
 
-            using IMemoryHandle<byte> ptBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
+            /*
+             * Cipher api
+             */
 
-            foreach (EncryptionVector vector in GetEncryptionVectors())
-            {
-                ReadOnlySpan<byte> secKey1 = Convert.FromHexString(vector.sec1);
-                ReadOnlySpan<byte> secKey2 = Convert.FromHexString(vector.sec2);
-                ReadOnlySpan<byte> expectedPt = Encoding.UTF8.GetBytes(vector.plaintext);
-                ReadOnlySpan<byte> message = Convert.FromBase64String(vector.payload);
+            NoscryptSigner signer = new(context, NCFallbackRandom.Shared);
 
-                NCPublicKey pub2 = default;
-
-                //Recover public keys
-                nc.GetPublicKey(in NCUtil.AsSecretKey(secKey2), ref pub2);
-
-                //update performs the decryption operation (mac is also verified by default)
-                msgCipher.Update(
-                    in NCUtil.AsSecretKey(secKey1),
-                    in pub2,
-                    message
-                );
-
-                int outLen = msgCipher.GetOutputSize();
-                Assert.IsTrue(outLen == expectedPt.Length);
-
-                Span<byte> plaintext = ptBuffer.AsSpan(0, outLen);
-
-                msgCipher.ReadOutput(plaintext);
-
-                if (!plaintext.SequenceEqual(expectedPt))
-                {
-                    Console.WriteLine($"Input data: {vector.plaintext}");
-                    Console.WriteLine($" \n{Convert.ToHexString(plaintext)}\n{Convert.ToHexString(expectedPt)}");
-                    Assert.Fail("Decrypted data does not match expected plaintext");
-                }
-            }
-        }
-
-
-        //Converstation key is only available in debug builds
-#if DEBUG
-
-        [TestMethod()]
-        public void ConverstationKeyTest()
-        { 
-            using NostrCrypto nc = _testLib.InitializeCrypto(MemoryUtil.Shared, RandomHash.GetRandomBytes(32));
-         
-            Span<byte> convKeyOut = stackalloc byte[32];
-
-            foreach (EncryptionVector v in GetEncryptionVectors())
-            {
-                ReadOnlySpan<byte> secKey1 = Convert.FromHexString(v.sec1);
-                ReadOnlySpan<byte> secKey2 = Convert.FromHexString(v.sec2);
-                ReadOnlySpan<byte> conversationKey = Convert.FromHexString(v.conversation_key);
-
-                NCPublicKey pubkey2 = default;
-                nc.GetPublicKey(in NCUtil.AsSecretKey(secKey2), ref pubkey2);
-
-                nc.GetConverstationKey(
-                    in NCUtil.AsSecretKey(secKey1),
-                    in pubkey2,
-                    convKeyOut
-                );
-
-                Assert.IsTrue(conversationKey.SequenceEqual(convKeyOut));
-
-                MemoryUtil.InitializeBlock(convKeyOut);
-            }
-        }
-#endif
-
-        private EncryptionVector[] GetEncryptionVectors()
-        {
-            return _testVectors.RootElement.GetProperty("v2")
-                .GetProperty("valid")
-                .GetProperty("encrypt_decrypt")
-                .EnumerateArray()
-                .Select(v => v.Deserialize<EncryptionVector>()!)
-                .ToArray();
+          
         }
 
         void IDisposable.Dispose()
         {
             _testLib.Dispose();
-            _testVectors.Dispose();
             GC.SuppressFinalize(this);
-        }
-
-        private sealed class EncryptionVector
-        {
-            public string sec1 { get; set; } = string.Empty;
-
-            public string sec2 { get; set; } = string.Empty;
-
-            public string nonce { get; set; } = string.Empty;
-
-            public string plaintext { get; set; } = string.Empty;
-
-            public string payload { get; set; } = string.Empty;
-
-            public string conversation_key { get; set; } = string.Empty;
         }
     }
 }

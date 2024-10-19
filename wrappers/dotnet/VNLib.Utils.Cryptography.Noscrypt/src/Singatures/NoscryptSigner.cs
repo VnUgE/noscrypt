@@ -14,21 +14,23 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using VNLib.Utils.Cryptography.Noscrypt.Random;
-using VNLib.Utils.Extensions;
-using VNLib.Utils.Memory;
 
+using VNLib.Utils.Memory;
+using VNLib.Utils.Extensions;
+using VNLib.Utils.Cryptography.Noscrypt;
+using VNLib.Utils.Cryptography.Noscrypt.Random;
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
 {
+
     /// <summary>
     /// A simple wrapper class to sign nostr message data using 
     /// the noscrypt library
     /// </summary>
     /// <param name="noscrypt">The noscrypt library instance</param>
     /// <param name="random">A random entropy pool used to source random data for signature entropy</param>
-    public class NoscryptSigner(INostrCrypto noscrypt, IRandomSource random)
+    public class NoscryptSigner(NCContext context, IRandomSource random)
     {
         /// <summary>
         /// Gets the size of the buffer required to hold the signature
@@ -72,12 +74,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public string SignData(
-            ReadOnlySpan<byte> secretKey, 
-            ReadOnlySpan<byte> message, 
+            ReadOnlySpan<byte> secretKey,
+            ReadOnlySpan<byte> message,
             INostrSignatureEncoder? format = null
         )
         {
-            return SignData(in NCUtil.AsSecretKey(secretKey), message, format);
+            return SignData(
+                in NCKeyUtil.AsSecretKey(secretKey), 
+                message, 
+                format
+            );
         }
 
         /// <summary>
@@ -90,8 +96,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public string SignData(
-            ref readonly NCSecretKey secretkey, 
-            ReadOnlySpan<byte> message, 
+            ref readonly NCSecretKey secretkey,
+            ReadOnlySpan<byte> message,
             INostrSignatureEncoder? format = null
         )
         {
@@ -115,8 +121,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public void SignData(
-            ref readonly NCSecretKey secretkey, 
-            ReadOnlySpan<byte> data, 
+            ref readonly NCSecretKey secretkey,
+            ReadOnlySpan<byte> data,
             Span<byte> signature
         )
         {
@@ -126,7 +132,35 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             Span<byte> entropy = stackalloc byte[NC_SIG_ENTROPY_SIZE];
             random.GetRandomBytes(entropy);
 
-            noscrypt.SignData(in secretkey, entropy, data, signature);
+            NCSignatureUtil.SignData(
+                context, 
+                in secretkey, 
+                entropy, 
+                data, 
+                signature
+            );
+        }
+
+        public bool VerifyData(
+              ReadOnlySpan<byte> publicKey,
+              ReadOnlySpan<byte> data,
+              ReadOnlySpan<byte> sig
+          )
+        {
+            return VerifyData(
+                in NCKeyUtil.AsPublicKey(publicKey), 
+                data, 
+                sig
+            );
+        }
+
+        public bool VerifyData(
+            ref readonly NCPublicKey pk, 
+            ReadOnlySpan<byte> data, 
+            ReadOnlySpan<byte> sig
+        )
+        {
+            return NCSignatureUtil.VerifyData(context, in pk, data, sig);
         }
     }
 

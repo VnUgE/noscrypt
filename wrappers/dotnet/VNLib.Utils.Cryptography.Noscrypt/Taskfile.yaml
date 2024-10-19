@@ -1,0 +1,81 @@
+#Builds c# libraries for produc
+
+version: '3'
+
+vars:
+  TARGET_FRAMEWORK: '{{ .TARGET_FRAMEWORK | default "net8.0" }}'
+
+tasks:
+
+#called by build pipeline to build module
+  build:
+    dir: '{{ .USER_WORKING_DIR }}'
+    vars:
+      PACK_OUT: '{{ .OUTPUT_DIR }}/{{ .HEAD_SHA }}/pkg'
+      MS_ARGS:
+        /p:RunAnalyzersDuringBuild=false 
+        /p:UseCommonOutputDirectory=true 
+        /p:BuildInParallel=true 
+        /p:MultiProcessorCompilation=true 
+        /p:ErrorOnDuplicatePublishOutputFiles=false
+    cmds:
+     - cmd: echo "building project {{ .PROJECT_NAME }}" 
+       silent: true
+
+     #updates the project versions for all inlcuded .NET projects
+     - cmd: dotnet-gitversion.exe /updateprojectfiles
+     
+     - cmd: dotnet publish -c debug {{ .MS_ARGS }} 
+     - cmd: dotnet publish -c release {{ .MS_ARGS }}
+  
+     #create nuget packages and write them directly to the output directory
+     - cmd: dotnet pack {{ .MS_ARGS }} -c debug -o "{{ .PACK_OUT }}/debug/"     
+     - cmd: dotnet pack {{ .MS_ARGS }} -c release -o "{{ .PACK_OUT }}/release/" 
+
+  postbuild_success:
+    deps:
+      - task: pack_source
+      - task: pack_artifacts
+        vars: { CONFIG: 'debug' }  
+      - task: pack_artifacts
+        vars: { CONFIG: 'release' }  
+
+    cmds:
+     - cmd: echo 'artifacts packaged'
+       silent: true
+
+  pack_artifacts:
+    dir: '{{ .USER_WORKING_DIR }}'
+    internal: true
+    vars:
+      SOURCE: 'bin/{{ .CONFIG }}/{{ .TARGET_FRAMEWORK }}/publish'
+      TARGET: '{{ .USER_WORKING_DIR }}/bin/{{ .CONFIG }}.tgz'
+    cmds:
+      - cmd: cd {{ .SOURCE }} && tar -czf '{{ lower .TARGET }}' .
+
+  pack_source:
+    dir: '{{ .USER_WORKING_DIR }}'
+    internal: true
+    vars:
+      TARGET: '{{ .USER_WORKING_DIR }}/bin'
+      INCLUDES:
+        src
+        tests
+        README.md
+        Taskfile.yaml
+      EXCLUDES: 
+        --exclude='*obj/'
+        --exclude='*bin/'
+    cmds:
+     #copy source code to target
+     - cmd: cd .. && tar {{ .EXCLUDES }} -czf '{{ .TARGET }}/src.tgz' {{ .INCLUDES }}
+
+#called by build pipeline to clean module
+  clean:
+    dir: '{{ .USER_WORKING_DIR }}'
+    cmds:
+    #clean solution
+    - dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
+    - for: [ obj/, bin/ ]
+      cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
+

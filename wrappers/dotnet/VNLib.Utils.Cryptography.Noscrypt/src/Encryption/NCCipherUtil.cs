@@ -15,20 +15,24 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
+
+using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
 
 using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 {
-    internal static class NCUtilCipher
+    public unsafe static class NCCipherUtil
     {
         /*
          * This class wraps the low-level cipher functions provided by 
          * the Noscrypt utility side-car library. 
          */
 
-        public static nint Alloc(NCContext ctx, uint version, uint flags)
+        internal static nint Alloc(NCContext ctx, uint version, uint flags)
         {
             nint cipher = GetTable(ctx).NCUtilCipherAlloc(version, flags);
 
@@ -43,7 +47,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             return cipher;
         }
 
-        public static uint GetFlags(NCContext ctx, nint cipher)
+        internal static uint GetFlags(NCContext ctx, nint cipher)
         {
             NCResult result = GetTable(ctx).NCUtilCipherGetFlags(cipher);
 
@@ -52,9 +56,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             return (uint)result;
         }
 
-        public static void Free(NCContext ctx, nint cipher) => GetTable(ctx).NCUtilCipherFree(cipher);
+        internal static void Free(NCContext ctx, nint cipher) => GetTable(ctx).NCUtilCipherFree(cipher);
 
-        public static int GetIvSize(NCContext ctx, nint cipher)
+        internal static int GetIvSize(NCContext ctx, nint cipher)
         {
             NCResult result = GetTable(ctx).NCUtilCipherGetIvSize(cipher);
 
@@ -63,7 +67,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             return checked((int)result);
         }
 
-        public static unsafe void SetProperty(NCContext ctx, nint cipher, uint property, ref readonly byte value, uint valueLen)
+        internal static void SetProperty(NCContext ctx, nint cipher, uint property, ref readonly byte value, uint valueLen)
         {
             fixed (byte* valPtr = &value)
             {
@@ -73,7 +77,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             }
         }
 
-        public static uint GetOutputSize(NCContext ctx, nint cipher)
+        internal static uint GetOutputSize(NCContext ctx, nint cipher)
         {
             NCResult result = GetTable(ctx).NCUtilCipherGetOutputSize(cipher);
 
@@ -82,7 +86,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             return (uint)result;
         }
 
-        public static unsafe uint ReadOutput(NCContext ctx, nint cipher, ref byte outputData, uint outLen)
+        internal static uint ReadOutput(NCContext ctx, nint cipher, ref byte outputData, uint outLen)
         {
             fixed (byte* outPtr = &outputData)
             {
@@ -94,14 +98,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             }
         }
 
-        public static unsafe void InitCipher(NCContext ctx, nint cipher, byte* inputPtr, uint inputSize)
+        internal static void InitCipher(NCContext ctx, nint cipher, byte* inputPtr, uint inputSize)
         {
             NCResult result = GetTable(ctx).NCUtilCipherInit(cipher, inputPtr, inputSize);
 
             NCUtil.CheckResult<FunctionTable.NCUtilCipherInitDelegate>(result, raiseOnFailure: true);
         }
 
-        public static unsafe void Update(
+        internal static void Update(
             NCContext ctx,
             nint cipher,
             ref readonly NCSecretKey localKey,
@@ -122,7 +126,46 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             }
         }
 
-        private static ref readonly FunctionTable GetTable(NCContext ctx) => ref ctx.Library.Functions;
+
+#if DEBUG
+        /*
+         * Conversation key is not meant to be a public api. Callers 
+         * should use Encrypt/Decrypt methods to handle encryption.
+         * 
+         * This method exists for vector testing purposes only.
+         */
+        public static void GetConverstationKey(
+            NCContext ctx,
+            ref readonly NCSecretKey localKey,
+            ref readonly NCPublicKey remoteKey,
+            Span<byte> conversationKeyOut32
+        )
+        {
+            ArgumentNullException.ThrowIfNull(ctx);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(
+                conversationKeyOut32.Length, 
+                NC_CONVERSATION_KEY_SIZE, 
+                nameof(conversationKeyOut32)
+            );
+
+            fixed (NCSecretKey* sk = &localKey)
+            fixed (NCPublicKey* pk = &remoteKey)
+            fixed(byte* convKey32Ptr = &MemoryMarshal.GetReference(conversationKeyOut32))
+            {
+                NCResult result = GetTable(ctx).NCGetConversationKey(
+                    ctx: ctx.DangerousGetHandle(),
+                    sk,
+                    pk,
+                    convKey32Ptr
+                );
+
+                NCUtil.CheckResult<FunctionTable.NCUtilCipherInitDelegate>(result, raiseOnFailure: true);
+            }
+        }
+#endif
+
+        private static ref readonly FunctionTable GetTable(NCContext ctx) 
+            => ref ctx.Library.Functions;
     }
 
 }

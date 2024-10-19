@@ -18,6 +18,8 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Microsoft.Win32.SafeHandles;
+
 using VNLib.Utils.Memory;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
@@ -27,29 +29,54 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
     /// <summary>
     /// The noscrypt util cipher wapper 
     /// </summary>
-    /// <param name="ctx"></param>
-    /// <param name="flags">Cipher creation flags</param>
+    /// <param name="ctx">A reference to the library context object</param>
+    /// <param name="cipher">A pointer to an existing cipher context that this instance owns</param>
     /// <param name="version">The cipher specification version</param>
-    public sealed class NoscryptCipher(NCContext ctx, NoscryptCipherVersion version, NoscryptCipherFlags flags) : VnDisposeable
+    public class NoscryptMessageCipher : SafeHandleMinusOneIsInvalid
     {
+        private readonly NCContext _context;
+        private readonly NoscryptCipherVersion _version;
         private IMemoryHandle<byte>? _ivBuffer;
-        private readonly nint _cipher = NCUtilCipher.Alloc(ctx, (uint)version, (uint)flags);
+
+        private NoscryptMessageCipher(NCContext ctx, nint cipher, NoscryptCipherVersion version) 
+            : base(ownsHandle: true)
+        {
+            SetHandle(cipher);
+            _context = ctx;
+            _version = version;
+        }
+
+        /// <summary>
+        /// Allocates and initializes a new cipher instance using the specified 
+        /// </summary>
+        /// <param name="context">A reference to the noscrypt library context</param>
+        /// <param name="version">The encryption standard to use</param>
+        /// <param name="flags">The raw cipher flags to the pass to the cipher initialization function</param>
+        /// <returns>A new <see cref="NoscryptMessageCipher"/> instance</returns>
+        public static NoscryptMessageCipher Create(NCContext context, NoscryptCipherVersion version, NoscryptCipherFlags flags)
+        {
+            return new(
+                context,
+                NCCipherUtil.Alloc(context, (uint)version, (uint)flags),
+                version
+            );
+        }
 
         /// <summary>
         /// The cipher standard version used by this instance
         /// </summary>
-        public NoscryptCipherVersion Version => version;
+        public NoscryptCipherVersion Version => _version;
 
         /// <summary>
         /// Gets the flags set for the cipher instance
         /// </summary>
-        public uint GetFlags() => NCUtilCipher.GetFlags(ctx, _cipher);
+        public uint GetFlags() => NCCipherUtil.GetFlags(_context, handle);
 
         /// <summary>
         /// Gets the cipher's initilaization vector size (or nonce)
         /// </summary>
         /// <returns>The size of the IV in bytes</returns>
-        public int GetIvSize() => NCUtilCipher.GetIvSize(ctx, _cipher);
+        public int GetIvSize() => NCCipherUtil.GetIvSize(_context, handle);
 
         /// <summary>
         /// Gets the internal heap buffer that holds the cipher's initalization
@@ -121,9 +148,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
             fixed (byte* inputPtr = &inputData)
             {
-                NCUtilCipher.InitCipher(ctx, _cipher, inputPtr, inputSize);
+                NCCipherUtil.InitCipher(_context, handle, inputPtr, inputSize);
 
-                NCUtilCipher.Update(ctx, _cipher, in localKey, in remoteKey);
+                NCCipherUtil.Update(_context, handle, in localKey, in remoteKey);
             }
         }
 
@@ -153,7 +180,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// Gets the size of the output buffer required to read the cipher output
         /// </summary>
         /// <returns>The size of the output in bytes</returns>
-        public int GetOutputSize() => checked((int)NCUtilCipher.GetOutputSize(ctx, _cipher));
+        public int GetOutputSize() => checked((int)NCCipherUtil.GetOutputSize(_context, handle));
 
         /// <summary>
         /// Reads the output data from the cipher into the specified buffer
@@ -166,7 +193,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(size, GetOutputSize());
 
-            return checked((int)NCUtilCipher.ReadOutput(ctx, _cipher, ref outputData, (uint)size));
+            return checked((int)NCCipherUtil.ReadOutput(_context, handle, ref outputData, (uint)size));
         }
 
         /// <summary>
@@ -186,7 +213,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         private IMemoryHandle<byte> AllocIvBuffer()
         {
             //Use the context heap to allocate the internal iv buffer
-            MemoryHandle<byte> buffer = MemoryUtil.SafeAlloc<byte>(ctx.Heap, GetIvSize(), zero: true);
+            MemoryHandle<byte> buffer = MemoryUtil.SafeAlloc<byte>(_context.Heap, GetIvSize(), zero: true);
 
             try
             {
@@ -199,9 +226,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
                  * buffer is required so we don't need to pin managed memory
                  * nor worry about the GC moving the buffer.
                  */
-                NCUtilCipher.SetProperty(
-                   ctx,
-                   _cipher,
+                NCCipherUtil.SetProperty(
+                   _context,
+                   DangerousGetHandle(),
                    NC_ENC_SET_IV,
                    ref buffer.GetReference(),
                    (uint)buffer.Length
@@ -217,10 +244,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         }
 
         ///<inheritdoc/>
-        protected override void Free()
+        protected override bool ReleaseHandle()
         {
-            NCUtilCipher.Free(ctx, _cipher);
+            NCCipherUtil.Free(_context, handle);
             _ivBuffer?.Dispose();
+
+            return true;
         }
     }
 

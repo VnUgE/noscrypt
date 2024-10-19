@@ -37,6 +37,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     public unsafe sealed class NoscryptLibrary(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
     {
         public const string NoscryptDefaultLibraryName = "noscrypt";
+        public const string NoscryptDllPathEnvName = "NOSCRYPT_DLL_PATH";
 
         //Constant values match the noscrypt.h header
         public const int NC_SEC_KEY_SIZE                = 0x20;
@@ -172,33 +173,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         }
 
         /// <summary>
-        /// Initializes a new NostrCrypto context wraper directly that owns the internal context.
-        /// This may be done once at app startup and is thread-safe for the rest of the 
-        /// application lifetime. 
+        /// Initialize a new NCContext for use. This may be done once at app startup
+        /// and is thread-safe for the rest of the application lifetime.
         /// </summary>
-        /// <param name="heap">The heap to allocate the context from</param>
-        /// <param name="entropy32">The random entropy data to initialize the context with</param>
-        /// <returns>The library wrapper handle</returns>
-        public NostrCrypto InitializeCrypto(IUnmangedHeap heap, ReadOnlySpan<byte> entropy32)
-        {
-            ArgumentNullException.ThrowIfNull(heap);
-
-            //Create the crypto interface from the new context object
-            return new NostrCrypto(
-                context: Initialize(heap, entropy32), 
-                ownsContext: true
-            );
-        }
-
-        /// <summary>
-        /// Initializes a new NostrCrypto context wraper directly that owns the internal context.
-        /// This may be done once at app startup and is thread-safe for the rest of the 
-        /// application lifetime. 
-        /// </summary>
-        /// <param name="heap">The heap to allocate the context from</param>
-        /// <param name="random">Random source used to generate context entropy</param>
-        /// <returns>The library wrapper handle</returns>
-        public NostrCrypto InitializeCrypto(IUnmangedHeap heap, IRandomSource random)
+        /// <param name="heap"></param>
+        /// <param name="enropy32">The 32byte random seed/nonce for the noscrypt context</param>
+        /// <returns>The inialized context</returns>
+        /// <exception cref="OutOfMemoryException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public NCContext Initialize(IUnmangedHeap heap, IRandomSource random)
         {
             ArgumentNullException.ThrowIfNull(random);
 
@@ -206,13 +190,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             Span<byte> entropy = stackalloc byte[NC_CTX_ENTROPY_SIZE];
             random.GetRandomBytes(entropy);
 
-            NostrCrypto nc = InitializeCrypto(heap, entropy);
-
-            MemoryUtil.InitializeBlock(entropy);
-
-            return nc;
+            return Initialize(heap, entropy);
         }
-
+      
         ///<inheritdoc/>
         protected override void Free()
         {
@@ -256,6 +236,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         /// <returns>The loaded library instance</returns>
         /// <exception cref="DllNotFoundException"></exception>
-        public static NoscryptLibrary LoadDefault() => Load(NoscryptDefaultLibraryName, DllImportSearchPath.SafeDirectories);
+        public static NoscryptLibrary LoadDefault()
+        {
+            string? libPath = Environment.GetEnvironmentVariable(NoscryptDllPathEnvName);
+            libPath ??= NoscryptDefaultLibraryName;
+
+            Console.WriteLine("Loading library {0}", libPath);
+
+            libPath = libPath.Replace("\"", "");
+
+            return Load(libPath);
+        }
     }  
 }

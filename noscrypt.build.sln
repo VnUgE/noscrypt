@@ -4,13 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wrappers", "wrappers", "{C20879D7-93D5-4C78-A347-9BC3CF72A6F2}"
-	ProjectSection(SolutionItems) = preProject
-		wrappers\dotnet\Taskfile.yaml = wrappers\dotnet\Taskfile.yaml
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VNLib.Utils.Cryptography.Noscrypt", "wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\src\VNLib.Utils.Cryptography.Noscrypt.csproj", "{7A41AFB2-7DE1-4E13-BABC-F96B4261D1E3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NVault.Crypto.NoscryptTests", "wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\tests\NVault.Crypto.NoscryptTests.csproj", "{603F1BFB-8CF2-46D7-A86E-ACAC17924958}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VNLib.Utils.Cryptography.NoscryptTests", "wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\tests\VNLib.Utils.Cryptography.NoscryptTests.csproj", "{603F1BFB-8CF2-46D7-A86E-ACAC17924958}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02638CCB-9F41-44F4-9E88-A4323BD275E9}"
+	ProjectSection(SolutionItems) = preProject
+		wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\.runsettings = wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\.runsettings
+		wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\Taskfile.yaml = wrappers\dotnet\VNLib.Utils.Cryptography.Noscrypt\Taskfile.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

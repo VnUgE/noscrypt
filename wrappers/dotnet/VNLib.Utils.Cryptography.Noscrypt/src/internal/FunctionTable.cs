@@ -119,7 +119,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         internal delegate NCResult NCSignDataDelegate(IntPtr ctx, NCSecretKey* sk, byte* random32, byte* data, uint dataSize, byte* sig64);
 
         [SafeMethodName("NCVerifyData")]
-        internal delegate NCResult NCVerifyDataDelegate(IntPtr ctx, NCPublicKey* sk, byte* data, uint dataSize, byte* sig64);
+        internal delegate NCResult NCVerifyDataDelegate(IntPtr ctx, NCPublicKey* pk, byte* data, uint dataSize, byte* sig64);
 
         [SafeMethodName("NCGetConversationKey")]
         internal delegate NCResult NCGetConversationKeyDelegate(IntPtr ctx, NCSecretKey* sk, NCPublicKey* pk, byte* keyOut32);

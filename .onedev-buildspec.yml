@@ -40,8 +40,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        cd @project_name@
-        task -t Module.Taskfile.yaml test
+        vnbuild test -i @project_name@
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
