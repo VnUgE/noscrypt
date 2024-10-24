@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+- Valgrind memory checking during unit testing
+- Added CI testing for Windows and Linux deployments
+
+### Fixed
+- Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
 
 ## [0.1.5]
 
