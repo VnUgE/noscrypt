@@ -27,6 +27,7 @@ tasks:
     cmds:
      - cmd: task test -- -DNC_ENABLE_UTILS=ON
      - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
+     - cmd: wsl task memcheck
 
 #called by build pipeline to build module
   build:

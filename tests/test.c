@@ -507,8 +507,16 @@ static int TestPublicApiArgumentValidation()
         macArgs.payloadSize = 0;
         TEST(NCVerifyMac(ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
     }
-    
-    PRINTL("\nPASSED: Public API argument validation tests completed")
+
+    ENSURE(NCDestroyContext(ctx) == NC_SUCCESS);
+
+#ifdef NOSCRYPTUTIL_H
+        NCUtilContextFree(ctx);
+#else
+        free(ctx);
+#endif
+
+    PRINTL("\nPASSED: Public API argument validation tests completed");
 
     return 0;
 }

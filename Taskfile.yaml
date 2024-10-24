@@ -37,7 +37,19 @@ tasks:
     cmds:
      - task: build-debug
      - cmd: cd {{ .CMAKE_BUILD_DIR }} && ctest -C Debug --verbose
-  
+
+  dev:
+    watch: true
+    sources:
+      - include/*
+      - src/*
+      - src/*/* 
+      - tests/*
+      - CMakelists.txt
+      - vendor/* 
+    cmds:
+     - task: test-dev
+
   test-mbedtls:
     desc: "Builds and runs tests for noscrypt using the mbedtls crypto library for the current platform"
     cmds:
@@ -55,6 +67,7 @@ tasks:
      - task: compile
        vars: { BUILD_CONFIG: 'Debug' }
      - cmd: cd {{ .CMAKE_BUILD_DIR }} && ctest -C Debug --verbose --output-on-failure
+     - task: memcheck
 
   build-internal:
     internal: true
@@ -84,7 +97,23 @@ tasks:
      - cmd: echo "Installing noscrypt globally"
        silent: true
      - cmd: cmake --install {{ .CMAKE_BUILD_DIR }} {{ .CLI_ARGS }}
-
+   
+  memcheck:
+    desc: 'Runs Valgrind memcheck in debug mode against the nctest executable (Linux only)'
+    platforms:
+      - linux 
+    preconditions:
+      - which valgrind
+    cmds:
+     - cmd: echo "Running valgrind memory check on test executable"
+       silent: true
+     - cmd: 
+         valgrind 
+         --tool=memcheck
+         --leak-check=full 
+         --show-leak-kinds=all 
+         --track-origins=yes 
+         {{ .CMAKE_BUILD_DIR }}/{{ .TEST_EXE_NAME }}
 
 #CI ONLY!!
 
