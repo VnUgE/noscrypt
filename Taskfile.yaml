@@ -98,6 +98,7 @@ tasks:
        silent: true
      - cmd: cmake --install {{ .CMAKE_BUILD_DIR }} {{ .CLI_ARGS }}
    
+  #Test executable and library must be built for tests to run
   memcheck:
     desc: 'Runs Valgrind memcheck in debug mode against the nctest executable (Linux only)'
     platforms:

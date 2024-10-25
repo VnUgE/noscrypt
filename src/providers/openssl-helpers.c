@@ -37,7 +37,7 @@ typedef enum {
 
 struct ossl_evp_state {
 	void* _context;
-	void* _cipher;
+	void* _providerHandle;
 
 	OSSL_PARAM params[2];
 
@@ -82,6 +82,7 @@ _IMPLSTB cstatus_t _osslEvpUpdate(const struct ossl_evp_state* state, cspan_t da
 	int result;
 
 	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->_context != NULL);
 
 	result = 0;
 
@@ -174,11 +175,11 @@ _IMPLSTB void _osslEvpFree(struct ossl_evp_state* state)
 	{
 	case EvpStateTypeDigest:
 		if (state->_context) EVP_MD_CTX_free(state->_context);
-		if (state->_cipher) EVP_MD_free(state->_cipher);
+		if (state->_providerHandle) EVP_MD_free(state->_providerHandle);
 		break;
 	case EvpStateTypeMac:
 		if (state->_context) EVP_MAC_CTX_free(state->_context);
-		if (state->_cipher) EVP_MAC_free(state->_cipher);
+		if (state->_providerHandle) EVP_MAC_free(state->_providerHandle);
 		break;
 	}
 }
@@ -197,16 +198,16 @@ _IMPLSTB cstatus_t _osslEvpInit(
 	switch (type)
 	{
 	case EvpStateTypeDigest:
-		state->_cipher = EVP_MD_fetch(NULL, providerName, NULL);
+		state->_providerHandle = EVP_MD_fetch(NULL, providerName, NULL);
 		state->_context = EVP_MD_CTX_new();		
 		break;
 	case EvpStateTypeMac:
 
-		state->_cipher = EVP_MAC_fetch(NULL, providerName, NULL);
+		state->_providerHandle = EVP_MAC_fetch(NULL, providerName, NULL);
 
-		if (state->_cipher)
+		if (state->_providerHandle)
 		{
-			state->_context = EVP_MAC_CTX_new((EVP_MAC*)(state->_cipher));
+			state->_context = EVP_MAC_CTX_new((EVP_MAC*)(state->_providerHandle));
 		}
 
 		break;
@@ -218,7 +219,7 @@ _IMPLSTB cstatus_t _osslEvpInit(
 	* Ensure allocations succeded, otherwise free the context
 	* and return a failure status.
 	*/
-	if (state->_cipher == NULL || state->_context == NULL)
+	if (state->_providerHandle == NULL || state->_context == NULL)
 	{		
 		return CSTATUS_FAIL;
 	}
@@ -230,8 +231,8 @@ _IMPLSTB cstatus_t _osslEvpInit(
 	{
 		if (
 			!EVP_DigestInit_ex(
-				state->_context,
-				state->_cipher,
+				(EVP_MD_CTX*)state->_context,
+				(EVP_MD*)state->_providerHandle,
 				NULL
 			)
 		)

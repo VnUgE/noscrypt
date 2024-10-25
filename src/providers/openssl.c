@@ -93,6 +93,8 @@
 			goto Cleanup;
 		}
 
+		result = CSTATUS_OK;
+
 	Cleanup:
 
 		_osslEvpFree(&evpState);
