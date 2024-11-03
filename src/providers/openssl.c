@@ -63,8 +63,7 @@
 	{
 		cstatus_t result;
 		span_t digestSpan;
-		struct ossl_evp_state evpState;
-		
+		struct ossl_evp_state evpState;		
 
 		DEBUG_ASSERT(digestOut32 != NULL);
 		DEBUG_ASSERT(ncSpanIsValidC(data));
@@ -112,7 +111,8 @@
 	_IMPLSTB cstatus_t _ossl_hmac_sha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	{
 		cstatus_t result;
-		span_t digestSpan;		
+		span_t digestSpan;	
+		OSSL_PARAM params[2];
 		struct ossl_evp_state evpState;
 
 		result = CSTATUS_FAIL;
@@ -135,8 +135,8 @@
 		* before the context can be initialized
 		*/
 
-		evpState.params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
-		evpState.params[1] = OSSL_PARAM_construct_end();
+		params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
+		params[1] = OSSL_PARAM_construct_end();
 
 		/*
 		* PRK Data must be assigned before the hmac 
@@ -145,7 +145,7 @@
 
 		_osslEvpSetPrk(&evpState, key);
 	
-		if (!_osslEvpMacInit(&evpState))
+		if (!_osslEvpMacInit(&evpState, params))
 		{
 			goto Cleanup;
 		}
@@ -176,13 +176,22 @@
 
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_ossl_sha256_hkdf_expand
 
+	struct _hkdf_state {
+		OSSL_PARAM params[2];
+		struct ossl_evp_state evpState;
+	};
+
 	static cstatus_t _ossl_hkdf_update(void* ctx, cspan_t data)
 	{
+		const struct _hkdf_state* state;
+
 		DEBUG_ASSERT(ctx != NULL);
 		_overflow_check(data.size);
 
+		state = (const struct _hkdf_state*)ctx;
+
 		return _osslEvpUpdate(
-			(const struct ossl_evp_state*)ctx, 
+			&state->evpState, 
 			data
 		);
 	}
@@ -190,13 +199,15 @@
 	static cstatus_t _ossl_hkdf_finish(void* ctx, sha256_t hmacOut32)
 	{
 		span_t hmacSpan;
+		const struct _hkdf_state* state;
 
 		DEBUG_ASSERT(ctx != NULL);
 		DEBUG_ASSERT(hmacOut32 != NULL);
 
+		state = (const struct _hkdf_state*)ctx;
 		ncSpanInit(&hmacSpan, hmacOut32, sizeof(sha256_t));
 
-		if (!_osslEvpFinal((const struct ossl_evp_state*)ctx, hmacSpan))
+		if (!_osslEvpFinal(&state->evpState, hmacSpan))
 		{
 			return CSTATUS_FAIL;
 		}
@@ -206,14 +217,14 @@
 		* See lifecycle https://docs.openssl.org/3.0/man7/life_cycle-mac/#copyright
 		*/
 
-		return _osslEvpMacInit((const struct ossl_evp_state*)ctx);
+		return _osslEvpMacInit(&state->evpState, state->params);
 	}
 	
 
 	_IMPLSTB cstatus_t _ossl_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
 	{
 		cstatus_t result;
-		struct ossl_evp_state hkdfState;
+		struct _hkdf_state state;
 		struct nc_hkdf_fn_cb_struct handler;		
 
 		result = CSTATUS_FAIL;
@@ -230,15 +241,7 @@
 		*
 		* Params must also be set for sha256 digest for mac
 		*/
-		_osslEvpSetPrk(&hkdfState, prk);
-
-		hkdfState.params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
-		hkdfState.params[1] = OSSL_PARAM_construct_end();		
-
-		if (!_osslEvpInit(&hkdfState, EvpStateTypeMac, OSSL_HMAC))
-		{
-			goto Cleanup;
-		}
+		_osslEvpSetPrk(&state.evpState, prk);
 
 		/*
 		* Silly openssl stuff. Enable hmac with sha256 using the system default
@@ -246,19 +249,28 @@
 		* we need to call update multiple times.
 		*/
 
-		if (_osslEvpMacInit(&hkdfState) != CSTATUS_OK)
+		state.params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
+		state.params[1] = OSSL_PARAM_construct_end();
+
+		if (!_osslEvpInit(&state.evpState, EvpStateTypeMac, OSSL_HMAC))
 		{
 			goto Cleanup;
 		}
 
-		DEBUG_ASSERT(EVP_MAC_CTX_get_mac_size(_osslEvpGetMacContext(&hkdfState)) == sizeof(sha256_t));
+		if (_osslEvpMacInit(&state.evpState, state.params) != CSTATUS_OK)
+		{
+			goto Cleanup;
+		}
 
-		/* Pass the library  */
-		result = hkdfExpandProcess(&handler, &hkdfState, info, okm);
+		/* Sanity check mac size */
+		DEBUG_ASSERT(EVP_MAC_CTX_get_mac_size(_osslEvpGetMacContext(&state.evpState)) == sizeof(sha256_t));
+
+		/* Pass to the library  */
+		result = hkdfExpandProcess(&handler, &state, info, okm);
 
 	Cleanup:
 
-		_osslEvpFree(&hkdfState);
+		_osslEvpFree(&state.evpState);
 
 		return result;
 	}
@@ -268,81 +280,7 @@
 #ifndef _IMPL_CHACHA20_CRYPT
 
 	#define _IMPL_CHACHA20_CRYPT _ossl_chacha20_crypt
-
-	_IMPLSTB cstatus_t _ossl_cipher_core(
-		const EVP_CIPHER* cipher,
-		cspan_t key,
-		cspan_t iv,
-		cspan_t input,
-		span_t output
-	)
-	{
-		cstatus_t result;
-		EVP_CIPHER_CTX* ctx;
-		int tempLen, osslResult;
-
-		DEBUG_ASSERT2(ncSpanGetSize(output) <= ncSpanGetSizeC(input), "Output buffer must be equal or larger than the input buffer");
-		DEBUG_ASSERT(cipher != NULL);
-
-		DEBUG_ASSERT((uint32_t)EVP_CIPHER_get_key_length(cipher) == ncSpanGetSizeC(key));
-		DEBUG_ASSERT((uint32_t)EVP_CIPHER_iv_length(cipher) == ncSpanGetSizeC(iv));
-
-		result = CSTATUS_FAIL;
-
-		ctx = EVP_CIPHER_CTX_new();
-
-		if (ctx == NULL)
-		{
-			goto Cleanup;
-		}
-
-		osslResult = EVP_EncryptInit_ex2(
-			ctx, 
-			cipher, 
-			ncSpanGetOffsetC(key, 0),
-			ncSpanGetOffsetC(iv, 0),
-			NULL
-		);
-
-		if (!osslResult)
-		{
-			goto Cleanup;
-		}
-
-		osslResult = EVP_EncryptUpdate(
-			ctx,
-			ncSpanGetOffset(output, 0),
-			&tempLen,
-			ncSpanGetOffsetC(input, 0),
-			ncSpanGetSizeC(input)
-		);
-
-		if (!osslResult)
-		{
-			goto Cleanup;
-		}
-
-		/*
-		* We can't get a pointer outside the range of the 
-		* output buffer
-		*/
-		if (((uint32_t)tempLen) < ncSpanGetSize(output))
-		{
-			if (!EVP_EncryptFinal_ex(ctx, ncSpanGetOffset(output, tempLen), &tempLen))
-			{
-				goto Cleanup;
-			}
-		}
-
-		result = CSTATUS_OK;
-
-	Cleanup:
-
-		if (ctx) EVP_CIPHER_CTX_free(ctx);
-
-		return result;
-	}
-
+	
 	_IMPLSTB cstatus_t _ossl_chacha20_crypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
@@ -352,12 +290,23 @@
 	)
 	{
 		cstatus_t result;
-		EVP_CIPHER* cipher;
+		struct ossl_evp_state state;
 		uint8_t chaChaIv[CHACHA_NONCE_SIZE + 4];
 		cspan_t keySpan, nonceSpan, inputSpan;
 		span_t outputSpan;
+		int bytesWritten;
 
 		result = CSTATUS_FAIL;
+		bytesWritten = 0;
+
+		/*
+		* Alloc and init the cipher state for ChaCha20 in 
+		* cipher mode
+		*/
+		if (!_osslEvpInit(&state, EvpStateTypeCipher, OSSL_CHACHA20))
+		{
+			goto Cleanup;
+		}
 
 		/*
 		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
@@ -375,24 +324,43 @@
 		ncSpanInitC(&inputSpan, input, dataLen);
 		ncSpanInit(&outputSpan, output, dataLen);
 
-		cipher = ossl_evp_fetch_chacha20();
-
-		if (cipher == NULL)
+		if (!_osslEvpCipherInit(&state, keySpan, nonceSpan))
 		{
 			goto Cleanup;
 		}
 
-		result = _ossl_cipher_core(
-			cipher, 
-			keySpan, 
-			nonceSpan, 
-			inputSpan, 
-			outputSpan
+		if (!_osslEvpCipherUpdate(&state, inputSpan, outputSpan, &bytesWritten))
+		{
+			goto Cleanup;
+		}
+		
+		/*
+		* Possible static asser that int size must be 32bit or smaller
+		*/
+		if (bytesWritten < 0 || bytesWritten > INT32_MAX)
+		{
+			goto Cleanup;
+		}
+
+		DEBUG_ASSERT((uint32_t)bytesWritten <= dataLen)
+
+		/* shift output span by consumed data amount */
+		outputSpan = ncSpanSlice(
+			outputSpan, 
+			(uint32_t)bytesWritten,
+			dataLen - (uint32_t)bytesWritten
 		);
+
+		if (!_osslEvpFinal(&state, outputSpan))
+		{
+			goto Cleanup;
+		}
+	
+		result = CSTATUS_OK;
 
 	Cleanup:
 		
-		if (cipher) EVP_CIPHER_free(cipher);
+		_osslEvpFree(&state);
 
 		return result;
 	}

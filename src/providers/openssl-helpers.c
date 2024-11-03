@@ -24,22 +24,24 @@
 
 #define OSSL_SHA256 "SHA2-256"
 #define OSSL_HMAC "hmac"
-#define ossl_evp_fetch_chacha20() EVP_CIPHER_fetch(NULL, "ChaCha20", NULL)
+#define OSSL_CHACHA20 "ChaCha20"
 
 
 typedef enum {
 	
+	EvpStateTypeInvalid,
+
 	EvpStateTypeDigest,
 	
-	EvpStateTypeMac
+	EvpStateTypeMac,
+
+	EvpStateTypeCipher
 
 } _evp_state_type;
 
 struct ossl_evp_state {
 	void* _context;
-	void* _providerHandle;
-
-	OSSL_PARAM params[2];
+	void* _providerHandle;	
 
 	_evp_state_type type;
 
@@ -61,6 +63,14 @@ _IMPLSTB EVP_MD_CTX* _osslEvpGetMdContext(const struct ossl_evp_state* state)
 	DEBUG_ASSERT(state->type == EvpStateTypeDigest);
 
 	return (EVP_MD_CTX*)state->_context;
+}
+
+_IMPLSTB EVP_CIPHER_CTX* _osslEvpGetCipherContext(const struct ossl_evp_state* state)
+{
+	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->type == EvpStateTypeCipher);
+
+	return (EVP_CIPHER_CTX*)state->_context;
 }
 
 _IMPLSTB cspan_t _osslEvpGetPrk(const struct ossl_evp_state* state)
@@ -104,41 +114,135 @@ _IMPLSTB cstatus_t _osslEvpUpdate(const struct ossl_evp_state* state, cspan_t da
 		);
 		break;
 
+	default:
+		break;
 	}
 
 	return (cstatus_t)(result != 0);
 }
 
-_IMPLSTB cstatus_t _osslEvpFinal(const struct ossl_evp_state* state, span_t out)
+_IMPLSTB cstatus_t _osslEvpCipherUpdate(
+	const struct ossl_evp_state* state, 
+	cspan_t input, 
+	span_t output, 
+	int* bytesConsumed
+)
 {
 	int result;
-	size_t hmacLen;
-	unsigned int mdLen;
 
 	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->_context != NULL);
+	DEBUG_ASSERT(state->type == EvpStateTypeCipher);
 
-	result = 0;
-	mdLen = hmacLen = ncSpanGetSize(out);
+	result = EVP_EncryptUpdate(
+		_osslEvpGetCipherContext(state),
+		ncSpanGetOffset(output, 0),
+		bytesConsumed,
+		ncSpanGetOffsetC(input, 0),
+		ncSpanGetSizeC(input)
+	);
+
+	return (cstatus_t)(result != 0);
+}
+
+_IMPLSTB cstatus_t __digestFinal(const struct ossl_evp_state* state, span_t out)
+{
+	int result;
+	unsigned int mdOut;
+
+	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->type == EvpStateTypeDigest);
+
+	mdOut = ncSpanGetSize(out);
+
+	/* If the output span is empty, nothing to do */
+	if (mdOut == 0)
+	{
+		return CSTATUS_OK;
+	}
+
+	result = EVP_DigestFinal_ex(
+		_osslEvpGetMdContext(state),
+		ncSpanGetOffset(out, 0),
+		&mdOut
+	);
+
+	return (cstatus_t)(result != 0 && mdOut == ncSpanGetSize(out));
+}
+
+_IMPLSTB cstatus_t __macFinal(const struct ossl_evp_state* state, span_t out)
+{
+	int result;
+	size_t macOut;
+
+	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->type == EvpStateTypeMac);
+
+	macOut = ncSpanGetSize(out);
+
+	/* If the output span is empty, nothing to do */
+	if (macOut == 0)
+	{
+		return CSTATUS_OK;
+	}
+
+	result = EVP_MAC_final(
+		_osslEvpGetMacContext(state),
+		ncSpanGetOffset(out, 0),
+		&macOut,
+		macOut
+	);
+
+	return (cstatus_t)(result != 0 && macOut == ncSpanGetSize(out));
+}
+
+_IMPLSTB cstatus_t __cipherFinal(const struct ossl_evp_state* state, span_t out)
+{
+	int result, cipherOut;
+
+	DEBUG_ASSERT(state != NULL);
+	DEBUG_ASSERT(state->type == EvpStateTypeCipher);
+	
+	/* guard small integer overflow */
+	if (ncSpanGetSize(out) > INT_MAX)
+	{
+		return CSTATUS_FAIL;
+	}
+
+	cipherOut = (int)ncSpanGetSize(out);
+
+	/* If the output span is empty, nothing to do */
+	if (cipherOut == 0)
+	{
+		return CSTATUS_OK;
+	}
+
+	result = EVP_CipherFinal_ex(
+		_osslEvpGetCipherContext(state),
+		ncSpanGetOffset(out, 0),
+		&cipherOut
+	);
+
+	return (cstatus_t)(result != 0 && cipherOut >= 0 && (uint32_t)cipherOut == ncSpanGetSize(out));
+}
+
+static cstatus_t _osslEvpFinal(const struct ossl_evp_state* state, span_t out)
+{
+	DEBUG_ASSERT(state != NULL);
 
 	switch (state->type)
 	{
 	case EvpStateTypeDigest:
-		result = EVP_DigestFinal_ex(
-			_osslEvpGetMdContext(state),
-			ncSpanGetOffset(out, 0),
-			&mdLen
-		);
-		
-		return (cstatus_t)(result != 0 && mdLen == ncSpanGetSize(out));
+		return __digestFinal(state, out);
 
 	case EvpStateTypeMac:
-		result = EVP_MAC_final(
-			_osslEvpGetMacContext(state),
-			ncSpanGetOffset(out, 0),
-			&hmacLen,
-			hmacLen
-		);
-		return (cstatus_t)(result != 0 && hmacLen == ncSpanGetSize(out));
+		return __macFinal(state, out);
+
+	case EvpStateTypeCipher:
+		return __cipherFinal(state, out);
+
+	default:
+		break;
 	}
 
 	/*
@@ -149,7 +253,7 @@ _IMPLSTB cstatus_t _osslEvpFinal(const struct ossl_evp_state* state, span_t out)
 	return CSTATUS_FAIL;
 }
 
-_IMPLSTB cstatus_t _osslEvpMacInit(const struct ossl_evp_state* state)
+_IMPLSTB cstatus_t _osslEvpMacInit(const struct ossl_evp_state* state, const OSSL_PARAM* params)
 {
 	int result;
 
@@ -161,10 +265,37 @@ _IMPLSTB cstatus_t _osslEvpMacInit(const struct ossl_evp_state* state)
 		_osslEvpGetMacContext(state),
 		ncSpanGetOffsetC(state->_prk, 0),
 		ncSpanGetSizeC(state->_prk),
-		state->params
+		params
 	);
 
 	return (cstatus_t)(result != 0);
+}
+
+_IMPLSTB cstatus_t _osslEvpCipherInit(const struct ossl_evp_state* state, cspan_t key, cspan_t iv)
+{
+	int osslResult;
+	const EVP_CIPHER* cipher;
+
+	DEBUG_ASSERT(state != NULL);
+
+	cipher = (const EVP_CIPHER*)state->_providerHandle;
+
+	/*
+	* Sanity check on key and IV sizes for the created
+	* cipher
+	*/
+	DEBUG_ASSERT((uint32_t)EVP_CIPHER_get_key_length(cipher) == ncSpanGetSizeC(key));
+	DEBUG_ASSERT((uint32_t)EVP_CIPHER_iv_length(cipher) == ncSpanGetSizeC(iv));
+
+	osslResult = EVP_EncryptInit_ex2(
+		_osslEvpGetCipherContext(state),
+		cipher,
+		ncSpanGetOffsetC(key, 0),
+		ncSpanGetOffsetC(iv, 0),
+		NULL
+	);
+
+	return (cstatus_t)(osslResult != 0);
 }
 
 _IMPLSTB void _osslEvpFree(struct ossl_evp_state* state)
@@ -180,6 +311,12 @@ _IMPLSTB void _osslEvpFree(struct ossl_evp_state* state)
 	case EvpStateTypeMac:
 		if (state->_context) EVP_MAC_CTX_free(state->_context);
 		if (state->_providerHandle) EVP_MAC_free(state->_providerHandle);
+		break;
+	case EvpStateTypeCipher:
+		if (state->_context) EVP_CIPHER_CTX_free(state->_context);
+		if (state->_providerHandle) EVP_CIPHER_free(state->_providerHandle);
+		break;
+	default:
 		break;
 	}
 }
@@ -211,6 +348,11 @@ _IMPLSTB cstatus_t _osslEvpInit(
 		}
 
 		break;
+	case EvpStateTypeCipher:
+		state->_providerHandle = EVP_CIPHER_fetch(NULL, providerName, NULL);
+		state->_context = EVP_CIPHER_CTX_new();
+		break;
+
 	default:
 		return CSTATUS_FAIL;
 	}
@@ -231,7 +373,7 @@ _IMPLSTB cstatus_t _osslEvpInit(
 	{
 		if (
 			!EVP_DigestInit_ex(
-				(EVP_MD_CTX*)state->_context,
+				_osslEvpGetMdContext(state),
 				(EVP_MD*)state->_providerHandle,
 				NULL
 			)
