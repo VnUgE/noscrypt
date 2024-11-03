@@ -207,14 +207,22 @@ static _nc_fn_inline span_t ncSpanSlice(span_t span, uint32_t offset, uint32_t s
 	span_t slice;
 
 	DEBUG_ASSERT2(ncSpanIsValid(span),	"Expected span to be non-null");
-	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
+	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size");
 
-	/* Initialize slice, offset input data by the specified offset */
-	ncSpanInit(
-		&slice, 
-		ncSpanGetOffset(span, offset), 
-		size
-	);
+	/* If the size of the sliced span is 0 return an empty span */
+	if (size == 0)
+	{
+		ncSpanInit(&slice, NULL, 0);
+	}
+	else
+	{
+		/* Initialize slice, offset input data by the specified offset */
+		ncSpanInit(
+			&slice,
+			ncSpanGetOffset(span, offset),
+			size
+		);
+	}
 
 	return slice;
 }
@@ -226,12 +234,20 @@ static _nc_fn_inline cspan_t ncSpanSliceC(cspan_t span, uint32_t offset, uint32_
 	DEBUG_ASSERT2(ncSpanIsValidC(span), "Expected span to be non-null");
 	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
 
-	/* Initialize slice, offset input data by the specified offset */
-	ncSpanInitC(
-		&slice, 
-		ncSpanGetOffsetC(span, offset), 
-		size
-	);
+	/* If the size of the sliced span is 0 return an empty span */
+	if (size == 0)
+	{
+		ncSpanInitC(&slice, NULL, 0);
+	}
+	else
+	{
+		/* Initialize slice, offset input data by the specified offset */
+		ncSpanInitC(
+			&slice,
+			ncSpanGetOffsetC(span, offset),
+			size
+		);
+	}
 
 	return slice;
 }

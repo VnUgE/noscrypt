@@ -289,10 +289,13 @@ static int TestPublicApiArgumentValidation()
     NCPublicKey pubKey;
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
     uint8_t nonce[NC_NIP44_IV_SIZE];
-
+   
     NCEncryptionArgs cryptoData;
 
-    PRINTL("TEST: Public API argument validation tests")
+    PRINTL("TEST: Public API argument validation tests");
+
+    /* Zero fill the structure to inialize */
+    ZERO_FILL(&cryptoData, sizeof(cryptoData));
 
     {
         TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44), sizeof(nonce));
@@ -507,8 +510,16 @@ static int TestPublicApiArgumentValidation()
         macArgs.payloadSize = 0;
         TEST(NCVerifyMac(ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
     }
-    
-    PRINTL("\nPASSED: Public API argument validation tests completed")
+
+    ENSURE(NCDestroyContext(ctx) == NC_SUCCESS);
+
+#ifdef NOSCRYPTUTIL_H
+        NCUtilContextFree(ctx);
+#else
+        free(ctx);
+#endif
+
+    PRINTL("\nPASSED: Public API argument validation tests completed");
 
     return 0;
 }
