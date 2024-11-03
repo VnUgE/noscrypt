@@ -2,7 +2,7 @@
 * Copyright (c) 2024 Vaughn Nugent
 *
 * Package: noscrypt
-* File: providers/openssl.c
+* File: providers/openssl-helpers.c
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -113,8 +113,9 @@ _IMPLSTB cstatus_t _osslEvpUpdate(const struct ossl_evp_state* state, cspan_t da
 			ncSpanGetSizeC(data)
 		);
 		break;
-
+		/* Cipher is not supported by this api */
 	default:
+		DEBUG_ASSERT2(0, "Called update on an invalid state type");
 		break;
 	}
 

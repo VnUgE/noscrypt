@@ -167,7 +167,6 @@
 		_osslEvpFree(&evpState);
 
 		return result;
-
 	}
 
 #endif /* !_IMPL_CRYPTO_SHA256_HMAC */
@@ -186,7 +185,6 @@
 		const struct _hkdf_state* state;
 
 		DEBUG_ASSERT(ctx != NULL);
-		_overflow_check(data.size);
 
 		state = (const struct _hkdf_state*)ctx;
 
@@ -231,8 +229,7 @@
 
 		handler.update = _ossl_hkdf_update;
 		handler.finish = _ossl_hkdf_finish;
-	
-		_overflow_check(prk.size);
+		
 		_overflow_check(info.size);
 		_overflow_check(okm.size);
 
@@ -336,6 +333,7 @@
 		
 		/*
 		* Possible static asser that int size must be 32bit or smaller
+		* so it can be cast safely to uint32
 		*/
 		if (bytesWritten < 0 || bytesWritten > INT32_MAX)
 		{
