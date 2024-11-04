@@ -101,7 +101,6 @@ _IMPLSTB cstatus_t _dummyAesFunc(
 		* 
 		*	https://sourceware.org/glibc/manual/2.39/html_mono/libc.html#Erasing-Sensitive-Data
 		*/
-		#include <string.h>
 		extern void explicit_bzero(void* block, size_t len);
 		#define _IMPL_SECURE_ZERO_MEMSET explicit_bzero
 	#endif
