@@ -12,9 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full NIP44 vector testing for encryption
 - Valgrind memory checking during unit testing
 - Added CI testing for Windows and Linux deployments
+- Security policy for the module
 
 ### Fixed
-- Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
+- [#9](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?id=53) - Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
 
 ## [0.1.5]
 

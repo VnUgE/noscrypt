@@ -272,6 +272,8 @@ if(MSVC)
 		/sdl						#enable additional security checks
 		/TC							#compile as c
 		/GS							#buffer security check
+
+		$<$<CONFIG:Debug>:/fsanitize=address>
 		
 		$<$<CONFIG:Debug>:/FC>				#show full path in diagnostics
 		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build
