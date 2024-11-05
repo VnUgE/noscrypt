@@ -271,10 +271,8 @@ if(MSVC)
    list(APPEND _NC_COMPILE_OPTS
 		/sdl						#enable additional security checks
 		/TC							#compile as c
-		/GS							#buffer security check
+		/GS							#buffer security check			
 
-		$<$<CONFIG:Debug>:/fsanitize=address>
-		
 		$<$<CONFIG:Debug>:/FC>				#show full path in diagnostics
 		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build
 		
@@ -307,11 +305,11 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	if(build_type STREQUAL "debug")
 		 list(APPEND _NC_COMPILE_OPTS
 		
-			-g
-			-Og
-			-Wall
-			-Werror
-			-pedantic
+			-g				# enable debug info
+			-Og				# disable all optimizations
+			-Wall			# enable all warnings
+			-Werror			# warnings as errors
+			-pedantic		# enable pedantic warnings
 		)
 	endif()
 endif()

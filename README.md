@@ -40,7 +40,7 @@ Testing is an will be important to a cryptography library, I take that responsib
 ### Hardness
 - Time sensitive verification always uses fixed time comparison
 - No explicit/dynamic memory allocations (in core library)
-- Valgrind and ASAN are used to check for memory leaks and overflows
+- Valgrind is used to check for runtime memory leaks and overflows
 - CI Requires %100 test pass before merging
 - Public API function input validation is on by default
 - All stack allocated structures are securely zeroed before return
