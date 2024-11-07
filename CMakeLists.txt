@@ -102,8 +102,6 @@ if(NC_ENABLE_UTILS)
 
 	#notify the project that utils are enabled
 	list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_UTILS)
-
-	message(STATUS "Utilities libraries are enabled")
 endif()
 
 #static/shared library
@@ -146,26 +144,34 @@ target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/secp256k
 #Include mbedtls if enabled
 if(NC_FETCH_MBEDTLS)
 
-	###############
-	# NOTE: Must disable shared libraries to avoid linking errors when using mbedtls
-	###############
-	set(BUILD_SHARED_LIBS OFF)
-
-	set(ENABLE_PROGRAMS OFF)
-	set(ENABLE_TESTING OFF)
-	set(USE_SHARED_MBEDTLS_LIBRARY OFF)
-	set(USE_STATIC_MBEDTLS_LIBRARY ON)
-	set(DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF)
 	set(MBEDTLS_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mbedtls/mbedtls_noscrypt_config.h" CACHE STRING "" FORCE)
 
 	FetchContent_Declare(
 	  libmbedtls
 	  GIT_REPOSITORY        https://github.com/Mbed-TLS/mbedtls.git
-	  GIT_TAG               v3.6.0
+	  GIT_TAG               v3.6.2
 	  GIT_PROGRESS          TRUE
 	)
 
-	FetchContent_MakeAvailable(libmbedtls)
+	FetchContent_MakeAvailable(libmbedtls)	
+
+	###############
+	# NOTE: Must disable shared libraries to avoid linking errors when using mbedtls
+	###############
+
+	set_target_properties(
+		mbedcrypto 
+		mbedtls
+
+		PROPERTIES
+		ENABLE_PROGRAMS OFF
+		ENABLE_TESTING OFF
+		BUILD_SHARED_LIBS OFF
+		POSITION_INDEPENDENT_CODE ON
+		USE_SHARED_MBEDTLS_LIBRARY OFF
+		USE_STATIC_MBEDTLS_LIBRARY ON
+		DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF
+	)
 
 	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
 
@@ -396,6 +402,21 @@ if(NC_BUILD_TESTS)
 	)
 
 endif()
+
+message("\n${_NC_PROJ_NAME} project summary")
+message("=====================================")
+message(" -- Configuration: ${build_type} --")
+message("  Testing enabled: ....... ${NC_BUILD_TESTS}")
+message("  Crypto library: ........ ${CRYPTO_LIB}")
+message("  Input validation: ...... ${NC_DISABLE_INPUT_VALIDATION}")
+message("  Monocypher: ............ ${NC_INCLUDE_MONOCYPHER}")
+message("  Fetched seckp256k1: .... ${NC_FETCH_SECP256K1}")
+message("  Fetched MbedTLS: ....... ${NC_FETCH_MBEDTLS}")
+message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
+message(" Defintions: ${NC_PROJ_DEFINTIONS}")
+message(" Compiler flags: ${_NC_COMPILE_OPTS}")
+message("=====================================")
+
 
 ###########################
 #
