@@ -277,7 +277,7 @@ tasks:
   dev-set-secp256-headers:
     vars:
       SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
-      SECP256_GIT_BRANCH: 'v0.5.1'
+      SECP256_GIT_BRANCH: 'v0.6.0'
       SECP256_DIR: 'vendor/secp256k1'
       TMP_DIR: '.update/secp256k1'
     cmds:

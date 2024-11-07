@@ -25,6 +25,7 @@ tasks:
   test:
     desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
     cmds:
+     #run CI tests with utils enabled
      - cmd: task test -- -DNC_ENABLE_UTILS=ON
      - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
      - cmd: wsl task memcheck

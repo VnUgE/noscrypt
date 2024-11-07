@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated OpenSSL to v3.4.0
 - Updated MbedTLS to v3.6.2
+- Updated libsecp256k1 to v0.6.0
 
 ## [0.1.5]
 
