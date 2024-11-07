@@ -40,10 +40,12 @@
  *      library/aria.c
  *      library/bn_mul.h
  *      library/constant_time.c
+ *      library/padlock.h
  *
  * Required by:
  *      MBEDTLS_AESCE_C
  *      MBEDTLS_AESNI_C (on some platforms)
+ *      MBEDTLS_PADLOCK_C
  *
  * Comment to disable the use of assembly code.
  */
@@ -351,6 +353,62 @@
 //#define MBEDTLS_TIMING_ALT
 
 /**
+ * \def MBEDTLS_AES_ALT
+ *
+ * MBEDTLS__MODULE_NAME__ALT: Uncomment a macro to let Mbed TLS use your
+ * alternate core implementation of a symmetric crypto, an arithmetic or hash
+ * module (e.g. platform specific assembly optimized implementations). Keep
+ * in mind that the function prototypes should remain the same.
+ *
+ * This replaces the whole module. If you only want to replace one of the
+ * functions, use one of the MBEDTLS__FUNCTION_NAME__ALT flags.
+ *
+ * Example: In case you uncomment MBEDTLS_AES_ALT, Mbed TLS will no longer
+ * provide the "struct mbedtls_aes_context" definition and omit the base
+ * function declarations and implementations. "aes_alt.h" will be included from
+ * "aes.h" to include the new function definitions.
+ *
+ * Uncomment a macro to enable alternate implementation of the corresponding
+ * module.
+ *
+ * \warning   MD5, DES and SHA-1 are considered weak and their
+ *            use constitutes a security risk. If possible, we recommend
+ *            avoiding dependencies on them, and considering stronger message
+ *            digests and ciphers instead.
+ *
+ */
+//#define MBEDTLS_AES_ALT
+//#define MBEDTLS_ARIA_ALT
+//#define MBEDTLS_CAMELLIA_ALT
+//#define MBEDTLS_CCM_ALT
+//#define MBEDTLS_CHACHA20_ALT
+//#define MBEDTLS_CHACHAPOLY_ALT
+//#define MBEDTLS_CMAC_ALT
+//#define MBEDTLS_DES_ALT
+//#define MBEDTLS_DHM_ALT
+//#define MBEDTLS_ECJPAKE_ALT
+//#define MBEDTLS_GCM_ALT
+//#define MBEDTLS_NIST_KW_ALT
+//#define MBEDTLS_MD5_ALT
+//#define MBEDTLS_POLY1305_ALT
+//#define MBEDTLS_RIPEMD160_ALT
+//#define MBEDTLS_RSA_ALT
+//#define MBEDTLS_SHA1_ALT
+//#define MBEDTLS_SHA256_ALT
+//#define MBEDTLS_SHA512_ALT
+
+/*
+ * When replacing the elliptic curve module, please consider, that it is
+ * implemented with two .c files:
+ *      - ecp.c
+ *      - ecp_curves.c
+ * You can replace them very much like all the other MBEDTLS__MODULE_NAME__ALT
+ * macros as described above. The only difference is that you have to make sure
+ * that you provide functionality for both .c files.
+ */
+//#define MBEDTLS_ECP_ALT
+
+/**
  * \def MBEDTLS_SHA256_PROCESS_ALT
  *
  * MBEDTLS__FUNCTION_NAME__ALT: Uncomment a macro to let Mbed TLS use you
@@ -404,6 +462,71 @@
 //#define MBEDTLS_ECDSA_VERIFY_ALT
 //#define MBEDTLS_ECDSA_SIGN_ALT
 //#define MBEDTLS_ECDSA_GENKEY_ALT
+
+/**
+ * \def MBEDTLS_ECP_INTERNAL_ALT
+ *
+ * Expose a part of the internal interface of the Elliptic Curve Point module.
+ *
+ * MBEDTLS_ECP__FUNCTION_NAME__ALT: Uncomment a macro to let Mbed TLS use your
+ * alternative core implementation of elliptic curve arithmetic. Keep in mind
+ * that function prototypes should remain the same.
+ *
+ * This partially replaces one function. The header file from Mbed TLS is still
+ * used, in contrast to the MBEDTLS_ECP_ALT flag. The original implementation
+ * is still present and it is used for group structures not supported by the
+ * alternative.
+ *
+ * The original implementation can in addition be removed by setting the
+ * MBEDTLS_ECP_NO_FALLBACK option, in which case any function for which the
+ * corresponding MBEDTLS_ECP__FUNCTION_NAME__ALT macro is defined will not be
+ * able to fallback to curves not supported by the alternative implementation.
+ *
+ * Any of these options become available by defining MBEDTLS_ECP_INTERNAL_ALT
+ * and implementing the following functions:
+ *      unsigned char mbedtls_internal_ecp_grp_capable(
+ *          const mbedtls_ecp_group *grp )
+ *      int  mbedtls_internal_ecp_init( const mbedtls_ecp_group *grp )
+ *      void mbedtls_internal_ecp_free( const mbedtls_ecp_group *grp )
+ * The mbedtls_internal_ecp_grp_capable function should return 1 if the
+ * replacement functions implement arithmetic for the given group and 0
+ * otherwise.
+ * The functions mbedtls_internal_ecp_init and mbedtls_internal_ecp_free are
+ * called before and after each point operation and provide an opportunity to
+ * implement optimized set up and tear down instructions.
+ *
+ * Example: In case you set MBEDTLS_ECP_INTERNAL_ALT and
+ * MBEDTLS_ECP_DOUBLE_JAC_ALT, Mbed TLS will still provide the ecp_double_jac()
+ * function, but will use your mbedtls_internal_ecp_double_jac() if the group
+ * for the operation is supported by your implementation (i.e. your
+ * mbedtls_internal_ecp_grp_capable() function returns 1 for this group). If the
+ * group is not supported by your implementation, then the original Mbed TLS
+ * implementation of ecp_double_jac() is used instead, unless this fallback
+ * behaviour is disabled by setting MBEDTLS_ECP_NO_FALLBACK (in which case
+ * ecp_double_jac() will return MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE).
+ *
+ * The function prototypes and the definition of mbedtls_ecp_group and
+ * mbedtls_ecp_point will not change based on MBEDTLS_ECP_INTERNAL_ALT, so your
+ * implementation of mbedtls_internal_ecp__function_name__ must be compatible
+ * with their definitions.
+ *
+ * Uncomment a macro to enable alternate implementation of the corresponding
+ * function.
+ */
+/* Required for all the functions in this section */
+//#define MBEDTLS_ECP_INTERNAL_ALT
+/* Turn off software fallback for curves not supported in hardware */
+//#define MBEDTLS_ECP_NO_FALLBACK
+/* Support for Weierstrass curves with Jacobi representation */
+//#define MBEDTLS_ECP_RANDOMIZE_JAC_ALT
+//#define MBEDTLS_ECP_ADD_MIXED_ALT
+//#define MBEDTLS_ECP_DOUBLE_JAC_ALT
+//#define MBEDTLS_ECP_NORMALIZE_JAC_MANY_ALT
+//#define MBEDTLS_ECP_NORMALIZE_JAC_ALT
+/* Support for curves with Montgomery arithmetic */
+//#define MBEDTLS_ECP_DOUBLE_ADD_MXZ_ALT
+//#define MBEDTLS_ECP_RANDOMIZE_MXZ_ALT
+//#define MBEDTLS_ECP_NORMALIZE_MXZ_ALT
 
 /**
  * \def MBEDTLS_ENTROPY_HARDWARE_ALT
@@ -707,7 +830,7 @@
  *
  * \note  This option only works with the default software implementation of
  *        elliptic curve functionality. It is incompatible with
- *        MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
+ *        MBEDTLS_ECP_ALT, MBEDTLS_ECDH_XXX_ALT, MBEDTLS_ECDSA_XXX_ALT.
  *
  * Requires: MBEDTLS_ECP_C
  *
@@ -1292,6 +1415,23 @@
 //#define MBEDTLS_PSA_CRYPTO_SPM
 
 /**
+ * \def MBEDTLS_PSA_KEY_STORE_DYNAMIC
+ *
+ * Dynamically resize the PSA key store to accommodate any number of
+ * volatile keys (until the heap memory is exhausted).
+ *
+ * If this option is disabled, the key store has a fixed size
+ * #MBEDTLS_PSA_KEY_SLOT_COUNT for volatile keys and loaded persistent keys
+ * together.
+ *
+ * This option has no effect when #MBEDTLS_PSA_CRYPTO_C is disabled.
+ *
+ * Module:  library/psa_crypto.c
+ * Requires: MBEDTLS_PSA_CRYPTO_C
+ */
+#define MBEDTLS_PSA_KEY_STORE_DYNAMIC
+
+/**
  * Uncomment to enable p256-m. This is an alternative implementation of
  * key generation, ECDH and (randomized) ECDSA on the curve SECP256R1.
  * Compared to the default implementation:
@@ -1658,8 +1798,9 @@
  * Requires: MBEDTLS_PSA_CRYPTO_C
  *
  * \note TLS 1.3 uses PSA crypto for cryptographic operations that are
- *       directly performed by TLS 1.3 code. As a consequence, you must
- *       call psa_crypto_init() before the first TLS 1.3 handshake.
+ *       directly performed by TLS 1.3 code. As a consequence, when TLS 1.3
+ *       is enabled, a TLS handshake may call psa_crypto_init(), even
+ *       if it ends up negotiating a different TLS version.
  *
  * \note Cryptographic operations performed indirectly via another module
  *       (X.509, PK) or by code shared with TLS 1.2 (record protection,
@@ -2483,6 +2624,11 @@
  * Enable the CMAC (Cipher-based Message Authentication Code) mode for block
  * ciphers.
  *
+ * \note When #MBEDTLS_CMAC_ALT is active, meaning that the underlying
+ *       implementation of the CMAC algorithm is provided by an alternate
+ *       implementation, that alternate implementation may opt to not support
+ *       AES-192 or 3DES as underlying block ciphers for the CMAC operation.
+ *
  * Module:  library/cmac.c
  *
  * Requires: MBEDTLS_CIPHER_C, MBEDTLS_AES_C or MBEDTLS_DES_C
@@ -2881,6 +3027,20 @@
  * This modules translates between OIDs and internal values.
  */
 #define MBEDTLS_OID_C
+
+/**
+ * \def MBEDTLS_PADLOCK_C
+ *
+ * Enable VIA Padlock support on x86.
+ *
+ * Module:  library/padlock.c
+ * Caller:  library/aes.c
+ *
+ * Requires: MBEDTLS_HAVE_ASM
+ *
+ * This modules adds support for the VIA PadLock on x86.
+ */
+#define MBEDTLS_PADLOCK_C
 
 /**
  * \def MBEDTLS_PEM_PARSE_C
@@ -3874,22 +4034,38 @@
  * Use HMAC_DRBG with the specified hash algorithm for HMAC_DRBG for the
  * PSA crypto subsystem.
  *
- * If this option is unset:
- * - If CTR_DRBG is available, the PSA subsystem uses it rather than HMAC_DRBG.
- * - Otherwise, the PSA subsystem uses HMAC_DRBG with either
- *   #MBEDTLS_MD_SHA512 or #MBEDTLS_MD_SHA256 based on availability and
- *   on unspecified heuristics.
+ * If this option is unset, the library chooses a hash (currently between
+ * #MBEDTLS_MD_SHA512 and #MBEDTLS_MD_SHA256) based on availability and
+ * unspecified heuristics.
+ *
+ * \note The PSA crypto subsystem uses the first available mechanism amongst
+ *       the following:
+ *       - #MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG if enabled;
+ *       - Entropy from #MBEDTLS_ENTROPY_C plus CTR_DRBG with AES
+ *         if #MBEDTLS_CTR_DRBG_C is enabled;
+ *       - Entropy from #MBEDTLS_ENTROPY_C plus HMAC_DRBG.
+ *
+ *       A future version may reevaluate the prioritization of DRBG mechanisms.
  */
 //#define MBEDTLS_PSA_HMAC_DRBG_MD_TYPE MBEDTLS_MD_SHA256
 
 /** \def MBEDTLS_PSA_KEY_SLOT_COUNT
- * Restrict the PSA library to supporting a maximum amount of simultaneously
- * loaded keys. A loaded key is a key stored by the PSA Crypto core as a
- * volatile key, or a persistent key which is loaded temporarily by the
- * library as part of a crypto operation in flight.
  *
- * If this option is unset, the library will fall back to a default value of
- * 32 keys.
+ * When #MBEDTLS_PSA_KEY_STORE_DYNAMIC is disabled,
+ * the maximum amount of PSA keys simultaneously in memory. This counts all
+ * volatile keys, plus loaded persistent keys.
+ *
+ * When #MBEDTLS_PSA_KEY_STORE_DYNAMIC is enabled,
+ * the maximum number of loaded persistent keys.
+ *
+ * Currently, persistent keys do not need to be loaded all the time while
+ * a multipart operation is in progress, only while the operation is being
+ * set up. This may change in future versions of the library.
+ *
+ * Currently, the library traverses of the whole table on each access to a
+ * persistent key. Therefore large values may cause poor performance.
+ *
+ * This option has no effect when #MBEDTLS_PSA_CRYPTO_C is disabled.
  */
 //#define MBEDTLS_PSA_KEY_SLOT_COUNT 32
 

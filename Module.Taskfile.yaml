@@ -24,13 +24,17 @@ tasks:
     cmds:
      #ensure the debug library has been built for the current system before project tests are executed
      - cmd: task build-debug -- -DNC_ENABLE_UTILS=ON
-     - task: test-dotnet
+     #library is already built, just need to test it
+     - cmd: task test-dev 
+     - task: test-dotnet     
   
      #runs the test suite inside wsl linux environment
      - cmd: echo 'Running WSL tests {{ if eq OS "windows" }}TRUE{{ else }}FALSE{{ end }}'
-       silent: true
+       silent: true   
      - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
        platforms: [ windows ]
+     #run memory check
+     - cmd: wsl task memcheck
 
   test-dotnet:
     vars:

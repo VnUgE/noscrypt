@@ -147,7 +147,7 @@ extern "C" {
 *   least, so I'm using unsgined integers. Sorry, not sorry.
 */
 
-/* A compressed resul/return value, negative values 
+/* A compressed result/return value, negative values 
 are failure, 0 is success and positive values are 
 defined by the operation. 
 */

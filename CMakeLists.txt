@@ -51,7 +51,7 @@ if(NC_FETCH_SECP256K1)
 	FetchContent_Declare(
 	  libsecp256k1
 	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				642c885b6102725e25623738529895a95addc4f4 # release-0.5.1
+	  GIT_TAG				0cdc758a56360bf58a851fe91085a327ec97685a # release-0.6.0
 	  GIT_PROGRESS			TRUE
 	)
 
@@ -271,8 +271,8 @@ if(MSVC)
    list(APPEND _NC_COMPILE_OPTS
 		/sdl						#enable additional security checks
 		/TC							#compile as c
-		/GS							#buffer security check
-		
+		/GS							#buffer security check			
+
 		$<$<CONFIG:Debug>:/FC>				#show full path in diagnostics
 		$<$<CONFIG:Debug>:/showIncludes>	#show a list of all included header files during build
 		
@@ -305,11 +305,11 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	if(build_type STREQUAL "debug")
 		 list(APPEND _NC_COMPILE_OPTS
 		
-			-g
-			-Og
-			-Wall
-			-Werror
-			-pedantic
+			-g				# enable debug info
+			-Og				# disable all optimizations
+			-Wall			# enable all warnings
+			-Werror			# warnings as errors
+			-pedantic		# enable pedantic warnings
 		)
 	endif()
 endif()

@@ -10,11 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+
+## [0.1.6]
+
+### Added
+- Security policy for the module
 - Valgrind memory checking during unit testing
-- Added CI testing for Windows and Linux deployments
+- Added fully automated integration testing for Windows and Linux deployments
 
 ### Fixed
-- Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
+- [#9](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?id=53) - Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
+
+### Changed
+- Updated OpenSSL to v3.4.0
+- Updated MbedTLS to v3.6.2
+- Updated libsecp256k1 to v0.6.0
 
 ## [0.1.5]
 
@@ -82,7 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NCContext structure defintion.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.5...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/VnUgE/noscrypt/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/VnUgE/noscrypt/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/VnUgE/noscrypt/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/VnUgE/noscrypt/compare/v0.1.2...v0.1.3

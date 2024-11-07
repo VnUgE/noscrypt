@@ -82,11 +82,15 @@
 	/* performs a log2 on integer types */
 	#define _math_int_log2(x)	(uint32_t)log2((double)x)
 
-#else
+#elif defined(__has_builtin)
 	/* 
+	* Only avaialable with builtins 
+	* 
 	* GCC/clang does not expose log2 so we can use the __builtin_clz
 	* to find leading zeros of an integer and subtract that from 31 
 	* (bit positions) for int32 
+	* 
+	* This file is really only meant for non-embedded systems
 	*/
 	static _nc_fn_inline uint32_t _math_int_log2(uint32_t val)
 	{
@@ -94,18 +98,12 @@
 
 		return 31 - __builtin_clz(val);
 	}
+#else 
+	#error "Utilities library is not supported on this platform. Must support GCC/Glang builtin functions"
 #endif
 
 /* Currently were on nip44 version 2 */
 static const uint8_t Nip44VersionValue[1] = { 0x02u };
-
-struct cipher_buffer_state {
-	
-	cspan_t input;
-	span_t output;
-
-	cspan_t actualOutput;
-};
 
 struct nc_util_enc_struct {
 
@@ -113,29 +111,37 @@ struct nc_util_enc_struct {
 
 	NCEncryptionArgs encArgs;
 
-	struct cipher_buffer_state buffer;
+	struct cipher_buffer_state {
+
+		cspan_t input;
+		span_t output;
+
+		cspan_t actualOutput;
+
+	} buffer;
 };
 
-static _nc_fn_inline span_t _ncUtilAllocSpan(uint32_t count, size_t size)
+static _nc_fn_inline int _ncUtilAllocSpan(span_t* span, uint32_t count, size_t size)
 {
-	span_t span;
 
 #if SIZE_MAX < UINT32_MAX
 
 	if (count > SIZE_MAX)
 	{
-		return span;
+		/* Return empty span */
+		ncSpanInit(&span, NULL, 0);
+		return 0;
 	}
 
 #endif
 
 	ncSpanInit(
-		&span, 
+		span, 
 		_nc_mem_alloc((size_t)count, size),
 		(uint32_t)count
 	);
 
-	return span;
+	return ncSpanIsValid(*span);
 }
 
 static _nc_fn_inline void _ncUtilZeroSpan(span_t span)
@@ -365,7 +371,7 @@ static NCResult _nip44EncryptCompleteCore(
 	* slice has debug guards to ensure output is large enough
 	*/
 	message = ncSpanSlice(
-		state->buffer.output, 
+		state->buffer.output,
 		0, 
 		_calcNip44TotalOutSize(plainText.size)
 	);
@@ -761,7 +767,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 				return E_CIPHER_BAD_INPUT_SIZE;
 			}
 
-			/* Ensure the first byte is a valid version */
+			/* Ensure the first byte is a valid nip44 version */
 			if (inputData[0] != Nip44VersionValue[0])
 			{
 				return E_VERSION_NOT_SUPPORTED;
@@ -811,6 +817,8 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 		/*
 		* if the existing buffer is large enough to hold the new 
 		* data reuse it, otherwise free it and allocate a new buffer
+		* 
+		* TODO: Consider re-alloc to resize
 		*/
 
 		if (outputSize <= ncSpanGetSize(encCtx->buffer.output))
@@ -826,9 +834,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	}
 
 	/* Alloc output buffer within the struct */
-	encCtx->buffer.output = _ncUtilAllocSpan((uint32_t)outputSize, sizeof(uint8_t));
-
-	if (!ncSpanIsValid(encCtx->buffer.output))
+	if (!_ncUtilAllocSpan(&encCtx->buffer.output, (uint32_t)outputSize, sizeof(uint8_t)))
 	{
 		return E_OUT_OF_MEMORY;
 	}

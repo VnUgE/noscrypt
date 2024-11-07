@@ -247,7 +247,7 @@ tasks:
   dev-update-mbedtls-headers:
     vars:
       MBEDTLS_GIT_URL: 'https://github.com/Mbed-TLS/mbedtls'
-      MBEDTLS_GIT_BRANCH: 'development'
+      MBEDTLS_GIT_BRANCH: 'v3.6.2'
       MBEDTLS_DIR: 'vendor/mbedtls'
       TMP_DIR: '.update/mbedtls'
     cmds:
@@ -262,7 +262,7 @@ tasks:
   dev-update-openssl-headers:
     vars:
       OPENSSL_GIT_URL: 'https://github.com/openssl/openssl'
-      OPENSSL_GIT_BRANCH: 'openssl-3.3.1'
+      OPENSSL_GIT_BRANCH: 'openssl-3.4.0'
       OPENSSL_DIR: 'vendor/openssl'
       TMP_DIR: '.update/openssl'
     cmds:
@@ -277,7 +277,7 @@ tasks:
   dev-set-secp256-headers:
     vars:
       SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
-      SECP256_GIT_BRANCH: 'v0.5.1'
+      SECP256_GIT_BRANCH: 'v0.6.0'
       SECP256_DIR: 'vendor/secp256k1'
       TMP_DIR: '.update/secp256k1'
     cmds:

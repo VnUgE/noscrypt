@@ -216,7 +216,7 @@ static NCResult _computeSharedSecret(
 	*/
 	result = secp256k1_ecdh(
 		ctx->secpCtx,
-		(uint8_t*)sharedPoint,
+		sharedPoint->value,
 		&pubKey,
 		sk->key,
 		&_edhHashFuncInternal,
@@ -876,7 +876,6 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 
 			result = _encryptNip44Ex(ctx, &conversationKey, args->keyData, args);
 		}
-
 		break;
 
 		/* At the moment nip04 compatability is not supported */
