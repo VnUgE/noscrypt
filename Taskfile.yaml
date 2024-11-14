@@ -17,6 +17,9 @@ vars:
   TEST_EXE_NAME: 'nctest'
   CI_BUILD_CONFIG: '{{ .CI_BUILD_CONFIG | default "Release" }}'
 
+  MBEDTLS_VERSION: '3.6.2'
+  MBEDTLS_ARCHIVE_SHA: ''
+
 tasks:
 
   default:
@@ -86,6 +89,30 @@ tasks:
 #       INTERNAL TASKS
 #
 #################################
+
+  mkdir:
+    internal: true
+    requires: { DIR }
+    preconditions:
+     - '{{ if eq OS "windows" }}powershell Test-Path{{ else }}test -n{{ end }} {{ .DIR }}' 
+    cmds:
+     - cmd: mkdir -p '{{ .DIR }}'
+       platforms: [linux, darwin]
+    
+     - cmd: powershell mkdir '{{ .DIR }}' -Force
+       platforms: [windows]
+
+  rm-dir:
+    internal: true
+    requires: { DIR }
+    preconditions:
+     - '{{ if eq OS "windows" }}powershell Test-Path{{ else }}test -n{{ end }} {{ .DIR }}' 
+    cmds:
+     - cmd: rm -rf '{{ .DIR }}'
+       platforms: [linux, darwin]
+       
+     - cmd: powershell rm -Recurse -Force '{{ .DIR }}'
+       platforms: [windows]
       
   clean-internal:
     internal: true
@@ -151,12 +178,11 @@ tasks:
 
   mbedtls-download:
     internal: true
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_VERSION }
     vars:
-      MBEDTLS_VERSION: '3.6.2'
       MBEDTLS_DOWNLOAD_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
       MBEDTLS_DOWNLOAD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps'
-      MBEDTLS_SHA256: ''
-      MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
+      MBEDTLS_SRC_DIR: '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls-{{ .MBEDTLS_VERSION }}'
     cmds:
      #remove source dirs if they exist
      - cmd: rm -rf '{{ .MBEDTLS_SRC_DIR }}'
@@ -166,7 +192,8 @@ tasks:
        ignore_error: true
 
      #ensure directory is created
-     - cmd: '{{ if eq OS "windows" }}powershell{{ end }} mkdir -p "{{ .MBEDTLS_SRC_DIR }}"'
+     - task: mkdir
+       vars: { DIR: '{{ .MBEDTLS_SRC_DIR }}' }
       
      #download mbedtls archive
      - cmd: curl{{ exeExt }} -L '{{ .MBEDTLS_DOWNLOAD_URL }}' -o '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2'
@@ -174,17 +201,11 @@ tasks:
      #extract the archive using bz2 (linux only)
      - cmd: '{{ if eq OS "windows" }}wsl{{ end }} tar -xjf "{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2" -C "{{ .MBEDTLS_DOWNLOAD_DIR }}"'
   
-     #rename the extracted directory
-     - cmd: 'mv -T "{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls-{{ .MBEDTLS_VERSION }}/" "{{ .MBEDTLS_SRC_DIR }}/"'
-       platforms: [linux, darwin]
-     - cmd: powershell Rename-Item -Force -Path "{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls-{{ .MBEDTLS_VERSION }}/" -NewName "mbedtls"
-       platforms: [windows]
-  
   mbedtls-configure:
     internal: true
-    requires: { CMAKE_BUILD_DIR }
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_VERSION }
     vars:
-      MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
+      MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-{{ .MBEDTLS_VERSION }}'
       MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-build'
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
@@ -277,6 +298,7 @@ tasks:
     internal: true
     requires: { CMAKE_BUILD_DIR }
     cmds:
+
      - task: cmake-test
        vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
 
@@ -357,8 +379,8 @@ tasks:
   build:
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
-     - cmd: powershell "mkdir bin/ -Force"
-       ignore_error: true
+     - task: mkdir
+       vars: { DIR: 'bin/' }
   
      #build windows x64
      - task: ci-build-win_x64
