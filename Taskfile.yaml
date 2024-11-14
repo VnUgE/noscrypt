@@ -159,11 +159,14 @@ tasks:
       MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
     cmds:
      #remove source dirs if they exist
-     - cmd: rm -rf '{{ .MBEDTLS_SRC_DIR }}' && mkdir -p '{{ .MBEDTLS_SRC_DIR }}'
+     - cmd: rm -rf '{{ .MBEDTLS_SRC_DIR }}'
        platforms: [linux, darwin]
-     - cmd: powershell rm -Recurse -Force '{{ .MBEDTLS_SRC_DIR }}' && mkdir '{{ .MBEDTLS_SRC_DIR }}'
+     - cmd: powershell rm -Recurse -Force '{{ .MBEDTLS_SRC_DIR }}'
        platforms: [windows]
        ignore_error: true
+
+     #ensure directory is created
+     - cmd: '{{ if eq OS "windows" }}powershell{{ end }} mkdir -p "{{ .MBEDTLS_SRC_DIR }}"'
       
      #download mbedtls archive
      - cmd: curl{{ exeExt }} -L '{{ .MBEDTLS_DOWNLOAD_URL }}' -o '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2'
