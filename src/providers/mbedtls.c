@@ -31,20 +31,20 @@
 /* Inline errors on linux in header files on linux */
 #ifndef inline
 	#define inline __inline
-	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
-	#include <mbedtls/chacha20.h>
-	#include <mbedtls/constant_time.h>
+	#include <mbedtls/mbedtls/md.h>
+	#include <mbedtls/mbedtls/hkdf.h>
+	#include <mbedtls/mbedtls/hmac_drbg.h>
+	#include <mbedtls/mbedtls/sha256.h>
+	#include <mbedtls/mbedtls/chacha20.h>
+	#include <mbedtls/mbedtls/constant_time.h>
 	#undef inline
 #else
-	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
-	#include <mbedtls/chacha20.h>
-	#include <mbedtls/constant_time.h>
+	#include <mbedtls/mbedtls/md.h>
+	#include <mbedtls/mbedtls/hkdf.h>
+	#include <mbedtls/mbedtls/hmac_drbg.h>
+	#include <mbedtls/mbedtls/sha256.h>
+	#include <mbedtls/mbedtls/chacha20.h>
+	#include <mbedtls/mbedtls/constant_time.h>
 #endif
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
@@ -57,7 +57,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 }
 
 #if SIZE_MAX < UINT64_MAX
-	#define _ssize_guard_int(x) if(x > SIZE_MAX) return 1;
+	#define _ssize_guard_int(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
 #else
 	#define _ssize_guard_int(x)
 #endif
@@ -100,8 +100,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		_overflow_check(data.size)
 
 		return mbedtls_sha256(
-			data.data, 
-			data.size, 
+			ncSpanGetOffsetC(data, 0), 
+			ncSpanGetSizeC(data), 
 			digestOut32, 
 			0				/* Set 0 for sha256 mode */
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
@@ -118,15 +118,13 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	{
 		_overflow_check(data.size)
 
-		/* Keys should never be large enough for this to matter, but sanity check. */
-		DEBUG_ASSERT2(key.size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")
 
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
-			key.data, 
-			key.size,
-			data.data, 
-			data.size,
+			ncSpanGetOffsetC(key, 0), 
+			ncSpanGetSizeC(key),
+			ncSpanGetOffsetC(data, 0), 
+			ncSpanGetSizeC(data),
 			hmacOut32
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
@@ -146,12 +144,12 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
-			prk.data, 
-			prk.size,
-			info.data, 
-			info.size,
-			okm.data, 
-			okm.size
+			ncSpanGetOffsetC(prk, 0), 
+			ncSpanGetSizeC(prk),
+			ncSpanGetOffsetC(info, 0),
+			ncSpanGetSizeC(info),
+			ncSpanGetOffset(okm, 0),
+			ncSpanGetSize(okm)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 

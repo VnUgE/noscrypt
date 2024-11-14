@@ -19,7 +19,6 @@ set(_NC_PROJ_NAME "noscrypt")
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_ENABLE_UTILS "Enables the sidecar utility library" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
-option(NC_FETCH_MBEDTLS "Fetch Mbed-TLS from it's source repository locally" OFF)
 option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
 option(NC_INCLUDE_MONOCYPHER "Statically link to vendored monocypher library" ON)
 set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl, bcrypt)")
@@ -131,51 +130,15 @@ target_include_directories(${_NC_PROJ_NAME}_static PRIVATE include)
 target_link_libraries(${_NC_PROJ_NAME} PRIVATE secp256k1)
 target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE secp256k1)
 
-#include secp256k1 headers
-target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/secp256k1/include)
-target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/secp256k1/include)
+#make vendored headers available to the project
+target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor)
+target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor)
 
 #############################################
 #
 #		Configure crypto library linking
 #
 #############################################
-
-#Include mbedtls if enabled
-if(NC_FETCH_MBEDTLS)
-
-	set(MBEDTLS_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/mbedtls/mbedtls_noscrypt_config.h" CACHE STRING "" FORCE)
-
-	FetchContent_Declare(
-	  libmbedtls
-	  GIT_REPOSITORY        https://github.com/Mbed-TLS/mbedtls.git
-	  GIT_TAG               v3.6.2
-	  GIT_PROGRESS          TRUE
-	)
-
-	FetchContent_MakeAvailable(libmbedtls)	
-
-	###############
-	# NOTE: Must disable shared libraries to avoid linking errors when using mbedtls
-	###############
-
-	set_target_properties(
-		mbedcrypto 
-		mbedtls
-
-		PROPERTIES
-		ENABLE_PROGRAMS OFF
-		ENABLE_TESTING OFF
-		BUILD_SHARED_LIBS OFF
-		POSITION_INDEPENDENT_CODE ON
-		USE_SHARED_MBEDTLS_LIBRARY OFF
-		USE_STATIC_MBEDTLS_LIBRARY ON
-		DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF
-	)
-
-	set(CRYPTO_LIB "mbedtls")		#enable linking to mbedtls
-
-endif()
 
 #try to load openssl quietly in order to check for its availability
 find_package(OpenSSL QUIET)
@@ -196,36 +159,48 @@ endif()
 #if mbedtls linking is enabled target the library
 if(CRYPTO_LIB STREQUAL "mbedtls")
 
+	#make vendored mbedtls headers available to the project
+	target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
+	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
+
 	message(STATUS "Linking to MbedTLS crypto library")
 
-	#include mbedtls headers
-	target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/mbedtls/include)
-	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/mbedtls/include)
-
-	if(NC_FETCH_MBEDTLS)
-		#link to included mbedtls
-		target_link_libraries(${_NC_PROJ_NAME} PRIVATE mbedcrypto PRIVATE mbedtls)
-		target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE mbedcrypto PRIVATE mbedtls)
-	else()
-		#find the library
-		find_library(MBEDTLS_LIB_CRYPTO
-			NAMES mbedcrypto libmbedcrypto 
-			PATHS ${CRYPTO_LIB_DIR}
-		)
+	#find the library
+	find_library(MBEDTLS_LIB_CRYPTO
+		NAMES mbedcrypto libmbedcrypto libmbedcrypto.a mbedcrypto.lib
+			
+		HINTS 
+		${CRYPTO_LIB_DIR} 
+		${CRYPTO_LIB_DIR}/debug 
+		${CRYPTO_LIB_DIR}/release 
+		${CRYPTO_LIB_DIR}/library
+		${CRYPTO_LIB_DIR}/library/debug 
+		${CRYPTO_LIB_DIR}/library/release
+			
+		REQUIRED
+	)
 		
-		find_library(MBEDTLS_LIB_TLS
-			NAMES mbedtls libmbedtls
-			PATHS ${CRYPTO_LIB_DIR}
-		)
+	find_library(MBEDTLS_LIB_TLS
+		NAMES mbedtls libmbedtls libmbedtls.a mbedtls.lib
 
-		message(STATUS "Found mbedtls crypto library at ${MBEDTLS_LIB_CRYPTO}")
-		message(STATUS "Found mbedtls tls library at ${MBEDTLS_LIB_TLS}")
+		HINTS 
+		${CRYPTO_LIB_DIR} 
+		${CRYPTO_LIB_DIR}/debug 
+		${CRYPTO_LIB_DIR}/release 
+		${CRYPTO_LIB_DIR}/library
+		${CRYPTO_LIB_DIR}/library/debug 
+		${CRYPTO_LIB_DIR}/library/release
 
-		#link to the library
-		target_link_libraries(${_NC_PROJ_NAME} PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
-		target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
-	endif()
+		REQUIRED
+	)
 
+	message(STATUS "Found mbedtls crypto library at ${MBEDTLS_LIB_CRYPTO}")
+	message(STATUS "Found mbedtls tls library at ${MBEDTLS_LIB_TLS}")
+
+	#link to the library
+	target_link_libraries(${_NC_PROJ_NAME} PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
+	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
+	
 	#enable mbedtls crypto library bindings
 	list(APPEND NC_PROJ_DEFINTIONS MBEDTLS_CRYPTO_LIB)
 
@@ -233,10 +208,6 @@ elseif(CRYPTO_LIB STREQUAL "openssl")
 
 	set(OPENSSL_USE_STATIC_LIBS ON)
 	find_package(OpenSSL REQUIRED)
-
-	#include openssl headers
-	target_include_directories(${_NC_PROJ_NAME} SYSTEM PUBLIC vendor/openssl/include)
-	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PUBLIC vendor/openssl/include)
 
 	#link to openssl
 	message(STATUS "Linking to OpenSSL crypto library")
@@ -344,9 +315,6 @@ if(NC_INCLUDE_MONOCYPHER)
 
 	target_link_libraries(${_NC_PROJ_NAME} PRIVATE monocypher)
 	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE monocypher)
-
-	#share mc header with project
-	target_include_directories(monocypher SYSTEM PUBLIC vendor/monocypher)
 	
 	target_compile_features(monocypher PRIVATE c_std_99)			#targets c99
 
@@ -411,7 +379,6 @@ message("  Crypto library: ........ ${CRYPTO_LIB}")
 message("  Input validation: ...... ${NC_DISABLE_INPUT_VALIDATION}")
 message("  Monocypher: ............ ${NC_INCLUDE_MONOCYPHER}")
 message("  Fetched seckp256k1: .... ${NC_FETCH_SECP256K1}")
-message("  Fetched MbedTLS: ....... ${NC_FETCH_MBEDTLS}")
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
 message(" Defintions: ${NC_PROJ_DEFINTIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")

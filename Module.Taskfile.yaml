@@ -26,11 +26,8 @@ tasks:
     desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
     cmds:
      #run CI tests with utils enabled
-     - cmd: task test -- -DNC_ENABLE_UTILS=ON
-     - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
-     - cmd: wsl task memcheck
-     - cmd: task test-mbedtls -- -DNC_ENABLE_UTILS=ON
-
+     - cmd: task ci-test
+     - cmd: wsl ci-test
 
 #called by build pipeline to build module
   build:

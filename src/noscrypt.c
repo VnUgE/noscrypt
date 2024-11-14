@@ -51,7 +51,7 @@
 
 /*
 * Actual, private defintion of the NCContext structure 
-* to allow for future development and ABI backords 
+* to allow for future development and ABI backwards 
 * compatability.
 */
 struct nc_ctx_struct {

@@ -29,7 +29,7 @@
 
 #ifdef NC_ENABLE_MONOCYPHER
 
-#include <monocypher.h>
+#include <monocypher/monocypher.h>
 
 /* Export secure memse0 */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
