@@ -13,19 +13,24 @@
 version: '3'
 
 vars:
+
+  _RMDIR: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{else}}rm -rf{{end}}'
+  _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{else}}mkdir -p{{end}}'
+  BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
+
   CMAKE_BUILD_DIR: 'build/{{ OS }}'
   TEST_EXE_NAME: 'nctest'
   CI_BUILD_CONFIG: '{{ .CI_BUILD_CONFIG | default "Release" }}'
 
   MBEDTLS_VERSION: '3.6.2'
-  MBEDTLS_ARCHIVE_SHA: ''
+  MBEDTLS_ARCHIVE_SHA: '' 
 
 tasks:
 
   default:
     desc: "Build the library for your system"
     cmds:
-     - task: build-internal
+     - task: cmake-build
        vars: { CMAKE_TEST_STATUS: 'OFF', BUILD_CONFIG: 'Release' }
 
   build-debug:
@@ -81,8 +86,7 @@ tasks:
     ignore_error: true
     cmds:
     - for: [ bin/, build/ ]
-      task: clean-internal
-      vars: { FILE: '{{ .ITEM }}'}
+      cmd: '{{ ._RMDIR }} "{{ .ITEM }}"'
 
 #################################
 #
@@ -90,42 +94,6 @@ tasks:
 #
 #################################
 
-  mkdir:
-    internal: true
-    requires: { DIR }
-    preconditions:
-     - '{{ if eq OS "windows" }}powershell Test-Path{{ else }}test -n{{ end }} {{ .DIR }}' 
-    cmds:
-     - cmd: mkdir -p '{{ .DIR }}'
-       platforms: [linux, darwin]
-    
-     - cmd: powershell mkdir '{{ .DIR }}' -Force
-       platforms: [windows]
-
-  rm-dir:
-    internal: true
-    requires: { DIR }
-    preconditions:
-     - '{{ if eq OS "windows" }}powershell Test-Path{{ else }}test -n{{ end }} {{ .DIR }}' 
-    cmds:
-     - cmd: rm -rf '{{ .DIR }}'
-       platforms: [linux, darwin]
-       
-     - cmd: powershell rm -Recurse -Force '{{ .DIR }}'
-       platforms: [windows]
-      
-  clean-internal:
-    internal: true
-    ignore_error: true
-    requires: { FILE }
-    cmds:
-     - cmd: rm -rf '{{ .FILE }}'
-       platforms: [linux, darwin]
-       
-     - cmd: powershell rm -Recurse -Force '{{ .FILE }}'
-       platforms: [windows]
-  
-  #build-internal:
   cmake-configue: 
     internal: true
     requires: { CMAKE_BUILD_DIR, BUILD_CONFIG, CMAKE_TEST_STATUS }
@@ -144,7 +112,9 @@ tasks:
     internal: true
     requires: { CMAKE_BUILD_DIR, BUILD_CONFIG }
     cmds:
-     - cmd: cmake --build {{ .CMAKE_BUILD_DIR }} --config {{ .BUILD_CONFIG }}
+     - cmd: cmake 
+        --build {{ .CMAKE_BUILD_DIR }} 
+        --config {{ .BUILD_CONFIG }}
   
   #runs the configure and compile cmake steps
   cmake-build:
@@ -184,16 +154,8 @@ tasks:
       MBEDTLS_DOWNLOAD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps'
       MBEDTLS_SRC_DIR: '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls-{{ .MBEDTLS_VERSION }}'
     cmds:
-     #remove source dirs if they exist
-     - cmd: rm -rf '{{ .MBEDTLS_SRC_DIR }}'
-       platforms: [linux, darwin]
-     - cmd: powershell rm -Recurse -Force '{{ .MBEDTLS_SRC_DIR }}'
-       platforms: [windows]
-       ignore_error: true
-
      #ensure directory is created
-     - task: mkdir
-       vars: { DIR: '{{ .MBEDTLS_SRC_DIR }}' }
+     - cmd: '{{ ._MKDIR }} "{{ .MBEDTLS_SRC_DIR }}"'
       
      #download mbedtls archive
      - cmd: curl{{ exeExt }} -L '{{ .MBEDTLS_DOWNLOAD_URL }}' -o '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2'
@@ -210,8 +172,8 @@ tasks:
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
      #clear build dir before re-configuring
-     - cmd: '{{ if eq OS "windows"}}powershell{{ end }} rm -r {{ .MBEDTLS_BUILD_DIR }}'
-       ignore_error: true  
+     - cmd: '{{ .RMDIR }} "{{ .MBEDTLS_BUILD_DIR }}"'
+       ignore_error: true
 
      - cmd: cmake 
         -S '{{ .MBEDTLS_SRC_DIR }}' 
@@ -309,15 +271,17 @@ tasks:
   # called by Module.taskfile to run tests
   ci-test:
     vars:
-      CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS'
-      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/mbedtls'
-      DEFAULT_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/default'
+      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/mbedtls'
+      DEFAULT_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/default'
     deps:
       - task: ci-configure-default
         vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}' }
       - task: ci-configure-mbedtls
         vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}' }    
     cmds:
+     #cleanup build directories after testing
+     - defer: '{{ ._RMDIR }} "{{ .CMAKE_BUILD_DIR }}/test"'
+
      - task: ci-test-default
        vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}'}#
 
@@ -359,7 +323,7 @@ tasks:
     
     cmds:
     #remove deps dir to avoid conflicts with vnbuild
-     - defer: powershell rm -Recurse -Force "{{ .BUILD_DIR }}/_deps"
+     - defer: '{{ ._RMDIR }} "{{ .BUILD_DIR }}/_deps"'
 
      #run configure and compile commands 
      - task: cmake-build
@@ -379,8 +343,7 @@ tasks:
   build:
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
-     - task: mkdir
-       vars: { DIR: 'bin/' }
+     - cmd: '{{ ._MKDIR }} {{ .BINARY_DIR }}'
   
      #build windows x64
      - task: ci-build-win_x64
@@ -437,7 +400,7 @@ tasks:
   dev-update-deps:
      desc: "Updates vendored projects files (headers mostly) from their source repositories to the configured version"
      cmds:
-      - defer: powershell rm -Recurse '.update/' -Force
+      - defer: '{{ ._RMDIR }} .update/'
   
       #must run serially since git does not support mutliple instances
       - task: dev-update-monocypher
@@ -452,10 +415,10 @@ tasks:
       MC_DIR: 'vendor/monocypher'
       TMP_DIR: '.update/mc'
     cmds:
-     - cmd: powershell mkdir '{{ .TMP_DIR }}' -Force
+     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
      
-     - git clone --branch {{ .MC_GIT_BRANCH }} {{ .MC_GIT_URL }} '{{ .TMP_DIR }}' 
+     - cmd: git clone --depth 1 --branch {{ .MC_GIT_BRANCH }} {{ .MC_GIT_URL }} '{{ .TMP_DIR }}' 
 
      - for: [ 'src/monocypher.h', 'src/monocypher.c' ]
        cmd: powershell cp '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .MC_DIR }}'
@@ -463,14 +426,14 @@ tasks:
   dev-update-mbedtls-headers:
     vars:
       MBEDTLS_GIT_URL: 'https://github.com/Mbed-TLS/mbedtls'
-      MBEDTLS_GIT_BRANCH: 'v3.6.2'
+      MBEDTLS_GIT_BRANCH: 'v{{ .MBEDTLS_VERSION }}'
       MBEDTLS_DIR: 'vendor/mbedtls'
       TMP_DIR: '.update/mbedtls'
     cmds:
-     - cmd: powershell mkdir '{{ .TMP_DIR }}' -Force
+     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
 
-     - git clone --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
+     - cmd: git clone --depth 1 --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
 
      - for: [ 'include/mbedtls' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .MBEDTLS_DIR }}'
@@ -482,12 +445,12 @@ tasks:
       OPENSSL_DIR: 'vendor/openssl'
       TMP_DIR: '.update/openssl'
     cmds:
-     - cmd: powershell mkdir '{{ .TMP_DIR }}' -Force
+     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
      
-     - git clone --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
+     - cmd: git clone --depth 1 --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
      
-     - for: [ 'include/openssl' ]
+     - for: [ 'include/openssl/*' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .OPENSSL_DIR }}'
 
   dev-set-secp256-headers:
@@ -497,10 +460,10 @@ tasks:
       SECP256_DIR: 'vendor/secp256k1'
       TMP_DIR: '.update/secp256k1'
     cmds:
-     - cmd: powershell mkdir '{{ .TMP_DIR }}' -Force
+     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
      
-     - git clone --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
+     - cmd: git clone --depth 1 --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
      
      - for: [ 'include/*' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .SECP256_DIR }}'
