@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security policy for the module
 - Valgrind memory checking during unit testing
 - Added fully automated integration testing for Windows and Linux deployments
-
+- Automated tests for all crypto backends (MbedTLS, OpenSSL, BCrypt)
+  
 ### Fixed
 - [#9](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?id=53) - Convert all OpenSSL apis to use the EVP api and unify it's usage. Also fixes some detected memory leaks that were undocumented.
 
@@ -25,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated OpenSSL to v3.4.0
 - Updated MbedTLS to v3.6.2
 - Updated libsecp256k1 to v0.6.0
+
+### Removed
+- The NC_FETCH_MBEDTLS directive for fetching MbedTLS during build. MbedTLS must be manually installed for the build to succeed. The Taskfile has been updated to handle the installation for users.
 
 ## [0.1.5]
 

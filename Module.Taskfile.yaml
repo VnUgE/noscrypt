@@ -22,19 +22,10 @@ tasks:
   test:
     desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
     cmds:
-     #ensure the debug library has been built for the current system before project tests are executed
-     - cmd: task build-debug -- -DNC_ENABLE_UTILS=ON
-     #library is already built, just need to test it
-     - cmd: task test-dev 
-     - task: test-dotnet     
-  
-     #runs the test suite inside wsl linux environment
-     - cmd: echo 'Running WSL tests {{ if eq OS "windows" }}TRUE{{ else }}FALSE{{ end }}'
-       silent: true   
-     - cmd: wsl task test -- -DNC_ENABLE_UTILS=ON
-       platforms: [ windows ]
-     #run memory check
-     - cmd: wsl task memcheck
+     #run CI tests with utils enabled
+     - cmd: task ci-test
+     - cmd: wsl task ci-test
+     - task: test-dotnet  
 
   test-dotnet:
     vars:
@@ -42,12 +33,15 @@ tasks:
       LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
     
     cmds:
+     #build the debug library with utils enabled
+     - cmd: task build-debug -- -DNC_ENABLE_UTILS=ON        
+  
      - cmd: echo "running tests for {{ .PROJECT_NAME }}" 
        silent: true
      - cmd: dotnet test 
         {{ .CLI_ARGS }}
         --logger "console;verbosity=detailed"
-        --framework {{ .FRAMEWORK | default "net8.0" }}   
+        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}   
         --configuration {{ .CONFIGURATION | default "Debug" }}     
         --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
         --environment 'NOSCRYPT_DLL_PATH="{{ osClean .LIB_PATH }}"'
@@ -59,13 +53,13 @@ tasks:
   publish:
     cmds:
      #git archive in the module directory
-     - git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
+     - cmd: git archive --format {{ .ARCHIVE_FILE_FORMAT }} --output {{ .ARCHIVE_FILE_NAME }} HEAD
 
   #called by build pipeline to clean module
   clean:
     cmds:
      #clean solution
-     - cmd: powershell -Command "rm out/ -Recurse "
+     - cmd: powershell rm -Recurse 'out/'
        ignore_error: true
 
 
