@@ -19,7 +19,7 @@ using System.Runtime.InteropServices;
 
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 
@@ -32,8 +32,43 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
          * the Noscrypt utility side-car library. 
          */
 
+
+        /// <summary>
+        /// Gets the padded size of the input data for the desired cipher version
+        /// </summary>
+        /// <param name="ctx">The library context object</param>
+        /// <param name="version">The encryption version to calculate padding for</param>
+        /// <param name="size">The size of the input data in bytes</param>
+        /// <returns>The padded size of the input data</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="NotSupportedException"></exception>
+        public static uint GetPaddedSize(NCContext ctx, uint version, uint size)
+        {
+            ArgumentNullException.ThrowIfNull(ctx);
+
+            NCResult result = GetTable(ctx).NCUtilGetEncryptionPaddedSize(version, size);
+
+            NCUtil.CheckResult<FunctionTable.NCUtilGetEncryptionPaddedSizeDelegate>(result, raiseOnFailure: true);
+
+            return checked((uint)result);
+        }
+
+        /// <summary>
+        /// Gets the padded size of the input data for the desired cipher version
+        /// </summary>
+        /// <param name="ctx">The library context object</param>
+        /// <param name="version">The encryption version to calculate padding for</param>
+        /// <param name="size">The size of the input data in bytes</param>
+        /// <returns>The padded size of the input data</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static uint GetPaddedSize(NCContext ctx, NoscryptCipherVersion version, uint size)
+            => GetPaddedSize(ctx, (uint)version, size);
+
         internal static nint Alloc(NCContext ctx, uint version, uint flags)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+
             nint cipher = GetTable(ctx).NCUtilCipherAlloc(version, flags);
 
             if (cipher == nint.Zero)
@@ -49,6 +84,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static uint GetFlags(NCContext ctx, nint cipher)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             NCResult result = GetTable(ctx).NCUtilCipherGetFlags(cipher);
 
             NCUtil.CheckResult<FunctionTable.NCUtilCipherGetFlagsDelegate>(result, raiseOnFailure: true);
@@ -60,6 +99,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static int GetIvSize(NCContext ctx, nint cipher)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             NCResult result = GetTable(ctx).NCUtilCipherGetIvSize(cipher);
 
             NCUtil.CheckResult<FunctionTable.NCUtilCipherGetIvSizeDelegate>(result, raiseOnFailure: true);
@@ -69,6 +112,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static void SetProperty(NCContext ctx, nint cipher, uint property, ref readonly byte value, uint valueLen)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             fixed (byte* valPtr = &value)
             {
                 NCResult result = GetTable(ctx).NCUtilCipherSetProperty(cipher, property, valPtr, valueLen);
@@ -79,6 +126,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static uint GetOutputSize(NCContext ctx, nint cipher)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             NCResult result = GetTable(ctx).NCUtilCipherGetOutputSize(cipher);
 
             NCUtil.CheckResult<FunctionTable.NCUtilCipherGetOutputSizeDelegate>(result, raiseOnFailure: true);
@@ -88,6 +139,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static uint ReadOutput(NCContext ctx, nint cipher, ref byte outputData, uint outLen)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             fixed (byte* outPtr = &outputData)
             {
                 NCResult result = GetTable(ctx).NCUtilCipherReadOutput(cipher, outPtr, outLen);
@@ -100,6 +155,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 
         internal static void InitCipher(NCContext ctx, nint cipher, byte* inputPtr, uint inputSize)
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             NCResult result = GetTable(ctx).NCUtilCipherInit(cipher, inputPtr, inputSize);
 
             NCUtil.CheckResult<FunctionTable.NCUtilCipherInitDelegate>(result, raiseOnFailure: true);
@@ -112,6 +171,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             ref readonly NCPublicKey remoteKey
         )
         {
+            //Sanity checks, the library will guard at runtime, just a little uglier
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             fixed (NCSecretKey* sk = &localKey)
             fixed (NCPublicKey* pk = &remoteKey)
             {

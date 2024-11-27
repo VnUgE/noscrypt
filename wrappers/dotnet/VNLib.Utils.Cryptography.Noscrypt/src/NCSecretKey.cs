@@ -16,7 +16,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
@@ -24,14 +24,19 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// Represents an nostr variant of a secp265k1 secret key that matches 
     /// the size of the native library
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = NC_SEC_KEY_SIZE)]
+    [StructLayout(LayoutKind.Sequential, Size = Size)]
     public unsafe struct NCSecretKey
     {
+        /// <summary>
+        /// The size of the secret key in bytes
+        /// </summary>
+        public const int Size = NC_SEC_KEY_SIZE;
+
         /// <summary>
         /// Gets a null reference to a secret key
         /// </summary>
         public static ref NCSecretKey NullRef => ref Unsafe.NullRef<NCSecretKey>();
 
-        private fixed byte key[NC_SEC_KEY_SIZE];       
+        private fixed byte key[Size];
     }
 }

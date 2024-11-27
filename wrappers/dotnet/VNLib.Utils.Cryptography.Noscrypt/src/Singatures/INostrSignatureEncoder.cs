@@ -15,17 +15,19 @@
 
 using System;
 
-namespace VNLib.Utils.Cryptography.Noscrypt
+namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
 {
-    public sealed class HexSignatureEncoder : INostrSignatureEncoder
+    /// <summary>
+    /// Encodes a message signature into it's string representation
+    /// </summary>
+    public interface INostrSignatureEncoder
     {
         /// <summary>
-        /// Shared formatter instance for hex signatures
+        /// Creates a string of the encoded signature data
         /// </summary>
-        public static HexSignatureEncoder Instance { get; } = new HexSignatureEncoder();
-
-        ///<inheritdoc/>
-        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToHexString(signature);
+        /// <param name="signature">The signature data to encode into the string</param>
+        /// <returns>The encoded signature string</returns>
+        string GetString(ReadOnlySpan<byte> signature);
     }
 
 }

@@ -30,11 +30,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 {
 
     /// <summary>
-    /// Initializes the native library and provides access to the native functions
+    /// The ultimate wrapper for the noscrypt native library that provides
+    /// access to the low-level functions and utilities provided by the library.
     /// </summary>
     /// <param name="Library">An existing noscrypt library handle</param>
     /// <param name="OwnsHandle">A value that indicates if the instance owns the library handle</param>
-    public unsafe sealed class NoscryptLibrary(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
+    public unsafe sealed class Noscrypt(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
     {
         public const string NoscryptDefaultLibraryName = "noscrypt";
         public const string NoscryptDllPathEnvName = "NOSCRYPT_DLL_PATH";
@@ -120,18 +121,15 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext Initialize(IUnmangedHeap heap, ref readonly byte entropy32, int size)
+        public NCContext AllocContext(ref readonly byte entropy32, int size, IUnmangedHeap? heap = null)
         {
-            ArgumentNullException.ThrowIfNull(heap);
+            heap ??= MemoryUtil.Shared;
 
             //Entropy must be exactly 32 bytes
             ArgumentOutOfRangeException.ThrowIfNotEqual(size, NC_CTX_ENTROPY_SIZE);
 
-            //Get struct size
-            nuint ctxSize = Functions.NCGetContextStructSize.Invoke();
-
             //Allocate the context with the struct alignment on a heap
-            IntPtr ctx = heap.Alloc(1, ctxSize, true);
+            IntPtr ctx = heap.Alloc(1, GetContextSize(), zero: true);
             try
             {
                 NCResult result;
@@ -140,7 +138,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
                     result = Functions.NCInitContext.Invoke(ctx, p);
                 }
 
-                NCUtil.CheckResult<FunctionTable.NCInitContextDelegate>(result, true);
+                NCUtil.CheckResult<FunctionTable.NCInitContextDelegate>(result, raiseOnFailure: true);
 
                 Trace.WriteLine($"Initialzied noscrypt context 0x{ctx:x}");
 
@@ -163,12 +161,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext Initialize(IUnmangedHeap heap, ReadOnlySpan<byte> enropy32)
+        public NCContext AllocContext(ReadOnlySpan<byte> enropy32, IUnmangedHeap? heap = null)
         {
-            return Initialize(
-                heap,
+            return AllocContext(
                 ref MemoryMarshal.GetReference(enropy32),
-                enropy32.Length
+                enropy32.Length,
+                heap
             );
         }
 
@@ -182,17 +180,25 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext Initialize(IUnmangedHeap heap, IRandomSource random)
+        public NCContext AllocContext(IRandomSource random, IUnmangedHeap? heap = null)
         {
             ArgumentNullException.ThrowIfNull(random);
 
-            //Get random bytes for context entropy
-            Span<byte> entropy = stackalloc byte[NC_CTX_ENTROPY_SIZE];
-            random.GetRandomBytes(entropy);
+            using UnsafeMemoryHandle<byte> entropyBuffer = (heap ?? MemoryUtil.Shared)
+                .UnsafeAlloc<byte>(NC_CTX_ENTROPY_SIZE, zero: true);
+          
+            random.GetRandomBytes(entropyBuffer.Span);
 
-            return Initialize(heap, entropy);
+            return AllocContext(entropyBuffer.Span, heap);
         }
-      
+
+        /// <summary>
+        /// Gets the size of the context structure in bytes defined by the 
+        /// library
+        /// </summary>
+        /// <returns>The size of the noscrypt context structure in bytes</returns>
+        private uint GetContextSize() => Functions.NCGetContextStructSize.Invoke();
+
         ///<inheritdoc/>
         protected override void Free()
         {
@@ -211,7 +217,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="search">The search path options</param>
         /// <returns>The loaded library instance</returns>
         /// <exception cref="DllNotFoundException"></exception>
-        public static NoscryptLibrary Load(string path, DllImportSearchPath search)
+        public static Noscrypt LoadLibrary(string path, DllImportSearchPath search)
         {
             //Load the native library
             SafeLibraryHandle handle = SafeLibraryHandle.LoadLibrary(path, search);
@@ -219,7 +225,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             Trace.WriteLine($"Loaded noscrypt library 0x{handle.DangerousGetHandle():x} from {path}");
 
             //Create the wrapper
-            return new NoscryptLibrary(handle, true);
+            return new Noscrypt(handle, true);
         }
 
         /// <summary>
@@ -229,14 +235,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="path">The native library path or name to load</param>
         /// <returns>The loaded library instance</returns>
         /// <exception cref="DllNotFoundException"></exception>
-        public static NoscryptLibrary Load(string path) => Load(path, DllImportSearchPath.SafeDirectories);
+        public static Noscrypt LoadLibrary(string path) => LoadLibrary(path, DllImportSearchPath.SafeDirectories);
 
         /// <summary>
         /// Attempts to load the default noscrypt library from the system search path
         /// </summary>
         /// <returns>The loaded library instance</returns>
         /// <exception cref="DllNotFoundException"></exception>
-        public static NoscryptLibrary LoadDefault()
+        public static Noscrypt LoadDefaultLibrary()
         {
             string? libPath = Environment.GetEnvironmentVariable(NoscryptDllPathEnvName);
             libPath ??= NoscryptDefaultLibraryName;
@@ -245,7 +251,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
             libPath = libPath.Replace("\"", "");
 
-            return Load(libPath);
+            return LoadLibrary(libPath);
         }
     }  
 }

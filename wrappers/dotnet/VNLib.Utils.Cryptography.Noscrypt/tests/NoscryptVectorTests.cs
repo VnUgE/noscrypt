@@ -17,21 +17,21 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         const string Nip44VectorTestFile = "nip44.vectors.json";
 
 #nullable disable
-        private NoscryptLibrary _testLib;
+        private Noscrypt _testLib;
         private JsonDocument _testVectors;
 #nullable enable
 
         [TestInitialize]
         public void Initialize()
         {
-            _testLib = NoscryptLibrary.LoadDefault();
+            _testLib = Noscrypt.LoadDefaultLibrary();
             _testVectors = JsonDocument.Parse(File.ReadAllText(Nip44VectorTestFile));
         }
 
         [TestMethod()]
         public void CorrectEncryptionTest()
         {
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
             using NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault);
 
             using IMemoryHandle<byte> ctBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
@@ -76,7 +76,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestMethod()]
         public void CorrectDecryptionTest()
         {
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
             using NoscryptMessageCipher msgCipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.DecryptDefault);
 
             using IMemoryHandle<byte> ptBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
@@ -117,13 +117,43 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         }
 
 
+        [TestMethod()]
+        public void InvalidPlaintextSizes()
+        {
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
+            using NoscryptMessageCipher msgCipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault);
+
+            NCPublicKey pubkey;
+            NCSecretKey secKey;
+            byte testByte = 0;
+
+            NCFallbackRandom.Shared.GetRandomBytes(NCKeyUtil.AsSpan(ref secKey));
+            NCKeyUtil.GetPublicKey(context, in secKey, ref pubkey);
+            msgCipher.SetRandomIv(NCFallbackRandom.Shared);
+
+            //update performs the decryption operation (mac is also verified by default)
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 0));
+
+            //Should be fine
+            msgCipher.Update(in secKey, in pubkey, in testByte, 1);
+
+            /*
+             *  65536 is too large of a plaintext message and should fail before 
+             *  the pointer is dereferences/read from. Otherwise this will probably 
+             *  cause a segfault.
+             */
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 65536));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 100000));
+        }
+
+
         //Converstation key is only available in debug builds
 #if DEBUG
 
         [TestMethod()]
         public void ConverstationKeyTest()
         {
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
             Span<byte> convKeyOut = stackalloc byte[32];
 
@@ -150,6 +180,22 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         }
 #endif
 
+        [TestMethod()]
+        public void PaddingTest()
+        {
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
+
+            foreach (uint[] vector in GetPaddingVectors())
+            {
+                uint inputSize = vector[0];
+                uint desiredPaddingSize = vector[1];
+
+                uint actualSize = NCCipherUtil.GetPaddedSize(context, NoscryptCipherVersion.Nip44, inputSize);
+
+                Assert.AreEqual<uint>(desiredPaddingSize, actualSize);
+            }
+        }
+
         private EncryptionVector[] GetEncryptionVectors()
         {
             return _testVectors.RootElement.GetProperty("v2")
@@ -157,6 +203,26 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 .GetProperty("encrypt_decrypt")
                 .EnumerateArray()
                 .Select(v => v.Deserialize<EncryptionVector>()!)
+                .ToArray();
+        }
+
+        private uint[][] GetPaddingVectors()
+        {
+            return _testVectors.RootElement.GetProperty("v2")
+                .GetProperty("valid")
+                .GetProperty("calc_padded_len")
+                .EnumerateArray()
+                .Select(v => v.Deserialize<uint[]>()!)
+                .ToArray();
+        }
+
+        private InvalidDecryptVector[] GetInvalidDecryptVectors()
+        {
+            return _testVectors.RootElement.GetProperty("v2")
+                .GetProperty("invalid")
+                .GetProperty("decrypt")
+                .EnumerateArray()
+                .Select(v => v.Deserialize<InvalidDecryptVector>()!)
                 .ToArray();
         }
 
@@ -169,17 +235,31 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 
         private sealed class EncryptionVector
         {
-            public string sec1 { get; set; } = string.Empty;
+            public required string sec1 { get; set; }
 
-            public string sec2 { get; set; } = string.Empty;
+            public required string sec2 { get; set; }
 
-            public string nonce { get; set; } = string.Empty;
+            public required string nonce { get; set; }
 
-            public string plaintext { get; set; } = string.Empty;
+            public required string plaintext { get; set; }
 
-            public string payload { get; set; } = string.Empty;
+            public required string payload { get; set; }
 
-            public string conversation_key { get; set; } = string.Empty;
+            public required string conversation_key { get; set; }
         }
+
+        private sealed class InvalidDecryptVector
+        {
+            public required string conversation_key { get; set; }
+            
+            public required string plaintext { get; set; }
+
+            public required string payload { get; set; }
+
+            public required string nonce { get; set; }
+
+            public required string note { get; set; }
+        }
+
     }
 }

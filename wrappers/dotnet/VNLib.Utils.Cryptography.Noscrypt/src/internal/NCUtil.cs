@@ -15,7 +15,7 @@
 
 using System;
 using System.Reflection;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 
@@ -59,6 +59,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
                     break;
                 case NCErrorCodes.E_VERSION_NOT_SUPPORTED:
                     throw new NotSupportedException("The requested version is not supported");
+
+                case NCErrorCodes.E_CIPHER_BAD_INPUT:
+                    throw new ArgumentException("The cipher input buffer is invalid or null");
+                case NCErrorCodes.E_CIPHER_BAD_INPUT_SIZE:
+                    throw new ArgumentOutOfRangeException("The cipher input buffer was too small or large for the configured cipher mode");
 
                 default:
                     if (raiseOnFailure)

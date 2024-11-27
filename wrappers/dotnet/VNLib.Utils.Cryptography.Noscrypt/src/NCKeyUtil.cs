@@ -19,7 +19,7 @@ using System.Runtime.CompilerServices;
 
 using VNLib.Utils.Extensions;
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 
@@ -34,13 +34,20 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// Gets a span of bytes from the current secret key 
         /// structure
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns>The secret key data span</returns>
-        public unsafe static Span<byte> AsSpan(this ref NCSecretKey key)
+        /// <param name="key">A reference to the secret key instance</param>
+        /// <returns>The secret key data span, or an empty span if a null reference is passed</returns>
+        public static Span<byte> AsSpan(ref NCSecretKey key)
         {
+            if (Unsafe.IsNullRef(in key))
+            {
+                return default;
+            }
+
             //Safe to cast secret key to bytes, then we can make a span to its memory
-            ref byte asBytes = ref Unsafe.As<NCSecretKey, byte>(ref key);
-            return MemoryMarshal.CreateSpan(ref asBytes, sizeof(NCSecretKey));
+            return MemoryMarshal.CreateSpan(
+                ref Unsafe.As<NCSecretKey, byte>(ref key), 
+                NCSecretKey.Size
+            );
         }
 
         /// <summary>
@@ -48,13 +55,40 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// structure
         /// </summary>
         /// <param name="key"></param>
-        /// <returns>The public key data as a data span</returns>
-        public unsafe static Span<byte> AsSpan(this ref NCPublicKey key)
+        /// <returns>The public key data as a data span, or an empty span if a null reference is passed</returns>
+        public static Span<byte> AsSpan(ref NCPublicKey key)
         {
+            if(Unsafe.IsNullRef(in key))
+            {
+                return default;
+            }
+
             //Safe to cast secret key to bytes, then we can make a span to its memory
-            ref byte asBytes = ref Unsafe.As<NCPublicKey, byte>(ref key);
-            return MemoryMarshal.CreateSpan(ref asBytes, sizeof(NCPublicKey));
+            return MemoryMarshal.CreateSpan(
+                ref Unsafe.As<NCPublicKey, byte>(ref key),
+                NCPublicKey.Size
+            );
         }
+
+        /// <summary>
+        /// Gets a span of bytes from the current secret key 
+        /// structure
+        /// </summary>
+        /// <param name="key">A readonly reference to the key structure</param>
+        /// <returns>The secret key data span, or an empty span if a null reference is passed</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ReadOnlySpan<byte> AsReadonlySpan(ref readonly NCSecretKey key) 
+            => AsSpan(ref Unsafe.AsRef(in key));
+
+        /// <summary>
+        /// Gets a span of bytes from the current public key
+        /// structure
+        /// </summary>
+        /// <param name="key">A readonly reference to the key structure</param>
+        /// <returns>The public key data as a data span, or an empty span if a null reference is passed</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Span<byte> AsReadonlySpan(ref readonly NCPublicKey key)
+            => AsSpan(ref Unsafe.AsRef(in key));
 
         /// <summary>
         /// Casts a span of bytes to a secret key reference. Note that
@@ -64,13 +98,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="span">The secret key data</param>
         /// <returns>A mutable secret key reference</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public unsafe static ref NCSecretKey AsSecretKey(Span<byte> span)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(span.Length, sizeof(NCSecretKey), nameof(span));
-
-            ref byte asBytes = ref MemoryMarshal.GetReference(span);
-            return ref Unsafe.As<byte, NCSecretKey>(ref asBytes);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref NCSecretKey AsSecretKey(Span<byte> span)
+            => ref MemoryMarshal.AsRef<NCSecretKey>(span);
 
         /// <summary>
         /// Casts a span of bytes to a public key reference. Note that
@@ -80,13 +110,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="span">The public key data span</param>
         /// <returns>A mutable reference to the public key structure</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public unsafe static ref NCPublicKey AsPublicKey(Span<byte> span)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(span.Length, sizeof(NCPublicKey), nameof(span));
-
-            ref byte asBytes = ref MemoryMarshal.GetReference(span);
-            return ref Unsafe.As<byte, NCPublicKey>(ref asBytes);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref NCPublicKey AsPublicKey(Span<byte> span) 
+            => ref MemoryMarshal.AsRef<NCPublicKey>(span);
 
         /// <summary>
         /// Casts a read-only span of bytes to a secret key reference. Note that
@@ -95,13 +121,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="span">The secret key data span</param>
         /// <returns>A readonly refernce to the secret key structure</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public unsafe static ref readonly NCSecretKey AsSecretKey(ReadOnlySpan<byte> span)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(span.Length, sizeof(NCSecretKey), nameof(span));
-
-            ref byte asBytes = ref MemoryMarshal.GetReference(span);
-            return ref Unsafe.As<byte, NCSecretKey>(ref asBytes);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref readonly NCSecretKey AsSecretKey(ReadOnlySpan<byte> span) 
+            => ref MemoryMarshal.AsRef<NCSecretKey>(span);
 
         /// <summary>
         /// Casts a read-only span of bytes to a public key reference. Note that
@@ -110,17 +132,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="span">The public key data span</param>
         /// <returns>A readonly reference to the public key structure</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public unsafe static ref readonly NCPublicKey AsPublicKey(ReadOnlySpan<byte> span)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan(span.Length, sizeof(NCPublicKey), nameof(span));
-
-            ref byte asBytes = ref MemoryMarshal.GetReference(span);
-            return ref Unsafe.As<byte, NCPublicKey>(ref asBytes);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ref readonly NCPublicKey AsPublicKey(ReadOnlySpan<byte> span) 
+            => ref MemoryMarshal.AsRef<NCPublicKey>(span);
 
         /// <summary>
         /// Gets a nostr public key from a secret key.
         /// </summary>
+        /// <param name="context">The noscrypt library context object</param>
         /// <param name="secretKey">A reference to the secret key to get the public key from</param>
         /// <param name="publicKey">A reference to the public key structure to write the recovered key to</param>
         /// <exception cref="ArgumentException"></exception>
@@ -147,16 +166,30 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         }
 
         /// <summary>
+        /// Gets a nostr public key from a secret key.
+        /// </summary>
+        /// <param name="context">The noscrypt library context object</param>
+        /// <param name="secretKey">A buffer pointing to the initialized secret key</param>
+        /// <param name="publicKey">A buffer pointing to memory to write the public key data to</param>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static void GetPublicKey(NCContext context, ReadOnlySpan<byte> secretKey, Span<byte> publicKey)
+        {
+            GetPublicKey(
+                context,
+                in AsSecretKey(secretKey),
+                ref AsPublicKey(publicKey)
+            );
+        }
+
+        /// <summary>
         /// Validates a secret key is in a valid format. 
         /// </summary>
         /// <param name="secretKey">A readonly reference to key structure to validate</param>
         /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public static bool ValidateSecretKey(
-            NCContext context,
-            ref readonly NCSecretKey secretKey
-        )
+        public static bool ValidateSecretKey(NCContext context, ref readonly NCSecretKey secretKey)
         {
             Check(context);
 
@@ -173,6 +206,18 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             }
         }
 
+        /// <summary>
+        /// Validates a secret key is in a valid format. 
+        /// </summary>
+        /// <param name="context">The noscrypt library context object</param>
+        /// <param name="secretKey">A readonly buffer to the secret structure. Must be at least <see cref="NCSecretKey.Size"/></param>
+        /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static bool ValidateSecretKey(NCContext context, ReadOnlySpan<byte> secretKey) 
+            => ValidateSecretKey(context, in AsSecretKey(secretKey));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void Check(NCContext? context)
         {
             ArgumentNullException.ThrowIfNull(context);

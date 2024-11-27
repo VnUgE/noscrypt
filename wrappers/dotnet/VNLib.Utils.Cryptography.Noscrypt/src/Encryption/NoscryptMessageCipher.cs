@@ -15,14 +15,17 @@
 
 using System;
 using System.Threading;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Microsoft.Win32.SafeHandles;
 
 using VNLib.Utils.Memory;
+using VNLib.Utils.Extensions;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
+
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 {
@@ -41,6 +44,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         private NoscryptMessageCipher(NCContext ctx, nint cipher, NoscryptCipherVersion version) 
             : base(ownsHandle: true)
         {
+            Debug.Assert(ctx != null);
+            Debug.Assert(cipher != 0);
+
             SetHandle(cipher);
             _context = ctx;
             _version = version;
@@ -55,6 +61,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// <returns>A new <see cref="NoscryptMessageCipher"/> instance</returns>
         public static NoscryptMessageCipher Create(NCContext context, NoscryptCipherVersion version, NoscryptCipherFlags flags)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
             return new(
                 context,
                 NCCipherUtil.Alloc(context, (uint)version, (uint)flags),
@@ -134,6 +142,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
                 throw new ArgumentNullException(nameof(inputData));
             }
 
+            _context.ThrowIfClosed();
+
             /*
              * Initializing the cipher requires the context holding a pointer
              * to the input data, so it has to be pinned in a fixed statment 
@@ -144,6 +154,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
              * If ciphers have the Reusable flag set this function may be called
              * repeatedly. The results of this operation can be considered
              * independent.
+             * 
+             * Technically the internal cipher will still hold a pointer to the input
+             * data, so this could be dangerous, but update should never be called
+             * outside this function.
              */
 
             fixed (byte* inputPtr = &inputData)
@@ -227,11 +241,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
                  * nor worry about the GC moving the buffer.
                  */
                 NCCipherUtil.SetProperty(
-                   _context,
-                   DangerousGetHandle(),
-                   NC_ENC_SET_IV,
-                   ref buffer.GetReference(),
-                   (uint)buffer.Length
+                   ctx: _context,
+                   cipher: DangerousGetHandle(),
+                   property: NC_ENC_SET_IV,
+                   value: ref buffer.GetReference(),
+                   valueLen: (uint)buffer.Length
                );
             }
             catch

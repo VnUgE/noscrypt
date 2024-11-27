@@ -43,6 +43,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
         public readonly NCUtilCipherSetPropertyDelegate NCUtilCipherSetProperty;
         public readonly NCUtilCipherUpdateDelegate NCUtilCipherUpdate;
         public readonly NCUtilCipherGetIvSizeDelegate NCUtilCipherGetIvSize;
+        public readonly NCUtilGetEncryptionPaddedSizeDelegate NCUtilGetEncryptionPaddedSize;
 
 
 #if DEBUG
@@ -73,6 +74,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             NCUtilCipherSetProperty = library.DangerousGetFunction<NCUtilCipherSetPropertyDelegate>();
             NCUtilCipherUpdate = library.DangerousGetFunction<NCUtilCipherUpdateDelegate>();
             NCUtilCipherGetIvSize = library.DangerousGetFunction<NCUtilCipherGetIvSizeDelegate>();
+
+            //Helper cipher util
+            NCUtilGetEncryptionPaddedSize = library.DangerousGetFunction<NCUtilGetEncryptionPaddedSizeDelegate>();
 
 #if DEBUG
             NCGetConversationKey = library.DangerousGetFunction<NCGetConversationKeyDelegate>();
@@ -151,5 +155,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
 
         [SafeMethodName("NCUtilCipherGetIvSize")]
         internal delegate NCResult NCUtilCipherGetIvSizeDelegate(IntPtr cipher);
+
+        //Cipher helpers
+        [SafeMethodName("NCUtilGetEncryptionPaddedSize")]
+        internal delegate NCResult NCUtilGetEncryptionPaddedSizeDelegate(uint version, uint dataSize);
     }
 }

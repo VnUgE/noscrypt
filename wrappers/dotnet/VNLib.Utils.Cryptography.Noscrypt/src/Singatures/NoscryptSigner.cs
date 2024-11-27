@@ -17,9 +17,8 @@ using System;
 
 using VNLib.Utils.Memory;
 using VNLib.Utils.Extensions;
-using VNLib.Utils.Cryptography.Noscrypt;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
 {
@@ -38,7 +37,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         public static int SignatureBufferSize => NC_SIGNATURE_SIZE;
 
         /// <summary>
-        /// Signs a message using the specified private key and message data
+        /// Signs a message using the specified private key and message data. If a signature encoder
+        /// is not specified, hexadecimal encoding is used.
         /// </summary>
         /// <param name="hexPrivateKey">The hexadecimal private key used to sign the message</param>
         /// <param name="message">The message data to sign</param>
@@ -65,7 +65,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         }
 
         /// <summary>
-        /// Signs a message using the specified secret key and message data
+        /// Signs a message using the specified secret key and message data. If a signature encoder
+        /// is not specified, hexadecimal encoding is used.
         /// </summary>
         /// <param name="secretKey">The secret key data buffer</param>
         /// <param name="message">The message data to sign</param>
@@ -87,7 +88,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         }
 
         /// <summary>
-        /// Signs a message using the specified secret key and message data
+        /// Signs a message using the specified secret key and message data. If a signature encoder
+        /// is not specified, hexadecimal encoding is used.
         /// </summary>
         /// <param name="secretkey">A reference to the secret key structurer</param>
         /// <param name="message">The message data to sign</param>
@@ -133,34 +135,34 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
             random.GetRandomBytes(entropy);
 
             NCSignatureUtil.SignData(
-                context, 
-                in secretkey, 
-                entropy, 
-                data, 
-                signature
+                context: context, 
+                secretKey: in secretkey,
+                random32: entropy, 
+                data: data,
+                signatureBuffer: signature
             );
         }
 
         public bool VerifyData(
               ReadOnlySpan<byte> publicKey,
               ReadOnlySpan<byte> data,
-              ReadOnlySpan<byte> sig
+              ReadOnlySpan<byte> signature
           )
         {
             return VerifyData(
                 in NCKeyUtil.AsPublicKey(publicKey), 
                 data, 
-                sig
+                signature
             );
         }
 
         public bool VerifyData(
             ref readonly NCPublicKey pk, 
             ReadOnlySpan<byte> data, 
-            ReadOnlySpan<byte> sig
+            ReadOnlySpan<byte> signature
         )
         {
-            return NCSignatureUtil.VerifyData(context, in pk, data, sig);
+            return NCSignatureUtil.VerifyData(context, in pk, data, signature);
         }
     }
 

@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 
 using VNLib.Utils.Extensions;
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 

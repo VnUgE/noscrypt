@@ -17,21 +17,26 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
     /// Represents a user's secp256k1 public key for use with the Nostrcrypt library
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = NC_SEC_PUBKEY_SIZE)]
+    [StructLayout(LayoutKind.Sequential, Size = Size)]
     public unsafe struct NCPublicKey
     {
+        /// <summary>
+        /// The size of the public key in bytes
+        /// </summary>
+        public const int Size = NC_SEC_PUBKEY_SIZE;
+
         /// <summary>
         /// Gets a null <see cref="NCPublicKey"/> reference.
         /// </summary>
         public static ref NCPublicKey NullRef => ref Unsafe.NullRef<NCPublicKey>();
 
-        private fixed byte key[NC_SEC_PUBKEY_SIZE];
+        private fixed byte key[Size];
     }
 }

@@ -22,7 +22,7 @@ using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
-using static VNLib.Utils.Cryptography.Noscrypt.NoscryptLibrary;
+using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 
@@ -38,9 +38,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <summary>
         /// The library this context was created from
         /// </summary>
-        public NoscryptLibrary Library { get; }
+        public Noscrypt Library { get; }
 
-        internal NCContext(IntPtr handle, IUnmangedHeap heap, NoscryptLibrary library) :base(true)
+        internal NCContext(IntPtr handle, IUnmangedHeap heap, Noscrypt library) :base(ownsHandle: true)
         {
             ArgumentNullException.ThrowIfNull(heap);
             ArgumentNullException.ThrowIfNull(library);

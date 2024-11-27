@@ -18,20 +18,20 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         const string TestPublicKeyHex2 = "421181660af5d39eb95e48a0a66c41ae393ba94ffeca94703ef81afbed724e5a";
 
 #nullable disable
-        private NoscryptLibrary _testLib;
+        private Noscrypt _testLib;
 #nullable enable
 
         [TestInitialize]
         public void Initialize()
         {
-            _testLib = NoscryptLibrary.LoadDefault();
+            _testLib = Noscrypt.LoadDefaultLibrary();
         }
 
         [TestMethod()]
         public void InitializeTest()
         {
             //Init new context and interface
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
         }
 
         [TestMethod()]
@@ -41,10 +41,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             ReadOnlySpan<byte> secretKey = RandomHash.GetRandomBytes(32);
             Span<byte> publicKey = stackalloc byte[32];
 
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
             //validate the secret key
-            Assert.IsTrue(NCKeyUtil.ValidateSecretKey(context, in NCKeyUtil.AsSecretKey(secretKey)));
+            Assert.IsTrue(NCKeyUtil.ValidateSecretKey(context, secretKey));
 
             //Generate the public key
             NCKeyUtil.GetPublicKey(
@@ -60,7 +60,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestMethod()]
         public void TestGetPublicKey()
         {
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
             //Test known key 1
             TestKnownKeys(
@@ -89,7 +89,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 );
 
                 //Make sure known key matches the generated key
-                Assert.IsTrue(pubKey.AsSpan().SequenceEqual(kownPub));
+                Assert.IsTrue(NCKeyUtil.AsSpan(ref pubKey).SequenceEqual(kownPub));
             }
         }
 
@@ -97,7 +97,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         [TestMethod()]
         public void TestPublicApiArgValidations()
         {
-            using NCContext context = _testLib.Initialize(MemoryUtil.Shared, NCFallbackRandom.Shared);
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
             byte[] bin16 = new byte[16];
             byte[] bin32 = new byte[32];
@@ -107,6 +107,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 
             //noThrow (its a bad sec key but it should not throw)
             NCKeyUtil.ValidateSecretKey(context, in secKey);
+            /*
+             * The important part about this test is that, null references become null 
+             * pointers and the base library guards against null pointers
+             */
             Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(null!, ref NCSecretKey.NullRef));
             Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(context, ref NCSecretKey.NullRef));
 
