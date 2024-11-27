@@ -63,6 +63,8 @@ typedef struct nc_util_enc_struct NCUtilCipherContext;
 * @param encVersion The encryption specification version to use
 * @param plaintextSize The size of the plaintext buffer in bytes
 * @return The size of the padded buffer in bytes
+* @note This function does not guard against invalid messages sizes, it 
+* simply calculates required padding for the input size
 */
 NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint32_t plaintextSize);
 

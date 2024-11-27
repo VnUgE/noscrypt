@@ -444,7 +444,17 @@ Cleanup:
 
 NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPosition)
 {
-	return -(((NCResult)argPosition << NC_ARG_POSITION_OFFSET) | -err);
+	NCResult asPositive, argPos;
+
+	/* Negate error code so it can be masked off*/
+	asPositive = -err;
+	asPositive = asPositive & NC_ERROR_CODE_MASK;
+
+	/* Cast, and mask off and shift the argument psotion to the upper 8 bits */
+	argPos = (NCResult)(argPosition) & 0xFF;
+	argPos <<= NC_ARG_POSITION_OFFSET;
+
+	return -(asPositive | argPos);
 }
 
 NC_EXPORT int NC_CC NCParseErrorCode(NCResult result, uint8_t* argPositionOut)
@@ -943,7 +953,6 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->nonceData, 3)
-	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
 
 	result = E_OPERATION_FAILED;
 
@@ -951,6 +960,8 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	{
 	case NC_ENC_VERSION_NIP44:
 	{
+		CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+
 		if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 		{
 			goto Cleanup;
