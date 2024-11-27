@@ -90,6 +90,11 @@
 
 #endif /* NC_EXTREME_COMPAT */
 
+/*
+* By default empty spans are allowed, which means that 
+* spans can be created with a size of 0, and/or a null
+* data pointer. 
+*/
 #ifndef EMPTY_SPANS
 	#define EMPTY_SPANS 1
 #endif
