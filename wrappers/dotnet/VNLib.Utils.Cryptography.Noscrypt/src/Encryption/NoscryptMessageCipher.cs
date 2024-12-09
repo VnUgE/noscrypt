@@ -32,9 +32,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
     /// <summary>
     /// The noscrypt util cipher wapper 
     /// </summary>
-    /// <param name="ctx">A reference to the library context object</param>
-    /// <param name="cipher">A pointer to an existing cipher context that this instance owns</param>
-    /// <param name="version">The cipher specification version</param>
     public class NoscryptMessageCipher : SafeHandleMinusOneIsInvalid
     {
         private readonly NCContext _context;

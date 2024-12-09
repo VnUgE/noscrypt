@@ -332,6 +332,8 @@ _IMPLSTB cstatus_t _osslEvpInit(
 	DEBUG_ASSERT(providerName != NULL);
 
 	state->type = type;
+	state->_context = NULL;
+	state->_providerHandle = NULL;
 
 	switch (type)
 	{

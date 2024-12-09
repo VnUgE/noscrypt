@@ -15,9 +15,9 @@ tasks:
 #called by build pipeline to sync repo
   update:
     cmds:
-     - git reset --hard  
-     - git remote update
-     - git pull origin {{ .BRANCH_NAME }} --verify-signatures 
+     - cmd: git reset --hard  
+     - cmd: git remote update
+     - cmd: git pull origin {{ .BRANCH_NAME }} --verify-signatures 
 
   test:
     desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
@@ -48,8 +48,9 @@ tasks:
 
 #called by build pipeline to build module
   build:
-    cmds: []
-     
+    cmds:
+     - cmd: echo "building module {{ .MODULE_NAME }}"   
+
   publish:
     cmds:
      #git archive in the module directory
