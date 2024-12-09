@@ -14,8 +14,9 @@ version: '3'
 
 vars:
 
-  _RMDIR: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{else}}rm -rf{{end}}'
-  _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{else}}mkdir -p{{end}}'
+  #cross platform commands to make and remove directories
+  _RMDIR: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }}'
+  _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{ else }}mkdir -p{{ end }}'
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
 
   CMAKE_BUILD_DIR: 'build/{{ OS }}'
@@ -29,9 +30,37 @@ tasks:
 
   default:
     desc: "Build the library for your system"
+    summary: 
+      Builds Noscrypt for your system using safe defaults. The default configuration is
+      set to 'Release' and the test executable is not built. 
+      You may specify addtional arugments like this 'task -- -DNC_ENABLE_UTILS=ON'
     cmds:
      - task: cmake-build
-       vars: { CMAKE_TEST_STATUS: 'OFF', BUILD_CONFIG: 'Release' }
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         CMAKE_CONFIG_ARGS: '{{ .CMAKE_CONFIG_ARGS }} {{ .CLI_ARGS }}'
+         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
+         BUILD_CONFIG: '{{ .BUILD_CONFIG | default "Release" }}'
+
+  build-mbedtls:
+    desc: "Build the library linking against mbedls as a crypto backend"
+    summary: |
+      Downloads, configures, and compiles mbedtls, then builds noscrypt linking against mbedtls 
+      as a crypto backend. 
+      * WSL is required to extract the mbedtls archive on Windows. *
+    cmds:
+     - task: mbedtls-build
+       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
+
+     - task: default
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         BUILD_CONFIG: '{{ .BUILD_CONFIG | default "Release" }}'
+         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
+         CMAKE_CONFIG_ARGS: '
+          {{ .CMAKE_CONFIG_ARGS }}
+          -DCRYPTO_LIB=mbedtls
+          -DCRYPTO_LIB_DIR={{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
 
   build-debug:
     desc: "Build libraries and test executable in debug mode"
@@ -39,7 +68,7 @@ tasks:
       Runs the CMake configure and compile steps to build the library 
       and test executable in debug mode.
     cmds:
-     - task: cmake-build
+     - task: default
        vars: { CMAKE_TEST_STATUS: 'ON', BUILD_CONFIG: 'Debug' }
 
   #available to users and vnbuild runner
@@ -103,7 +132,6 @@ tasks:
         -B{{ .CMAKE_BUILD_DIR }} 
         -DCMAKE_BUILD_TYPE={{ .BUILD_CONFIG }} 
         -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }}
-        {{ .CLI_ARGS }} 
         {{ .CMAKE_CONFIG_ARGS }}
         
 
@@ -168,7 +196,7 @@ tasks:
     requires: { CMAKE_BUILD_DIR, MBEDTLS_VERSION }
     vars:
       MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-{{ .MBEDTLS_VERSION }}'
-      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-build'
+      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
      #clear build dir before re-configuring
@@ -191,7 +219,7 @@ tasks:
     internal: true
     requires: { CMAKE_BUILD_DIR }
     vars:
-      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-build'
+      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
     cmds:
      - cmd: cmake --build '{{ .MBEDTLS_BUILD_DIR }}' --config Release
     
@@ -213,80 +241,42 @@ tasks:
 #
 #################################
 
-  # runs the cmake setups to configure the mbedtls library build for testing
-  ci-configure-mbedtls:
-    internal: false
-    requires: { CMAKE_BUILD_DIR }
-    cmds:
-     - task: mbedtls-build
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
-
-     - task: cmake-build
-       vars: 
-         CMAKE_TEST_STATUS: 'ON'
-         BUILD_CONFIG: 'Debug'
-         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
-         CMAKE_CONFIG_ARGS: '
-          -DNC_ENABLE_UTILS=ON
-          -DCRYPTO_LIB=mbedtls
-          -DCRYPTO_LIB_DIR={{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-build'
-
-  # runs the cmake setups to configure the default library build for testing
-  ci-configure-default:
-    internal: true
-    requires: { CMAKE_BUILD_DIR }
-    cmds:
-     - task: cmake-build
-       vars: 
-         CMAKE_TEST_STATUS: 'ON'
-         BUILD_CONFIG: 'Debug'
-         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
-         CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
-
-  # runs cmake testing and memcheck on the mbedtls build
-  ci-test-mbedtls:
-    internal: false
-    requires: { CMAKE_BUILD_DIR }
-    cmds:
-     - task: cmake-test
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
-
-     #runs memcheck if the platform supports it
-     - task: memcheck
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
-
-  # runs cmake testing and memcheck on the default build
-  ci-test-default:
-    internal: true
-    requires: { CMAKE_BUILD_DIR }
-    cmds:
-
-     - task: cmake-test
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
-
-     #runs memcheck if the platform supports it
-     - task: memcheck
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
-
   # called by Module.taskfile to run tests
   ci-test:
     vars:
       MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/mbedtls'
       DEFAULT_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/default'
+      BUILD_ARGS: '-DNC_ENABLE_UTILS=ON'
     deps:
-      - task: ci-configure-default
-        vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}' }
-      - task: ci-configure-mbedtls
-        vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}' }    
+      - task: cmake-build
+        vars: 
+           BUILD_CONFIG: 'Debug'
+           CMAKE_TEST_STATUS: 'ON'
+           CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}'
+           CMAKE_CONFIG_ARGS: '{{ .BUILD_ARGS }}'
+
+      - task: build-mbedtls
+        vars: 
+          BUILD_CONFIG: 'Debug'
+          CMAKE_TEST_STATUS: 'ON'
+          CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'
+          CMAKE_CONFIG_ARGS: '{{ .BUILD_ARGS }}'
     cmds:
      #cleanup build directories after testing
      - defer: '{{ ._RMDIR }} "{{ .CMAKE_BUILD_DIR }}/test"'
 
-     - task: ci-test-default
-       vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}'}#
+     #run tests and memcheck against default build
+     - task: cmake-test
+       vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}' }
+     - task: memcheck
+       vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}' }
 
-     - task: ci-test-mbedtls
-       vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'}
+     #run tests and memcheck against mbedtls build
+     - task: cmake-test
+       vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}' }
+     - task: memcheck
+       vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}' }
+
 
   ci-pack-source:
     internal: true
