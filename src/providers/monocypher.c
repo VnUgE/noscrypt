@@ -60,7 +60,7 @@
 		 * Guard conversion from 32bit int to size_t incase 
 		 * incase the platform integer size is too small
 		 */
-#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
+#if SIZE_MAX < UINT32_MAX
 		if (ncSpanGetSizeC(input) > SIZE_MAX)
 		{
 			return CSTATUS_FAIL;
