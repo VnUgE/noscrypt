@@ -62,12 +62,6 @@
 
 #include <stdint.h>
 
-#if SIZE_MAX < UINT32_MAX
-	#define _overflow_check(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
-#else
-	#define _overflow_check(x)
-#endif
-
 #ifdef NC_EXTREME_COMPAT
 
 	void _nc_memmove(void* dst, const void* src, uint32_t size)

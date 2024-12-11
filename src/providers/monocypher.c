@@ -51,7 +51,16 @@
 		uint32_t dataLen
 	)
 	{
-		_overflow_check(dataLen)
+		/* 
+		 * Guard conversion from 32bit int to size_t incase 
+		 * incase the platform integer size is too small
+		 */
+#if SIZE_MAX < UINT32_MAX
+		if (dataLen > SIZE_MAX)
+		{
+			return CSTATUS_FAIL;
+		}
+#endif
 
 		/*
 		* Function returns the next counter value which is not

@@ -22,6 +22,19 @@
 /* Setup openssl */
 #ifdef OPENSSL_CRYPTO_LIB
 
+/*
+* Since openssl depends on the variable size 
+* size_t type but spans use fixed size uint32_t
+* we need to ensure that the size of size_t is
+* at least 32 bits. 
+* 
+* This means this implementation requires 32bit 
+* or larger size_t types to use openssl.
+*/
+#if SIZE_MAX < UINT32_MAX
+	#error "Size of size_t is less than 32 bits"
+#endif
+
 #include "openssl-helpers.c"
 
 #ifndef _IMPL_SECURE_ZERO_MEMSET
@@ -30,8 +43,6 @@
 
 	_IMPLSTB void _ossl_secure_zero_memset(void* ptr, size_t size)
 	{
-		_overflow_check(size)
-
 		OPENSSL_cleanse(ptr, size);
 	}
 #endif
@@ -42,14 +53,7 @@
 
 	_IMPLSTB uint32_t _ossl_fixed_time_compare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		int result;
-
-		/* Size checks are required for platforms that have integer sizes under 32bit */
-		_overflow_check(size)
-
-		result = CRYPTO_memcmp(a, b, size);
-
-		return (uint32_t)result;
+		return (uint32_t)CRYPTO_memcmp(a, b, size);
 	}
 
 #endif /* _IMPL_CRYPTO_FIXED_TIME_COMPARE */
@@ -69,8 +73,6 @@
 		DEBUG_ASSERT(ncSpanIsValidC(data));
 
 		result = CSTATUS_FAIL;
-
-		_overflow_check(data.size);
 
 		ncSpanInit(&digestSpan, digestOut32, sizeof(sha256_t));
 
@@ -116,9 +118,6 @@
 		struct ossl_evp_state evpState;
 
 		result = CSTATUS_FAIL;
-
-		_overflow_check(key.size)
-		_overflow_check(data.size)
 
 		ncSpanInit(&digestSpan, hmacOut32, sizeof(sha256_t));
 
@@ -230,9 +229,6 @@
 		handler.update = _ossl_hkdf_update;
 		handler.finish = _ossl_hkdf_finish;
 		
-		_overflow_check(info.size);
-		_overflow_check(okm.size);
-
 		/*
 		* PRK Must be set before any call to MacInit
 		*

@@ -56,8 +56,21 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	return info;
 }
 
-#if SIZE_MAX < UINT64_MAX
-	#define _ssize_guard_int(x) if(x > SIZE_MAX) return CSTATUS_FAIL;
+/*
+* Guard against size_t overflow for platforms with 
+* integer sizes less than 32 bits.
+*/
+_IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
+{
+	return x > SIZE_MAX;
+}
+
+/* 
+* Required on < 32 bit platforms, and enable in 
+* debug mode for testing purposes 
+*/
+#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
+	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
 #else
 	#define _ssize_guard_int(x)
 #endif
@@ -75,7 +88,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		uint32_t dataLen
 	)
 	{
-		_overflow_check(dataLen)
+		_ssize_guard_int(dataLen)
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
@@ -97,7 +110,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_digest(cspan_t data, sha256_t digestOut32)
 	{
-		_overflow_check(data.size)
+		_ssize_guard_int(data.size)
 
 		return mbedtls_sha256(
 			ncSpanGetOffsetC(data, 0), 
@@ -116,8 +129,7 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_hmac(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	{
-		_overflow_check(data.size)
-
+		_ssize_guard_int(data.size)
 
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
@@ -136,11 +148,10 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_mbed_sha256_hkdf_expand
 
 	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
-	{
-		/* These sizes should never be large enough to overflow on <64bit platforms, but sanity check */
-		DEBUG_ASSERT(okm.size < SIZE_MAX)
-		DEBUG_ASSERT(prk.size < SIZE_MAX)
-		DEBUG_ASSERT(info.size < SIZE_MAX)
+	{		
+		_ssize_guard_int(prk.size);
+		_ssize_guard_int(info.size);
+		_ssize_guard_int(okm.size);
 
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
@@ -163,7 +174,16 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	/* fixed-time memcmp */
 	_IMPLSTB uint32_t _mbed_fixed_time_compare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		_ssize_guard_int(size)
+		/*
+		* guard platform int overflow, and forcibly return
+		* 1 to indicate failure
+		*/
+#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
+		if (__isLargerThanPlatformIntSize(size))
+		{
+			return 1;
+		}
+#endif
 
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
