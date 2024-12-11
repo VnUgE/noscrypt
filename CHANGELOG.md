@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated MbedTLS to v3.6.2
 - Updated libsecp256k1 to v0.6.0
 - `NCUtilGetEncryptionPaddedSize()` no longer validates input sizes against nip44 messages sizes [(correct behavior)](https://github.com/paulmillr/nip44/issues/21)
+- Now requires 32bit minimum CPU word size when using OpenSSL as a crypto backend
 
 ### Removed
 - **Breaking:** Noscrypt no longer builds and links against mbedtls using CMake. You may manually install and link against mbedtls, or use the Taskfile to do it for you.
