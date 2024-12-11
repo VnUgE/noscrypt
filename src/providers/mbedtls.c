@@ -60,19 +60,17 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 * Guard against size_t overflow for platforms with 
 * integer sizes less than 32 bits.
 */
+#if SIZE_MAX < UINT32_MAX
+	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
+
 _IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
 {
 	return x > SIZE_MAX;
 }
 
-/* 
-* Required on < 32 bit platforms, and enable in 
-* debug mode for testing purposes 
-*/
-#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
-	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
 #else
 	#define _ssize_guard_int(x)
+	#define __isLargerThanPlatformIntSize(x) 0
 #endif
 
 #ifndef _IMPL_CHACHA20_CRYPT
@@ -178,12 +176,10 @@ _IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
 		* guard platform int overflow, and forcibly return
 		* 1 to indicate failure
 		*/
-#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
 		if (__isLargerThanPlatformIntSize(size))
 		{
 			return 1;
 		}
-#endif
 
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
