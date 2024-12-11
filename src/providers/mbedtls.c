@@ -31,20 +31,20 @@
 /* Inline errors on linux in header files on linux */
 #ifndef inline
 	#define inline __inline
-	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
-	#include <mbedtls/chacha20.h>
-	#include <mbedtls/constant_time.h>
+	#include <mbedtls/mbedtls/md.h>
+	#include <mbedtls/mbedtls/hkdf.h>
+	#include <mbedtls/mbedtls/hmac_drbg.h>
+	#include <mbedtls/mbedtls/sha256.h>
+	#include <mbedtls/mbedtls/chacha20.h>
+	#include <mbedtls/mbedtls/constant_time.h>
 	#undef inline
 #else
-	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
-	#include <mbedtls/chacha20.h>
-	#include <mbedtls/constant_time.h>
+	#include <mbedtls/mbedtls/md.h>
+	#include <mbedtls/mbedtls/hkdf.h>
+	#include <mbedtls/mbedtls/hmac_drbg.h>
+	#include <mbedtls/mbedtls/sha256.h>
+	#include <mbedtls/mbedtls/chacha20.h>
+	#include <mbedtls/mbedtls/constant_time.h>
 #endif
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
@@ -56,10 +56,21 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	return info;
 }
 
-#if SIZE_MAX < UINT64_MAX
-	#define _ssize_guard_int(x) if(x > SIZE_MAX) return 1;
+/*
+* Guard against size_t overflow for platforms with
+* integer sizes less than 32 bits.
+*/
+#if SIZE_MAX < UINT32_MAX
+	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
+
+	_IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
+	{
+		return x > SIZE_MAX;
+	}
+
 #else
 	#define _ssize_guard_int(x)
+	#define __isLargerThanPlatformIntSize(x) 0
 #endif
 
 #ifndef _IMPL_CHACHA20_CRYPT
@@ -70,21 +81,26 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	_IMPLSTB cstatus_t _mbed_chacha20_encrypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
-		const uint8_t* input,
-		uint8_t* output,
-		uint32_t dataLen
+		cspan_t input,
+		span_t output
 	)
 	{
-		_overflow_check(dataLen)
+		_ssize_guard_int(input.size);
+
+		/* Ensure output buffer is large enough to store input data */
+		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		{
+			return CSTATUS_FAIL;
+		}
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
-			key, 
-			nonce, 
+			key,
+			nonce,
 			0x00u,		/* nip-44 counter version */
-			dataLen, 
-			input, 
-			output
+			ncSpanGetSizeC(input),
+			ncSpanGetOffsetC(input, 0), 
+			ncSpanGetOffset(output, 0)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
@@ -97,11 +113,11 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_digest(cspan_t data, sha256_t digestOut32)
 	{
-		_overflow_check(data.size)
+		_ssize_guard_int(data.size)
 
 		return mbedtls_sha256(
-			data.data, 
-			data.size, 
+			ncSpanGetOffsetC(data, 0), 
+			ncSpanGetSizeC(data), 
 			digestOut32, 
 			0				/* Set 0 for sha256 mode */
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
@@ -116,17 +132,14 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 	_IMPLSTB cstatus_t _mbed_sha256_hmac(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	{
-		_overflow_check(data.size)
-
-		/* Keys should never be large enough for this to matter, but sanity check. */
-		DEBUG_ASSERT2(key.size < SIZE_MAX, "Expected key size to be less than SIZE_MAX")
+		_ssize_guard_int(data.size)
 
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
-			key.data, 
-			key.size,
-			data.data, 
-			data.size,
+			ncSpanGetOffsetC(key, 0), 
+			ncSpanGetSizeC(key),
+			ncSpanGetOffsetC(data, 0), 
+			ncSpanGetSizeC(data),
 			hmacOut32
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
@@ -138,20 +151,19 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_mbed_sha256_hkdf_expand
 
 	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
-	{
-		/* These sizes should never be large enough to overflow on <64bit platforms, but sanity check */
-		DEBUG_ASSERT(okm.size < SIZE_MAX)
-		DEBUG_ASSERT(prk.size < SIZE_MAX)
-		DEBUG_ASSERT(info.size < SIZE_MAX)
+	{		
+		_ssize_guard_int(prk.size);
+		_ssize_guard_int(info.size);
+		_ssize_guard_int(okm.size);
 
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
-			prk.data, 
-			prk.size,
-			info.data, 
-			info.size,
-			okm.data, 
-			okm.size
+			ncSpanGetOffsetC(prk, 0), 
+			ncSpanGetSizeC(prk),
+			ncSpanGetOffsetC(info, 0),
+			ncSpanGetSizeC(info),
+			ncSpanGetOffset(okm, 0),
+			ncSpanGetSize(okm)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
@@ -165,7 +177,14 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	/* fixed-time memcmp */
 	_IMPLSTB uint32_t _mbed_fixed_time_compare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		_ssize_guard_int(size)
+		/*
+		* guard platform int overflow, and forcibly return
+		* 1 to indicate failure
+		*/
+		if (__isLargerThanPlatformIntSize(size))
+		{
+			return 1;
+		}
 
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}

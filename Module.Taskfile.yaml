@@ -15,30 +15,32 @@ tasks:
 #called by build pipeline to sync repo
   update:
     cmds:
-     - git reset --hard  
-     - git remote update
-     - git pull origin {{.BRANCH_NAME}} --verify-signatures 
-     
-     #updates the project versions for all inlcuded .NET projects
-     - dotnet-gitversion.exe /updateprojectfiles
+     - cmd: git reset --hard  
+     - cmd: git remote update
+     - cmd: git pull origin {{ .BRANCH_NAME }} --verify-signatures 
 
+  test:
+    desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
+    cmds:
+     #run CI tests with utils enabled
+     - cmd: task ci-test
+     - cmd: wsl task ci-test
 
 #called by build pipeline to build module
   build:
     cmds:
-     - echo "building module {{.MODULE_NAME}}"   
+     - cmd: echo "building module {{ .MODULE_NAME }}"   
 
   publish:
     cmds:
      #git archive in the module directory
-     - git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
-
+     - cmd: git archive --format {{ .ARCHIVE_FILE_FORMAT }} --output {{ .ARCHIVE_FILE_NAME }} HEAD
 
   #called by build pipeline to clean module
   clean:
     cmds:
      #clean solution
-     - cmd: powershell -Command "rm out/ -Recurse "
+     - cmd: powershell rm -Recurse out/
        ignore_error: true
 
 

@@ -289,10 +289,13 @@ static int TestPublicApiArgumentValidation()
     NCPublicKey pubKey;
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
     uint8_t nonce[NC_NIP44_IV_SIZE];
-
+   
     NCEncryptionArgs cryptoData;
 
-    PRINTL("TEST: Public API argument validation tests")
+    PRINTL("TEST: Public API argument validation tests");
+
+    /* Zero fill the structure to inialize */
+    ZERO_FILL(&cryptoData, sizeof(cryptoData));
 
     {
         TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44), sizeof(nonce));
@@ -507,8 +510,16 @@ static int TestPublicApiArgumentValidation()
         macArgs.payloadSize = 0;
         TEST(NCVerifyMac(ctx, &secKey, &pubKey, &macArgs), ARG_RANGE_ERROR_POS_3)
     }
-    
-    PRINTL("\nPASSED: Public API argument validation tests completed")
+
+    ENSURE(NCDestroyContext(ctx) == NC_SUCCESS);
+
+#ifdef NOSCRYPTUTIL_H
+        NCUtilContextFree(ctx);
+#else
+        free(ctx);
+#endif
+
+    PRINTL("\nPASSED: Public API argument validation tests completed");
 
     return 0;
 }
@@ -621,8 +632,8 @@ static int TestCorrectEncryption(const NCContext* context)
 #ifdef NOSCRYPTUTIL_H
 
 /* Padding tests taken from the nip44 repo vectors.json file */
-static const uint32_t _padTestActual[24] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020, 65536 };
-static const uint32_t _padTestExpected[24] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024, 65536 };
+static const uint32_t _padTestActual[23] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020 };
+static const uint32_t _padTestExpected[23] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024 };
 
 static int TestUtilNip44Encryption(
     const NCContext* libCtx, 
@@ -731,13 +742,29 @@ static int TestUtilFunctions(const NCContext* libCtx)
 {
 	PRINTL("TEST: Util functions")
 
-	for (int i = 0; i < 24; i++)
+	for (int i = 0; i < 23; i++)
     {
         int32_t totalSize = _padTestExpected[i] + 67;
 
         TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), _padTestExpected[i]);
 		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), totalSize);
 	}
+
+    /*
+    * NOTE:
+    * https://github.com/paulmillr/nip44/issues/21
+    * 
+    * 65536 is not allowed for nip44 plaintext size, however it is a valid input 
+    * for padding. It is assumed that the buffer calculation function will detect
+	* these valid inputs and return an error, but the padding calculation will not.
+    */
+    TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, 65536u), 65536u);
+    TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, 65536u), ARG_RANGE_ERROR_POS_1);
+
+    /* Again, zero is not a valid buffer size, but is valid for padding */
+    TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, 0u), 0x20u);
+    TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, 0u), ARG_RANGE_ERROR_POS_1);
+
     {
 		PRINTL("TEST: NIP-44 util encryption")
 
