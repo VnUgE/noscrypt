@@ -29,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NCUtilGetEncryptionPaddedSize()` no longer validates input sizes against nip44 messages sizes [(correct behavior)](https://github.com/paulmillr/nip44/issues/21)
 
 ### Removed
-- **Breaking:** The NC_FETCH_MBEDTLS directive for fetching MbedTLS during build. MbedTLS must be manually installed for the build to succeed. The Taskfile has been updated to handle the installation for users.
+- **Breaking:** Noscrypt no longer builds and links against mbedtls using CMake. You may manually install and link against mbedtls, or use the Taskfile to do it for you.
+- `NC_FETCH_MBEDTLS` CMake directive was removed, see previous point.
 
 ## [0.1.5]
 
