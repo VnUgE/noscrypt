@@ -53,17 +53,15 @@ cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk);
 cstatus_t ncCryptoChacha20(
 	const uint8_t key[CHACHA_KEY_SIZE],
 	const uint8_t nonce[CHACHA_NONCE_SIZE],
-	const uint8_t* input,
-	uint8_t* output,
-	uint32_t dataSize
+	cspan_t input,
+	span_t output
 );
 
 cstatus_t ncAes256CBCEncrypt(
 	const uint8_t key[32],
 	const uint8_t iv[16],
-	const uint8_t* input,
-	uint8_t* output,
-	uint32_t dataSize
+	cspan_t input,
+	span_t output
 );
 
 #endif /* !_NC_CRYPTO_H */

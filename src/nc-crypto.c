@@ -54,17 +54,15 @@
 
 _IMPLSTB cstatus_t _dummyAesFunc(
 	const uint8_t key[32], 
-	const uint8_t iv[16], 
-	const uint8_t* input, 
-	uint8_t* output, 
-	uint32_t dataSize
+	const uint8_t iv[16],
+	cspan_t input,
+	span_t output
 )
 {
 	UNREFPARAM(key);
 	UNREFPARAM(iv);
 	UNREFPARAM(input);
 	UNREFPARAM(output);
-	UNREFPARAM(dataSize);
 
 	return CSTATUS_FAIL;
 }
@@ -286,39 +284,33 @@ cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 cstatus_t ncCryptoChacha20(
 	const uint8_t key[CHACHA_KEY_SIZE],
 	const uint8_t nonce[CHACHA_NONCE_SIZE],
-	const uint8_t* input,
-	uint8_t* output,
-	uint32_t dataSize
+	cspan_t input,
+	span_t output
 )
 {
 	DEBUG_ASSERT2(key != NULL,		"Expected key to be non-null");
 	DEBUG_ASSERT2(nonce != NULL,	"Expected nonce to be non-null");
-	DEBUG_ASSERT2(input != NULL,	"Expected input to be non-null");
-	DEBUG_ASSERT2(output != NULL,	"Expected output to be non-null");
 
 #ifndef _IMPL_CHACHA20_CRYPT
 	#error "No chacha20 implementation defined"
 #endif /* !_IMPL_CHACHA20_CRYPT */
 
-	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output, dataSize);
+	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output);
 }
 
 cstatus_t ncAes256CBCEncrypt(
 	const uint8_t key[32],
 	const uint8_t iv[16],
-	const uint8_t* input,
-	uint8_t* output,
-	uint32_t dataSize
+	cspan_t input,
+	span_t output
 )
 {
 	DEBUG_ASSERT2(key != NULL, "Expected key to be non-null")
 	DEBUG_ASSERT2(iv != NULL, "Expected iv to be non-null")
-	DEBUG_ASSERT2(input != NULL, "Expected input to be non-null")
-	DEBUG_ASSERT2(output != NULL, "Expected output to be non-null")
 
 #ifndef _IMPL_AES256_CBC_CRYPT
 	#error "No AES256 CBC encrypt implementation defined"
 #endif /* !_IMPL_AES256_CBC_CRYPT */
 
-	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output, dataSize);
+	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output);
 }
