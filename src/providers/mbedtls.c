@@ -57,16 +57,16 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 }
 
 /*
-* Guard against size_t overflow for platforms with 
+* Guard against size_t overflow for platforms with
 * integer sizes less than 32 bits.
 */
 #if SIZE_MAX < UINT32_MAX
 	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
 
-_IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
-{
-	return x > SIZE_MAX;
-}
+	_IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
+	{
+		return x > SIZE_MAX;
+	}
 
 #else
 	#define _ssize_guard_int(x)
@@ -81,21 +81,26 @@ _IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
 	_IMPLSTB cstatus_t _mbed_chacha20_encrypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
-		const uint8_t* input,
-		uint8_t* output,
-		uint32_t dataLen
+		cspan_t input,
+		span_t output
 	)
 	{
-		_ssize_guard_int(dataLen)
+		_ssize_guard_int(input.size);
+
+		/* Ensure output buffer is large enough to store input data */
+		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		{
+			return CSTATUS_FAIL;
+		}
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
-			key, 
-			nonce, 
+			key,
+			nonce,
 			0x00u,		/* nip-44 counter version */
-			dataLen, 
-			input, 
-			output
+			ncSpanGetSizeC(input),
+			ncSpanGetOffsetC(input, 0), 
+			ncSpanGetOffset(output, 0)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 

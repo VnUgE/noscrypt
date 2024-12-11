@@ -260,15 +260,20 @@ static _nc_fn_inline const struct nc_expand_keys* _expandKeysFromHkdf(const stru
 
 static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, NCEncryptionArgs* args)
 {
-	DEBUG_ASSERT2(keys != NULL, "Expected valid keys")
-	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args")
+	span_t outputSpan;
+	cspan_t inputSpan;
+
+	DEBUG_ASSERT2(keys != NULL, "Expected valid keys");
+	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
+
+	ncSpanInit(&outputSpan, args->outputData, args->dataSize);
+	ncSpanInitC(&inputSpan, args->inputData, args->dataSize);
 
 	return ncCryptoChacha20(
 		keys->chacha_key,
 		keys->chacha_nonce,
-		args->inputData,		/* Input data */
-		args->outputData,		/* Output data */
-		args->dataSize			/* Data size (input and output are assumed to be the same size) */
+		inputSpan,			/* Input data */
+		outputSpan			/* Output data */
 	);
 }
 

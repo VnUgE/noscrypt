@@ -46,17 +46,22 @@
 	_IMPLSTB cstatus_t _mc_chacha20_crypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
-		const uint8_t* input,
-		uint8_t* output,
-		uint32_t dataLen
+		cspan_t input,
+		span_t output
 	)
 	{
+		/* Ensure output is large enough to store input data */
+		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		{
+			return CSTATUS_FAIL;
+		}
+
 		/* 
 		 * Guard conversion from 32bit int to size_t incase 
 		 * incase the platform integer size is too small
 		 */
-#if SIZE_MAX < UINT32_MAX
-		if (dataLen > SIZE_MAX)
+#if SIZE_MAX < UINT32_MAX || defined(DEBUG)
+		if (ncSpanGetSizeC(input) > SIZE_MAX)
 		{
 			return CSTATUS_FAIL;
 		}
@@ -71,9 +76,9 @@
 		* nip-44 compliant encryption.
 		*/
 		crypto_chacha20_ietf(
-			output,
-			input,
-			(size_t)dataLen,
+			ncSpanGetOffset(output, 0),
+			ncSpanGetOffsetC(input, 0),
+			ncSpanGetSizeC(input),
 			key,
 			nonce,
 			0x00			/* Counter always starts at 0 */

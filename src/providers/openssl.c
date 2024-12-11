@@ -277,20 +277,24 @@
 	_IMPLSTB cstatus_t _ossl_chacha20_crypt(
 		const uint8_t* key,
 		const uint8_t* nonce,
-		const uint8_t* input,
-		uint8_t* output,
-		uint32_t dataLen
+		cspan_t input,
+		span_t output
 	)
 	{
 		cstatus_t result;
 		struct ossl_evp_state state;
 		uint8_t chaChaIv[CHACHA_NONCE_SIZE + 4];
-		cspan_t keySpan, nonceSpan, inputSpan;
-		span_t outputSpan;
+		cspan_t keySpan, nonceSpan;
 		int bytesWritten;
 
 		result = CSTATUS_FAIL;
 		bytesWritten = 0;
+
+		/* Ensure output buffer is at least large enough to store input data */
+		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		{
+			return CSTATUS_FAIL;
+		}
 
 		/*
 		* Alloc and init the cipher state for ChaCha20 in 
@@ -314,15 +318,13 @@
 
 		ncSpanInitC(&keySpan, key, CHACHA_KEY_SIZE);
 		ncSpanInitC(&nonceSpan, chaChaIv, sizeof(chaChaIv));
-		ncSpanInitC(&inputSpan, input, dataLen);
-		ncSpanInit(&outputSpan, output, dataLen);
 
 		if (!_osslEvpCipherInit(&state, keySpan, nonceSpan))
 		{
 			goto Cleanup;
 		}
 
-		if (!_osslEvpCipherUpdate(&state, inputSpan, outputSpan, &bytesWritten))
+		if (!_osslEvpCipherUpdate(&state, input, output, &bytesWritten))
 		{
 			goto Cleanup;
 		}
@@ -336,16 +338,16 @@
 			goto Cleanup;
 		}
 
-		DEBUG_ASSERT((uint32_t)bytesWritten <= dataLen)
+		DEBUG_ASSERT((uint32_t)bytesWritten <= ncSpanGetSizeC(input))
 
 		/* shift output span by consumed data amount */
-		outputSpan = ncSpanSlice(
-			outputSpan, 
+		output = ncSpanSlice(
+		    output,
 			(uint32_t)bytesWritten,
-			dataLen - (uint32_t)bytesWritten
+			ncSpanGetSizeC(input) - (uint32_t)bytesWritten
 		);
 
-		if (!_osslEvpFinal(&state, outputSpan))
+		if (!_osslEvpFinal(&state, output))
 		{
 			goto Cleanup;
 		}

@@ -34,7 +34,7 @@ tasks:
   publish:
     cmds:
      #git archive in the module directory
-     - cmd: git archive --format {{.ARCHIVE_FILE_FORMAT}} --output {{.ARCHIVE_FILE_NAME}} HEAD
+     - cmd: git archive --format {{ .ARCHIVE_FILE_FORMAT }} --output {{ .ARCHIVE_FILE_NAME }} HEAD
 
   #called by build pipeline to clean module
   clean:
