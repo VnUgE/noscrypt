@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+- Initialize stack buffers to zero before use in noscrypt.c
 
 ## [0.1.6]
 
