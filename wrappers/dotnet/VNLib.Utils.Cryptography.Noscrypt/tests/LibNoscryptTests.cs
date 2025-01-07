@@ -1,7 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using VNLib.Hashing;
-using VNLib.Utils.Memory;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using VNLib.Utils.Cryptography.Noscrypt.Singatures;
 
@@ -192,7 +191,49 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 
             NoscryptSigner signer = new(context, NCFallbackRandom.Shared);
 
-          
+            //Null context 
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                signer.VerifyData(ref NCPublicKey.NullRef, bin32, bin64)
+            );
+
+            //No data buffer
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                signer.VerifyData(ref pubKey, [], bin64)
+            );
+
+            //No signature
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                signer.VerifyData(ref pubKey, bin32, [])
+            );
+
+            //Signature too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+               signer.VerifyData(ref pubKey, bin32, bin32)
+            );
+
+            /*
+             *      SIGN DATA
+             */
+
+            //Null secret key
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                signer.SignData(ref NCSecretKey.NullRef, bin32, bin64)
+            );
+
+            //No data
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                signer.SignData(ref secKey, [], bin64)
+            );
+
+            //No signature
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                signer.SignData(ref secKey, bin32, [])
+            );         
+
+            //Signature too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+                signer.SignData(ref secKey, bin32, bin32)
+            );
         }
 
         void IDisposable.Dispose()

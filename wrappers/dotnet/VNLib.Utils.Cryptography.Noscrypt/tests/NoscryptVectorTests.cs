@@ -3,15 +3,16 @@
 using System;
 using System.Text;
 using System.Text.Json;
+
 using VNLib.Utils.Memory;
 using VNLib.Utils.Extensions;
-using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
+using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 {
 
-    [TestClass()]
+    [TestClass]
     public class NoscryptVectorTests : IDisposable
     {
         const string Nip44VectorTestFile = "nip44.vectors.json";
@@ -28,7 +29,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             _testVectors = JsonDocument.Parse(File.ReadAllText(Nip44VectorTestFile));
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void CorrectEncryptionTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
@@ -73,7 +74,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             }
         }
 
-        [TestMethod()]
+        [TestMethod]
         public void CorrectDecryptionTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
@@ -117,7 +118,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         }
 
 
-        [TestMethod()]
+        [TestMethod]
         public void InvalidPlaintextSizes()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
@@ -147,10 +148,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         }
 
 
-        //Converstation key is only available in debug builds
+        //Converstation key is only defined in debug builds
 #if DEBUG
 
-        [TestMethod()]
+        [TestMethod]
         public void ConverstationKeyTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
@@ -180,7 +181,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         }
 #endif
 
-        [TestMethod()]
+        [TestMethod]
         public void PaddingTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
