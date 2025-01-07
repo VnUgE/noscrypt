@@ -271,7 +271,7 @@ static int TestEcdsa(const NCContext* context, NCSecretKey* secKey, NCPublicKey*
 
     /* test verification of invalid signature */
     {
-        TEST(NCVerifyDigest(context, pubKey, digestHex.data, invalidSig), E_INVALID_ARG);
+        TEST(NCVerifyDigest(context, pubKey, digestHex.data, invalidSig), E_OPERATION_FAILED);
     }
 
     PRINTL("\nPASSED: Ecdsa tests completed")

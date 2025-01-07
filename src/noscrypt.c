@@ -622,6 +622,10 @@ NC_EXPORT NCResult NC_CC NCSignDigest(
 	CHECK_NULL_ARG(digest32, 3)
 	CHECK_NULL_ARG(sig64, 4)
 
+	/* Zero out the keypair and xonly structures before use */
+	ZERO_FILL(&keyPair, sizeof(keyPair));
+	ZERO_FILL(&xonly, sizeof(xonly));
+
 	/* Fill keypair structure from the callers secret key */
 	if (secp256k1_keypair_create(ctx->secpCtx, &keyPair, sk->key) != 1)
 	{
@@ -640,7 +644,6 @@ NC_EXPORT NCResult NC_CC NCSignDigest(
 	result = secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly);
 	
 	ZERO_FILL(&keyPair, sizeof(keyPair));
-	ZERO_FILL(&xonly, sizeof(xonly));
 
 	return result == 1 ? NC_SUCCESS : E_INVALID_ARG;
 }
@@ -684,7 +687,6 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 	const uint8_t sig64[64]
 )
 {
-	int result;
 	secp256k1_xonly_pubkey xonly;
 
 	CHECK_NULL_ARG(ctx, 0)
@@ -693,17 +695,15 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 	CHECK_NULL_ARG(digest32, 2)
 	CHECK_NULL_ARG(sig64, 3)	
 
+	ZERO_FILL(&xonly, sizeof(xonly));
+
 	/* recover the x-only key from a compressed public key */
 	if(_convertToXonly(ctx, pk, &xonly) != 1)
 	{
 		return E_INVALID_ARG;
 	}
 
-	result = secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly);
-	
-	ZERO_FILL(&xonly, sizeof(xonly));
-
-	return result == 1 ? NC_SUCCESS : E_INVALID_ARG;
+	return secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly) == 1 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 NC_EXPORT NCResult NC_CC NCVerifyData(
@@ -722,6 +722,8 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 	CHECK_NULL_ARG(data, 2)
 	CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 3)
 	CHECK_NULL_ARG(sig64, 4)
+
+	ZERO_FILL(digest, sizeof(digest));
 
 	ncSpanInitC(&dataSpan, data, dataSize);
 
@@ -791,6 +793,8 @@ NC_EXPORT NCResult NC_CC NCGetConversationKey(
 	CHECK_NULL_ARG(sk, 1)
 	CHECK_NULL_ARG(pk, 2)
 	CHECK_NULL_ARG(conversationKey, 3)
+
+	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
 
 	/* Compute the shared point */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
@@ -866,6 +870,9 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->nonceData, 3)
+
+	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	result = E_OPERATION_FAILED;
 
@@ -958,6 +965,10 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->nonceData, 3)
+
+	/* init structures */
+	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	result = E_OPERATION_FAILED;
 
@@ -1061,6 +1072,10 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	CHECK_INVALID_ARG(args->payload, 3)
 	CHECK_INVALID_ARG(args->nonce32, 3)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 3)
+
+	/* init structures */
+	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	/* Computed the shared point so we can get the converstation key */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)

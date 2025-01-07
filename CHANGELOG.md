@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+ 
+## [0.1.7]
+ 
+### Added
+- Initialize stack buffers to zero before use in noscrypt.c
+
+### Fixed
+- `NCVerifyDigest()` now correctly returns `E_OPERATION_FAILED` when signature verification fails
 
 ## [0.1.6]
 
