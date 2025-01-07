@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full NIP44 vector testing for encryption
 - Initialize stack buffers to zero before use in noscrypt.c
 
+### Fixed
+- `NCVerifyDigest()` now correctly returns `E_OPERATION_FAILED` when signature verification fails
+
 ## [0.1.6]
 
 ### Added

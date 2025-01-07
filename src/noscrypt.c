@@ -703,7 +703,7 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 		return E_INVALID_ARG;
 	}
 
-	return secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly) ? NC_SUCCESS : E_INVALID_ARG;
+	return secp256k1_schnorrsig_verify(ctx->secpCtx, sig64, digest32, 32, &xonly) == 1 ? NC_SUCCESS : E_OPERATION_FAILED;
 }
 
 NC_EXPORT NCResult NC_CC NCVerifyData(
