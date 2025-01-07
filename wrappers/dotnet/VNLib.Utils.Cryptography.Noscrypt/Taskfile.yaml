@@ -2,35 +2,58 @@
 
 version: '3'
 
-vars:
-  TARGET_FRAMEWORK: '{{ .TARGET_FRAMEWORK | default "net8.0" }}'
+vars:  
+  BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
+  ARCHIVE_FILE_NAME: '{{ .ARCHIVE_FILE_NAME | default "archive.tgz" }}'
+  MS_ARGS: 
+    /p:RunAnalyzersDuringBuild=false 
+    /p:BuildInParallel=true 
+    /p:MultiProcessorCompilation=true 
+    /p:ErrorOnDuplicatePublishOutputFiles=false  
 
 tasks:
 
+  default:
+    desc: 'Builds the managed libraries'
+    dir: src/
+    vars:
+      CONFIGURATION: '{{ .CONFIGURATION | default "debug" }}'
+    cmds:
+      - cmd: dotnet build -c {{ .CONFIGURATION }} {{ .MS_ARGS }}
+
 #called by build pipeline to build module
   build:
+    desc: "Used by vnbuild to build the entire module at CI time"
     dir: '{{ .USER_WORKING_DIR }}'
     vars:
       PACK_OUT: '{{ .OUTPUT_DIR }}/{{ .HEAD_SHA }}/pkg'
-      MS_ARGS:
-        /p:RunAnalyzersDuringBuild=false 
+      INT_DIR: '{{ .SCRATCH_DIR }}/obj/{{ .MODULE_NAME }}/'
+      MS_ARGS: ' 
+        {{ .MS_ARGS }} 
+        --nologo
         /p:UseCommonOutputDirectory=true 
-        /p:BuildInParallel=true 
-        /p:MultiProcessorCompilation=true 
-        /p:ErrorOnDuplicatePublishOutputFiles=false
+        /p:IntermediateOutputPath="{{ .INT_DIR }}"'
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
        silent: true
 
      #updates the project versions for all inlcuded .NET projects
      - cmd: dotnet-gitversion.exe /updateprojectfiles
-     
-     - cmd: dotnet publish -c debug {{ .MS_ARGS }} 
+
+     #build debug mode first
+     - cmd: dotnet publish -c debug {{ .MS_ARGS }}
      - cmd: dotnet publish -c release {{ .MS_ARGS }}
-  
-     #create nuget packages and write them directly to the output directory
-     - cmd: dotnet pack {{ .MS_ARGS }} -c debug -o "{{ .PACK_OUT }}/debug/"     
-     - cmd: dotnet pack {{ .MS_ARGS }} -c release -o "{{ .PACK_OUT }}/release/" 
+
+     # ONLY Pack release config with debug symbols
+     # pack can be run without build or restore because the previous commands build it
+     - cmd: dotnet pack 
+        --no-build 
+        --no-restore
+        --include-symbols
+        --configuration release
+        --output "{{ .PACK_OUT }}/release/" 
+        -p:PackageVersion={{ .BUILD_VERSION }}
+        {{ .MS_ARGS }}
 
   postbuild_success:
     deps:
@@ -49,7 +72,7 @@ tasks:
     internal: true
     vars:
       SOURCE: 'bin/{{ .CONFIG }}/{{ .TARGET_FRAMEWORK }}/publish'
-      TARGET: '{{ .USER_WORKING_DIR }}/bin/{{ .CONFIG }}.tgz'
+      TARGET: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/{{ .CONFIG }}.tgz'
     cmds:
       - cmd: cd {{ .SOURCE }} && tar -czf '{{ lower .TARGET }}' .
 
@@ -75,7 +98,7 @@ tasks:
     dir: '{{ .USER_WORKING_DIR }}'
     cmds:
     #clean solution
-    - dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
+    - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
     - for: [ obj/, bin/ ]
       cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
 
