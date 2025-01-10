@@ -298,7 +298,7 @@ cstatus_t ncCryptoChacha20(
 	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output);
 }
 
-cstatus_t ncAes256CBCEncrypt(
+cstatus_t ncCryptoAes256CBCEncrypt(
 	cspan_t key,
 	cspan_t iv,
 	cspan_t input,
