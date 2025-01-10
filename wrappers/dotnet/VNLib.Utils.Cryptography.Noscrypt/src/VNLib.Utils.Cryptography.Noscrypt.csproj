@@ -33,8 +33,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0205" />
-    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0205" />
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0212" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0212" />
   </ItemGroup>
   
 </Project>
