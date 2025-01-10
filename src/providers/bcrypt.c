@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/bcrypt.c
@@ -95,17 +95,13 @@ _IMPLSTB NTSTATUS _bcCreate(struct _bcrypt_ctx* ctx)
 	return _bcCreateHmac(ctx, key);
 }
 
-_IMPLSTB NTSTATUS _bcHashDataRaw(const struct _bcrypt_ctx* ctx, const uint8_t* data, uint32_t len)
-{
-	return BCryptHashData(ctx->hHash, (uint8_t*)data, len, 0);
-}
-
 _IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, cspan_t data)
 {
-	return _bcHashDataRaw(
-		ctx, 
-		ncSpanGetOffsetC(data, 0),
-		ncSpanGetSizeC(data)
+	return BCryptHashData(
+		ctx->hHash, 
+		(uint8_t*)ncSpanGetOffsetC(data, 0),
+		ncSpanGetSizeC(data),
+		0
 	);
 }
 
@@ -155,6 +151,8 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
 
+		_IMPL_SECURE_ZERO_MEMSET(&ctx, sizeof(ctx));
+
 		result = CSTATUS_FAIL;	/* Start in fail state */
 
 		IF_BC_FAIL(_bcInitSha256(&ctx, 0)) goto Exit;
@@ -185,6 +183,8 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	{
 		cstatus_t result;
 		struct _bcrypt_ctx ctx;
+
+		_IMPL_SECURE_ZERO_MEMSET(&ctx, sizeof(ctx));
 
 		result = CSTATUS_FAIL;		/* Start in fail state */
 
@@ -242,6 +242,8 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 		handler.update = _bcrypt_hkdf_update;
 		handler.finish = _bcrypt_hkdf_finish;
+
+		_IMPL_SECURE_ZERO_MEMSET(&ctx, sizeof(ctx));
 
 		/* Init bcrypt */
 		BC_FAIL(_bcInitSha256(&ctx, BCRYPT_ALG_HANDLE_HMAC_FLAG))

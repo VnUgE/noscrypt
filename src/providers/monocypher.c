@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/monocypher.c
@@ -44,8 +44,8 @@
 	#define _IMPL_CHACHA20_CRYPT _mc_chacha20_crypt
 
 	_IMPLSTB cstatus_t _mc_chacha20_crypt(
-		const uint8_t* key,
-		const uint8_t* nonce,
+		cspan_t key,
+		cspan_t nonce,
 		cspan_t input,
 		span_t output
 	)
@@ -75,12 +75,16 @@
 		* ITEF function uses a 12byte nonce which is required for
 		* nip-44 compliant encryption.
 		*/
+
+		DEBUG_ASSERT(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE);
+		DEBUG_ASSERT(ncSpanGetSizeC(nonce) == 12);
+
 		crypto_chacha20_ietf(
 			ncSpanGetOffset(output, 0),
 			ncSpanGetOffsetC(input, 0),
 			ncSpanGetSizeC(input),
-			key,
-			nonce,
+			ncSpanGetOffsetC(key, 0),
+			ncSpanGetOffsetC(nonce, 0),
 			0x00			/* Counter always starts at 0 */
 		);
 

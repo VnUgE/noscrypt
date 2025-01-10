@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: nc-crypto.c
@@ -53,8 +53,8 @@
 #define UNREFPARAM(x) (void)(x)
 
 _IMPLSTB cstatus_t _dummyAesFunc(
-	const uint8_t key[32], 
-	const uint8_t iv[16],
+	cspan_t key,
+	cspan_t iv,
 	cspan_t input,
 	span_t output
 )
@@ -282,14 +282,14 @@ cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 }
 
 cstatus_t ncCryptoChacha20(
-	const uint8_t key[CHACHA_KEY_SIZE],
-	const uint8_t nonce[CHACHA_NONCE_SIZE],
+	cspan_t key,
+	cspan_t nonce,
 	cspan_t input,
 	span_t output
 )
 {
-	DEBUG_ASSERT2(key != NULL,		"Expected key to be non-null");
-	DEBUG_ASSERT2(nonce != NULL,	"Expected nonce to be non-null");
+	DEBUG_ASSERT2(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
+	DEBUG_ASSERT2(ncSpanGetSizeC(nonce) == CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
 
 #ifndef _IMPL_CHACHA20_CRYPT
 	#error "No chacha20 implementation defined"
@@ -299,14 +299,14 @@ cstatus_t ncCryptoChacha20(
 }
 
 cstatus_t ncAes256CBCEncrypt(
-	const uint8_t key[32],
-	const uint8_t iv[16],
+	cspan_t key,
+	cspan_t iv,
 	cspan_t input,
 	span_t output
 )
 {
-	DEBUG_ASSERT2(key != NULL, "Expected key to be non-null")
-	DEBUG_ASSERT2(iv != NULL, "Expected iv to be non-null")
+	DEBUG_ASSERT2(ncSpanGetSizeC(key) == AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
+	DEBUG_ASSERT2(ncSpanGetSizeC(iv) == AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
 
 #ifndef _IMPL_AES256_CBC_CRYPT
 	#error "No AES256 CBC encrypt implementation defined"

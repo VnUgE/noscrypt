@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/openssl.c
@@ -275,8 +275,8 @@
 	#define _IMPL_CHACHA20_CRYPT _ossl_chacha20_crypt
 	
 	_IMPLSTB cstatus_t _ossl_chacha20_crypt(
-		const uint8_t* key,
-		const uint8_t* nonce,
+		cspan_t key,
+		cspan_t nonce,
 		cspan_t input,
 		span_t output
 	)
@@ -284,11 +284,13 @@
 		cstatus_t result;
 		struct ossl_evp_state state;
 		uint8_t chaChaIv[CHACHA_NONCE_SIZE + 4];
-		cspan_t keySpan, nonceSpan;
+		cspan_t nonceSpan;
 		int bytesWritten;
 
 		result = CSTATUS_FAIL;
 		bytesWritten = 0;
+
+		ncSpanInitC(&nonceSpan, chaChaIv, sizeof(chaChaIv));
 
 		/* Ensure output buffer is at least large enough to store input data */
 		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
@@ -305,21 +307,20 @@
 			goto Cleanup;
 		}
 
+		DEBUG_ASSERT2(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE, "ChaCha key buffer size is not correct");
+
 		/*
 		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
 		* counter value is preprended to the nonce to make up the 16 byte 
 		* size.
 		*
-		* The counter is always set to 0 for the nonce.
+		* The counter bytes are always set to 0 for the nonce.
 		*/
 
-		ncCryptoSecureZero(chaChaIv, sizeof(chaChaIv));
-		MEMMOV(chaChaIv + 4, nonce, CHACHA_NONCE_SIZE);
+		ncCryptoSecureZero(chaChaIv, sizeof(chaChaIv));		
+		ncSpanReadC(nonce, chaChaIv + 4, CHACHA_NONCE_SIZE);		
 
-		ncSpanInitC(&keySpan, key, CHACHA_KEY_SIZE);
-		ncSpanInitC(&nonceSpan, chaChaIv, sizeof(chaChaIv));
-
-		if (!_osslEvpCipherInit(&state, keySpan, nonceSpan))
+		if (!_osslEvpCipherInit(&state, key, nonceSpan))
 		{
 			goto Cleanup;
 		}
