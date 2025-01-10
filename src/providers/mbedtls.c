@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/mbedtls.c
@@ -79,8 +79,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	#define _IMPL_CHACHA20_CRYPT _mbed_chacha20_encrypt	
 
 	_IMPLSTB cstatus_t _mbed_chacha20_encrypt(
-		const uint8_t* key,
-		const uint8_t* nonce,
+		cspan_t key,
+		cspan_t nonce,
 		cspan_t input,
 		span_t output
 	)
@@ -95,8 +95,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
-			key,
-			nonce,
+			ncSpanGetOffsetC(key, 0),
+			ncSpanGetOffsetC(nonce, 0),
 			0x00u,		/* nip-44 counter version */
 			ncSpanGetSizeC(input),
 			ncSpanGetOffsetC(input, 0), 
