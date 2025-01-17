@@ -631,10 +631,6 @@ static int TestCorrectEncryption(const NCContext* context)
 
 #ifdef NOSCRYPTUTIL_H
 
-/* Padding tests taken from the nip44 repo vectors.json file */
-static const uint32_t _padTestActual[23] =      { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020 };
-static const uint32_t _padTestExpected[23] =    { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024 };
-
 static int TestUtilNip44Encryption(
     const NCContext* libCtx, 
     span_t sendKey, 
@@ -738,16 +734,30 @@ static int TestUtilNip44Decryption(
     return 0;
 }
 
+/* Padding tests taken from the nip44 repo vectors.json file */
+static const uint32_t _nip44PadTestActual[23] = { 16, 32, 33, 37, 45, 49, 64, 65, 100, 111, 200, 250, 320, 383, 384, 400, 500, 512, 515, 700, 800, 900,  1020 };
+static const uint32_t _nip44PadTestExpected[23] = { 32, 32, 64, 64, 64, 64, 64, 96, 128, 128, 224, 256, 320, 384, 384, 448, 512, 512, 640, 768, 896, 1024, 1024 };
+
+/* Padding should be a multiple of the aes block size */
+static const uint32_t _nip04PadTestActual[9] = { 5, 15, 32, 33, 37, 45, 49, 255, 1024 };
+static const uint32_t _nip04PadTestExpected[9] = { 16, 16, 48, 48, 48, 48, 64, 256, 1040 };
+
 static int TestUtilFunctions(const NCContext* libCtx)
 {
 	PRINTL("TEST: Util functions")
 
 	for (int i = 0; i < 23; i++)
     {
-        int32_t totalSize = _padTestExpected[i] + 67;
+        int32_t totalSize = _nip44PadTestExpected[i] + 67;
 
-        TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), _padTestExpected[i]);
-		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, _padTestActual[i]), totalSize);
+        TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP44, _nip44PadTestActual[i]), _nip44PadTestExpected[i]);
+		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP44, _nip44PadTestActual[i]), totalSize);
+	}
+
+	for (int i = 0; i < 9; i++)
+	{
+		TEST(NCUtilGetEncryptionPaddedSize(NC_ENC_VERSION_NIP04, _nip04PadTestActual[i]), _nip04PadTestExpected[i]);
+		TEST(NCUtilGetEncryptionBufferSize(NC_ENC_VERSION_NIP04, _nip04PadTestActual[i]), _nip04PadTestExpected[i]);
 	}
 
     /*

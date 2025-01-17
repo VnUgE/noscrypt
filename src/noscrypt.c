@@ -358,8 +358,8 @@ static _nc_fn_inline NCResult _nip04CipherUpdate(
 	NCEncryptionArgs* args
 ) 
 {
-	cspan_t ivSpan, inputSpan, keySpan;
 	span_t outputSpan;
+	cspan_t ivSpan, inputSpan, keySpan;	
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context");
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
@@ -837,9 +837,8 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 				1 /* enables encryption mode */
 			);
 
-			/* TODO: Implement nip04 */
 		case NC_ENC_VERSION_NIP04:
-			/*return _nip04CipherUpdate(ctx, args); */
+			return _nip04CipherUpdate(ctx, args);
 
 		default:
 			return E_VERSION_NOT_SUPPORTED;
@@ -902,10 +901,8 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 
 		/* At the moment nip04 compatability is not supported */
 		case NC_ENC_VERSION_NIP04:
-			/*
 			result = _nip04CipherUpdate(ctx, args);
 			break; 
-			*/
 			
 		default:
 			result = E_VERSION_NOT_SUPPORTED;
@@ -944,7 +941,7 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 		return _nip44CipherUpdate(ctx, (struct conversation_key*)conversationKey, args, 0);
 
 	case NC_ENC_VERSION_NIP04:
-		/* return _nip04CipherUpdate(ctx, args); */
+		return _nip04CipherUpdate(ctx, args);
 	default:
 		return E_VERSION_NOT_SUPPORTED;
 	}
@@ -998,11 +995,10 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	}
 	break;
 
-	case NC_ENC_VERSION_NIP04:
-		/*
+	case NC_ENC_VERSION_NIP04:		
 		result = _nip04CipherUpdate(ctx, args);
 		break;
-		*/
+		
 	default:
 		result = E_VERSION_NOT_SUPPORTED;
 		break;

@@ -52,23 +52,6 @@
 
 #define UNREFPARAM(x) (void)(x)
 
-_IMPLSTB cstatus_t _dummyAesFunc(
-	cspan_t key,
-	cspan_t iv,
-	cspan_t input,
-	span_t output
-)
-{
-	UNREFPARAM(key);
-	UNREFPARAM(iv);
-	UNREFPARAM(input);
-	UNREFPARAM(output);
-
-	return CSTATUS_FAIL;
-}
-
-#define _IMPL_AES256_CBC_CRYPT _dummyAesFunc
-
 /*
 * Prioritize embedded builds with mbedtls
 */
@@ -116,6 +99,26 @@ _IMPLSTB cstatus_t _dummyAesFunc(
 */
 #include "providers/monocypher.c"
 
+#ifndef  _IMPL_AES256_CBC_CRYPT
+
+	_IMPLSTB cstatus_t _dummyAesFunc(
+		cspan_t key,
+		cspan_t iv,
+		cspan_t input,
+		span_t output
+	)
+	{
+		UNREFPARAM(key);
+		UNREFPARAM(iv);
+		UNREFPARAM(input);
+		UNREFPARAM(output);
+
+		return CSTATUS_FAIL;
+	}
+
+	#define _IMPL_AES256_CBC_CRYPT _dummyAesFunc
+
+#endif
 
 #ifdef _IMPL_CRYPTO_SHA256_HMAC
 
