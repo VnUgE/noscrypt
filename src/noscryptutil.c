@@ -196,6 +196,12 @@ static _nc_fn_inline uint32_t _calcNip44PtPadding(uint32_t plaintextSize)
 	return chunk * factor;
 }
 
+static _nc_fn_inline uint32_t _calcNip04PtPadding(uint32_t plaintextSize)
+{
+	/* must be a multiple of the aes block size */
+	return plaintextSize + (AES_IV_SIZE - (plaintextSize % AES_IV_SIZE));
+}
+
 static _nc_fn_inline uint32_t _calcNip44TotalOutSize(uint32_t inputSize)
 {
 	uint32_t bufferSize;
@@ -628,7 +634,8 @@ static NCResult _nip44DecryptCompleteCore(
 
 	/*
 	* actual output span should now point to the decrypted plaintext
-	* data segment
+	* data segment. The leading bytes are the text length bytes so the 
+	* offset must be just after that.
 	*/
 	_cipherPublishOutput(state, NIP44_PT_LEN_SIZE, ptSize);
 
@@ -642,7 +649,7 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint
 	switch (encVersion)
 	{
 	case NC_ENC_VERSION_NIP04:
-		return plaintextSize;
+		return (NCResult)(_calcNip04PtPadding(plaintextSize));
 
 	case NC_ENC_VERSION_NIP44:
 		
@@ -656,12 +663,9 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionBufferSize(uint32_t encVersion, uint
 {
 	switch (encVersion)
 	{
-		/*
-		* NIP-04 simply uses AES to 1:1 encrypt the plainText
-		* to ciphertext.
-		*/
+		/* output buffer just needs to be padded to the block size */
 	case NC_ENC_VERSION_NIP04:
-		return plaintextSize;
+		return NCUtilGetEncryptionPaddedSize(encVersion, plaintextSize);
 
 	case NC_ENC_VERSION_NIP44:
 		/*
