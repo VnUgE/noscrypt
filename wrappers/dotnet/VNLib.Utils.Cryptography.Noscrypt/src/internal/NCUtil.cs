@@ -65,6 +65,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
                 case NCErrorCodes.E_CIPHER_BAD_INPUT_SIZE:
                     throw new ArgumentOutOfRangeException("The cipher input buffer was too small or large for the configured cipher mode");
 
+                case NCErrorCodes.E_CIPHER_NO_OUTPUT:
+                    throw new InvalidOperationException("No data has been processed no output data can be read");
+
                 default:
                     if (raiseOnFailure)
                     {

@@ -15,7 +15,7 @@
     <Company>Vaughn Nugent</Company>
     <Product>VNLib.Utils.Cryptography.Noscrypt</Product>
     <Description>Provides a managed library wrapper for the noscrypt native library</Description>
-    <Copyright>Copyright © 2024 Vaughn Nugent</Copyright>
+    <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/noscryot/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
   </PropertyGroup>
@@ -33,8 +33,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0212" />
-    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0212" />
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-ci0214" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.0-ci0214" />
   </ItemGroup>
   
 </Project>

@@ -1,6 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+using System.Diagnostics;
+
 using VNLib.Hashing;
+using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using VNLib.Utils.Cryptography.Noscrypt.Singatures;
 
@@ -94,7 +97,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 
         //Test argument validations
         [TestMethod()]
-        public void TestPublicApiArgValidations()
+        public void TestSignerPublicApiValidation()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
@@ -144,7 +147,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             //Signature too small
             Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
                NCSignatureUtil.VerifyData(context, ref pubKey, bin32, bin32)
-           );
+            );
 
             /*
              *      SIGN DATA
@@ -186,7 +189,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             );
 
             /*
-             * Cipher api
+             * With the signer api
              */
 
             NoscryptSigner signer = new(context, NCFallbackRandom.Shared);
@@ -234,6 +237,56 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
                 signer.SignData(ref secKey, bin32, bin32)
             );
+        }
+
+
+        [TestMethod()]
+        public void TestNoscryptCipher()
+        {
+            using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
+            
+            byte[] bin16 = new byte[16];
+            NCSecretKey secKey = default;
+            NCPublicKey pubKey = default;
+
+            NCFallbackRandom.Shared.GetRandomBytes(NCKeyUtil.AsSpan(ref secKey));
+            NCKeyUtil.GetPublicKey(context, in secKey, ref pubKey);
+
+            /*
+             * NOTE:
+             *  NIP04 encryption is not supported at the moment
+             */
+            using (NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip04, NoscryptCipherFlags.EncryptDefault))
+            { 
+                //Should be aes cipher at 16 bytes
+                Assert.AreEqual(16, cipher.GetIvSize());
+                Assert.AreEqual((uint)NoscryptCipherFlags.EncryptDefault, cipher.GetFlags());
+
+                //Should fail to get output before update is called
+                Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());
+
+                cipher.SetRandomIv(NCFallbackRandom.Shared);
+
+                Assert.ThrowsException<NotSupportedException>(() => cipher.Update(in secKey, in pubKey, bin16));
+            }
+
+            using (NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault))
+            {
+                //Should be chacha cipher at with a custom 32 byte nonce/iv
+                Assert.AreEqual(32, cipher.GetIvSize());
+                Assert.AreEqual((uint)NoscryptCipherFlags.EncryptDefault, cipher.GetFlags());
+
+                //Should fail to get output before update is called
+                Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());
+
+                cipher.SetRandomIv(NCFallbackRandom.Shared);
+                cipher.Update(in secKey, in pubKey, bin16);
+
+                /*
+                 * 
+                 */
+                Assert.AreEqual(32 + 67, cipher.GetOutputSize());
+            }
         }
 
         void IDisposable.Dispose()

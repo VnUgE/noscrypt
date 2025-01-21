@@ -28,6 +28,7 @@ tasks:
      - task: test-dotnet  
 
   test-dotnet:
+    desc: Runs dotnet unit tests for vnbuild CI systems
     vars:
       LIB_NAME: '{{ if eq OS "windows" }}noscrypt.dll{{ else }}libnoscrypt{{ end }}'
       LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
