@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2024 Vaughn Nugent
+﻿// Copyright (C) 2025 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -28,7 +29,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// <summary>
     /// Contains utility methods for working with nostr keys
     /// </summary>
-    public static unsafe class NCKeyUtil
+    public static class NCKeyUtil
     {
         /// <summary>
         /// Gets a span of bytes from the current secret key 
@@ -144,7 +145,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <param name="publicKey">A reference to the public key structure to write the recovered key to</param>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public static void GetPublicKey(
+        public static unsafe void GetPublicKey(
             NCContext context,
             ref readonly NCSecretKey secretKey,
             ref NCPublicKey publicKey
@@ -189,7 +190,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
-        public static bool ValidateSecretKey(NCContext context, ref readonly NCSecretKey secretKey)
+        public static unsafe bool ValidateSecretKey(NCContext context, ref readonly NCSecretKey secretKey)
         {
             Check(context);
 
@@ -216,6 +217,101 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="ArgumentNullException"></exception>
         public static bool ValidateSecretKey(NCContext context, ReadOnlySpan<byte> secretKey) 
             => ValidateSecretKey(context, in AsSecretKey(secretKey));
+
+        /// <summary>
+        /// Converts a hexadecimal encoded secret key to a secret key structure
+        /// </summary>
+        /// <param name="hexPubKey">The 32 byte hexadecimal encoded secret key</param>
+        /// <param name="publicKey">A pointer to the secret key structure to write the key data to</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void FromHex(string hexSecKey, ref NCSecretKey secretKey)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(hexSecKey);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(hexSecKey.Length, NCSecretKey.Size * 2, nameof(hexSecKey));
+
+            FastDecodeHex(hexSecKey, AsSpan(ref secretKey));
+        }
+
+        /// <summary>
+        /// Converts a hexadecimal encoded public key to a public key structure
+        /// </summary>
+        /// <param name="hexPubKey">The 32 byte hexadecimal encoded public key</param>
+        /// <param name="publicKey">A pointer to the public key structure to write the key data to</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void FromHex(string hexPubKey, ref NCPublicKey publicKey)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(hexPubKey);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(hexPubKey.Length, NCPublicKey.Size * 2, nameof(hexPubKey));
+
+            FastDecodeHex(hexPubKey, AsSpan(ref publicKey));
+        }
+
+        private static void FastDecodeHex(ReadOnlySpan<char> input, Span<byte> output)
+        {
+            for (int i = 0; i < input.Length; i += 2)
+            {
+                byte b1 = CharToByte(input[i]);
+                byte b2 = CharToByte(input[i + 1]);
+                output[i / 2] = (byte)((b1 << 4) | b2);
+            }
+        }
+
+        private static byte CharToByte(char c)
+        {
+            if (c >= '0' && c <= '9')
+            {
+                return (byte)(c - '0');
+            }
+            
+            if (c >= 'a' && c <= 'f')
+            {
+                return (byte)(c - 'a' + 10);
+            }
+            
+            if (c >= 'A' && c <= 'F')
+            {
+                return (byte)(c - 'A' + 10);
+            }
+
+            throw new ArgumentException($"Input data contained invalid hexadecimal character data: '{c}'");
+        }
+
+        public static bool AreEqual(ref readonly NCPublicKey first, ref readonly NCPublicKey second)
+        {
+            return AreEqual<NCPublicKey>(in first, in second);
+        }
+
+        public static bool AreEqual(ref readonly NCSecretKey first, ref readonly NCSecretKey second)
+        {
+            return AreEqual<NCSecretKey>(in first, in second);
+        }
+
+        public static unsafe bool AreEqual<T>(ref readonly T first, ref readonly T second) where T : unmanaged
+        {
+            //Ensure the size of the structure is a multiple of long
+            Debug.Assert(sizeof(T) % sizeof(long) == 0);
+
+            //If pointers to the same memory, they are equal
+            if (Unsafe.AreSame(in first, in second))
+            {
+                return true;
+            }
+
+            ref long f = ref Unsafe.As<T, long>(ref Unsafe.AsRef(in first));
+            ref long s = ref Unsafe.As<T, long>(ref Unsafe.AsRef(in second));
+
+            for (int i = 0; i < sizeof(T) / sizeof(long); i++)
+            {
+                if (Unsafe.Add(ref f, i) != Unsafe.Add(ref s, i))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void Check(NCContext? context)

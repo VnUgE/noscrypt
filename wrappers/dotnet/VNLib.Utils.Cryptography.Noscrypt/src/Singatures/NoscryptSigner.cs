@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2024 Vaughn Nugent
+﻿// Copyright (C) 2025 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -16,7 +16,6 @@
 using System;
 
 using VNLib.Utils.Memory;
-using VNLib.Utils.Extensions;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
@@ -51,16 +50,17 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
             ArgumentException.ThrowIfNullOrWhiteSpace(hexPrivateKey);
             ArgumentOutOfRangeException.ThrowIfNotEqual(hexPrivateKey.Length / 2, NC_SEC_KEY_SIZE, nameof(hexPrivateKey));
 
-            //Have to allocate array unfortunately
-            byte[] privKey = Convert.FromHexString(hexPrivateKey);
+            NCSecretKey nsec;
+            NCKeyUtil.FromHex(hexPrivateKey, ref nsec);
+            
             try
             {
-                return SignData(privKey.AsSpan(), message, format);
+                return SignData(ref nsec, message, format);
             }
             finally
             {
                 //Always zero key beofre leaving
-                MemoryUtil.InitializeBlock(privKey);
+                MemoryUtil.ZeroStruct(ref nsec);
             }
         }
 
@@ -81,7 +81,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         )
         {
             return SignData(
-                in NCKeyUtil.AsSecretKey(secretKey), 
+                secretkey: in NCKeyUtil.AsSecretKey(secretKey), 
                 message, 
                 format
             );
@@ -108,7 +108,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
 
             Span<byte> sigBuffer = stackalloc byte[SignatureBufferSize];
 
-            SignData(message, sigBuffer);
+            SignData(in secretkey, message, sigBuffer);
 
             return format.GetString(sigBuffer);
         }
@@ -143,11 +143,42 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
             );
         }
 
+        /// <summary>
+        /// Verifies a message signature using the specified hex encoded public 
+        /// key and message data
+        /// </summary>
+        /// <param name="hexPublicKey">The hexadecimal encoded public key of the author of the signed message</param>
+        /// <param name="data">The signed data to verify</param>
+        /// <param name="signature">The signature of the data to verify</param>
+        /// <returns>True if the data was correctly signed by the author's public key</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public bool VerifyData(
+              string hexPublicKey,
+              ReadOnlySpan<byte> data,
+              ReadOnlySpan<byte> signature
+        )
+        {
+            NCPublicKey npub;
+            NCKeyUtil.FromHex(hexPublicKey, ref npub);
+
+            return VerifyData(in npub, data, signature);
+        }
+
+        /// <summary>
+        /// Verifies a message signature using the specified hex encoded public 
+        /// key and message data
+        /// </summary>
+        /// <param name="publicKey">A buffer containing the 32byte public key structure</param>
+        /// <param name="data">The signed data to verify</param>
+        /// <param name="signature">The signature of the data to verify</param>
+        /// <returns>True if the data was correctly signed by the author's public key</returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public bool VerifyData(
               ReadOnlySpan<byte> publicKey,
               ReadOnlySpan<byte> data,
               ReadOnlySpan<byte> signature
-          )
+        )
         {
             return VerifyData(
                 in NCKeyUtil.AsPublicKey(publicKey), 

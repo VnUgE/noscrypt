@@ -90,7 +90,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             //Get delegate parameters
             Type type = typeof(T);
             ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentNullException(arg.Name, "Argument is null or invalid cannot continue");
+            throw new ArgumentNullException(arg.Name, $"Argument for function '{type.Name}' is null or invalid cannot continue");
         }
 
         private static void RaiseArgExceptionForArgumentNumber<T>(int argNumber) where T : Delegate
@@ -98,7 +98,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             //Get delegate parameters
             Type type = typeof(T);
             ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentException("Argument is null or invalid cannot continue", arg.Name);
+            throw new ArgumentException($"Argument for function '{type.Name}' is null or invalid cannot continue", arg.Name);
         }
 
         private static void RaiseOORExceptionForArgumentNumber<T>(int argNumber) where T : Delegate
@@ -106,7 +106,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.@internal
             //Get delegate parameters
             Type type = typeof(T);
             ParameterInfo arg = type.GetMethod("Invoke")!.GetParameters()[argNumber];
-            throw new ArgumentOutOfRangeException(arg.Name, "Argument is out of range of acceptable values");
+            throw new ArgumentOutOfRangeException(arg.Name, $"Argument for function '{type.Name}' is out of range of acceptable values");
         }
     }
 }
