@@ -1,7 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using System.Diagnostics;
-
 using VNLib.Hashing;
 using VNLib.Utils.Cryptography.Noscrypt.Encryption;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
@@ -27,6 +25,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void Initialize()
         {
             _testLib = Noscrypt.LoadDefaultLibrary();
+        }
+
+        void IDisposable.Dispose()
+        {
+            _testLib.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         [TestMethod()]
@@ -65,33 +69,26 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
 
             //Test known key 1
-            TestKnownKeys(
-                context,
-                Convert.FromHexString(TestPrivateKeyHex),
-                Convert.FromHexString(TestPublicKeyHex)
-            );
+            TestKnownKeys(context, TestPrivateKeyHex, TestPublicKeyHex);
 
             //Test known key 2
-            TestKnownKeys(
-                context,
-                Convert.FromHexString(TestPrivateKeyHex2),
-                Convert.FromHexString(TestPublicKeyHex2)
-            );
+            TestKnownKeys(context, TestPrivateKeyHex2, TestPublicKeyHex2);
 
 
-            static void TestKnownKeys(NCContext context, ReadOnlySpan<byte> knownSec, ReadOnlySpan<byte> kownPub)
+            static void TestKnownKeys(NCContext context, string knownSec, string kownPub)
             {
-                NCPublicKey pubKey;
+                NCSecretKey nsec;
+                NCPublicKey npub;
+                NCPublicKey knownNpub;
+
+                NCKeyUtil.FromHex(knownSec, ref nsec);
+                NCKeyUtil.FromHex(kownPub, ref knownNpub);
 
                 //Invoke test function
-                NCKeyUtil.GetPublicKey(
-                    context,
-                    in NCKeyUtil.AsSecretKey(knownSec),
-                    ref pubKey
-                );
+                NCKeyUtil.GetPublicKey(context, in nsec, ref npub);
 
                 //Make sure known key matches the generated key
-                Assert.IsTrue(NCKeyUtil.AsSpan(ref pubKey).SequenceEqual(kownPub));
+                Assert.IsTrue(NCKeyUtil.AreEqual(in knownNpub, in knownNpub));
             }
         }
 
@@ -214,6 +211,17 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                signer.VerifyData(ref pubKey, bin32, bin32)
             );
 
+            //Key too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => {
+                Span<byte> key = stackalloc byte[NCPublicKey.Size - 1];
+                signer.VerifyData(key, bin32, bin32);
+            });
+
+            //Empty hex string
+            Assert.ThrowsException<ArgumentException>(() =>
+                signer.VerifyData(string.Empty, bin32, bin64)
+            );
+
             /*
              *      SIGN DATA
              */
@@ -236,6 +244,25 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             //Signature too small
             Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
                 signer.SignData(ref secKey, bin32, bin32)
+            );
+
+            //Key too small
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            {
+                Span<byte> key = stackalloc byte[NCSecretKey.Size - 1];
+                _ = signer.SignData(key, bin32, format: null);
+            });
+
+            //Key too large should be ignored
+            {
+                Span<byte> key = stackalloc byte[NCSecretKey.Size + 1];
+                RandomHash.GetRandomBytes(key);
+                _ = signer.SignData(key, bin32, format: null);
+            }
+
+            //Empty hex string
+            Assert.ThrowsException<ArgumentException>(() =>
+                signer.SignData(string.Empty, bin32, format: null)
             );
         }
 
@@ -287,12 +314,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                  */
                 Assert.AreEqual(32 + 67, cipher.GetOutputSize());
             }
-        }
-
-        void IDisposable.Dispose()
-        {
-            _testLib.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }
