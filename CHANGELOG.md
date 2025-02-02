@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+
+### Changed
+ - Added `const` to `NCVerifyMac()` and `NCVerifyMacEx()` args paramter. Maybe a breaking change on some platforms.
  
 ## [0.1.7]
  
