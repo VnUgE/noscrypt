@@ -221,16 +221,15 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <summary>
         /// Converts a hexadecimal encoded secret key to a secret key structure
         /// </summary>
-        /// <param name="hexPubKey">The 32 byte hexadecimal encoded secret key</param>
-        /// <param name="publicKey">A pointer to the secret key structure to write the key data to</param>
+        /// <param name="hexSecKey">The 32 byte hexadecimal encoded secret key</param>
+        /// <param name="secretKey">A pointer to the secret key structure to write the key data to</param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public static void FromHex(string hexSecKey, ref NCSecretKey secretKey)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(hexSecKey);
-            ArgumentOutOfRangeException.ThrowIfNotEqual(hexSecKey.Length, NCSecretKey.Size * 2, nameof(hexSecKey));
 
-            FastDecodeHex(hexSecKey, AsSpan(ref secretKey));
+            FromHex(hexSecKey.AsSpan(), ref secretKey);
         }
 
         /// <summary>
@@ -243,6 +242,33 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public static void FromHex(string hexPubKey, ref NCPublicKey publicKey)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(hexPubKey);
+
+            FromHex(hexPubKey.AsSpan(), ref publicKey);
+        }
+
+        /// <summary>
+        /// Converts a hexadecimal encoded secret key to a secret key structure
+        /// </summary>
+        /// <param name="hexSecKey">The 32 byte hexadecimal encoded secret key</param>
+        /// <param name="secretKey">A pointer to the secret key structure to write the key data to</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void FromHex(ReadOnlySpan<char> hexSecKey, ref NCSecretKey secretKey)
+        {
+            ArgumentOutOfRangeException.ThrowIfNotEqual(hexSecKey.Length, NCSecretKey.Size * 2, nameof(hexSecKey));
+
+            FastDecodeHex(hexSecKey, AsSpan(ref secretKey));
+        }
+
+        /// <summary>
+        /// Converts a hexadecimal encoded public key to a public key structure
+        /// </summary>
+        /// <param name="hexPubKey">The 32 byte hexadecimal encoded public key</param>
+        /// <param name="publicKey">A pointer to the public key structure to write the key data to</param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void FromHex(ReadOnlySpan<char> hexPubKey, ref NCPublicKey publicKey)
+        {
             ArgumentOutOfRangeException.ThrowIfNotEqual(hexPubKey.Length, NCPublicKey.Size * 2, nameof(hexPubKey));
 
             FastDecodeHex(hexPubKey, AsSpan(ref publicKey));

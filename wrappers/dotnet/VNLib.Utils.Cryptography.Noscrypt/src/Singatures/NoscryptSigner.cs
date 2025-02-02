@@ -45,14 +45,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         /// <returns>The string encoded nostr signature</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public string SignData(string hexPrivateKey, ReadOnlySpan<byte> message, INostrSignatureEncoder? format = null)
+        public string SignData(ReadOnlySpan<char> hexPrivateKey, ReadOnlySpan<byte> message, INostrSignatureEncoder? format = null)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(hexPrivateKey);
             ArgumentOutOfRangeException.ThrowIfNotEqual(hexPrivateKey.Length / 2, NC_SEC_KEY_SIZE, nameof(hexPrivateKey));
 
             NCSecretKey nsec;
             NCKeyUtil.FromHex(hexPrivateKey, ref nsec);
-            
+
             try
             {
                 return SignData(ref nsec, message, format);
@@ -154,7 +153,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public bool VerifyData(
-              string hexPublicKey,
+              ReadOnlySpan<char> hexPublicKey,
               ReadOnlySpan<byte> data,
               ReadOnlySpan<byte> signature
         )
