@@ -1,4 +1,4 @@
-version: 36
+version: 37
 jobs:
 - name: Git mirror push
   steps:
@@ -25,15 +25,16 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
-
-- name: Unit Testing
+- name: Windows Testing
+  jobExecutor: windows
   steps:
-  - !CheckoutStep
+  - !CommandStep
     name: checkout
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    checkoutPath: '@project_name@'
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+    useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: run unit tests
@@ -52,20 +53,22 @@ jobs:
   retryDelay: 30
   timeout: 14400
 - name: Staging build
+  jobExecutor: windows
   steps:
-  - !CheckoutStep
+  - !CommandStep
     name: checkout
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    checkoutPath: '@project_name@'
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+    useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: VNBuild build
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild build -S --verbose
+        vnbuild build --verbose --no-delay
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
@@ -80,28 +83,57 @@ jobs:
   - !BranchUpdateTrigger
     branches: develop master
   jobDependencies:
-  - jobName: Unit Testing
+  - jobName: Windows Testing
     requireSuccessful: true
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
-
-- name: Publish on tag
+- name: Ubuntu Testing
+  jobExecutor: docker
   steps:
-  - !CheckoutStep
+  - !CommandStep
     name: checkout
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    checkoutPath: '@project_name@'
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  - !CommandStep
+    name: run unit tests
+    runInContainer: true
+    image: noscrypt-ubuntu:latest
+    interpreter: !DefaultInterpreter
+      commands: |
+        cd @project_name@
+        task -t Module.Taskfile.yaml test
+    useTTY: true
+    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+  triggers:
+  - !BranchUpdateTrigger
+    branches: '** -master'
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+- name: Publish on tag
+  jobExecutor: windows
+  steps:
+  - !CommandStep
+    name: checkout
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+    useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: VNBuild build
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild build -S --verbose
+        vnbuild build --verbose --no-delay
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
