@@ -92,13 +92,12 @@ jobs:
 - name: Ubuntu Testing
   jobExecutor: docker
   steps:
-  - !CommandStep
+  - !CheckoutStep
     name: checkout
-    runInContainer: false
-    interpreter: !DefaultInterpreter
-      commands: |
-        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
-    useTTY: true
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@'
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
     name: run unit tests
