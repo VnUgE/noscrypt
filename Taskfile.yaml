@@ -397,7 +397,7 @@ tasks:
       - task: dev-update-monocypher
       - task: dev-update-mbedtls-headers
       - task: dev-update-openssl-headers
-      - task: dev-set-secp256-headers
+      - task: dev-update-secp256
 
   dev-update-monocypher:
     vars:
@@ -444,17 +444,12 @@ tasks:
      - for: [ 'include/openssl/*' ]
        cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .OPENSSL_DIR }}'
 
-  dev-set-secp256-headers:
+  dev-update-secp256:
     vars:
-      SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
-      SECP256_GIT_BRANCH: 'v0.6.0'
+      TAG: 'v0.6.0'
+      TAR_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/{{ .TAG }}.tar.gz'
       SECP256_DIR: 'vendor/secp256k1'
-      TMP_DIR: '.update/secp256k1'
     cmds:
-     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
+     - cmd: '{{ ._MKDIR }} "{{ .SECP256_DIR }}"'
        ignore_error: true
-     
-     - cmd: git clone --depth 1 --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
-     
-     - for: [ 'include/*' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .SECP256_DIR }}'
+     - cmd: curl {{ .TAR_URL }} -L | tar -xz -f - -C '{{ .SECP256_DIR }}' --strip-components=1

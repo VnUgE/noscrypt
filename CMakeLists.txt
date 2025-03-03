@@ -47,14 +47,7 @@ if(NC_FETCH_SECP256K1)
 	set(SECP256K1_INSTALL OFF)
 	set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
 
-	FetchContent_Declare(
-	  libsecp256k1
-	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				0cdc758a56360bf58a851fe91085a327ec97685a # release-0.6.0
-	  GIT_PROGRESS			TRUE
-	)
-
-	FetchContent_MakeAvailable(libsecp256k1)
+	add_subdirectory(vendor/secp256k1)
 	
 	#Must force FPIC when using secp256k1, ld linker complains otherwise
 	set_target_properties(
