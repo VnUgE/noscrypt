@@ -24,7 +24,6 @@ tasks:
     cmds:
      #run CI tests with utils enabled
      - cmd: task ci-test
-     - cmd: wsl task ci-test
 
 #called by build pipeline to build module
   build:
