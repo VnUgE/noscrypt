@@ -152,8 +152,7 @@ if(CRYPTO_LIB STREQUAL "")
   elseif(OPENSSL_FOUND)
 	set(CRYPTO_LIB "openssl")
   endif()
-
-  message(STATUS "No crypto library was specified, defaulting to ${CRYPTO_LIB}")
+  message(STATUS "No crypto library was specified, defaulting to '${CRYPTO_LIB}'")
 endif()
 
 
