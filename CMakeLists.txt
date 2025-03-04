@@ -19,7 +19,6 @@ set(_NC_PROJ_NAME "noscrypt")
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_ENABLE_UTILS "Enables the sidecar utility library" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
-option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
 option(NC_INCLUDE_MONOCYPHER "Statically link to vendored monocypher library" ON)
 set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl, bcrypt)")
 set(CRYPTO_LIB_DIR "" CACHE STRING "The path to the crypto library if it's not globally available")
@@ -32,7 +31,25 @@ set(NC_PROJ_DEFINTIONS "")
 
 include(FetchContent)
 
-if(NC_FETCH_SECP256K1)
+if(SECP256K1_LIB_DIR)
+
+	#search for an existing library, it's a required dependency
+	find_library(secp256k1
+		NAMES secp256k1 libsecp256k1 
+		PATHS ${SECP256K1_LIB_DIR}
+		REQUIRED
+	)
+
+else()
+
+  #try to find the library globally
+  find_library(secp256k1 NAMES secp256k1 libsecp256k1)
+
+endif()
+
+if(NOT secp256k1)
+
+   message(STATUS "No secp256k1 library was found, falling back to build local copy")
 
 	#Fetch libsecp256k1, and build a minimal static library 
 	set(SECP256K1_BUILD_BENCHMARK OFF)
@@ -58,15 +75,6 @@ if(NC_FETCH_SECP256K1)
 		POSITION_INDEPENDENT_CODE  ON
 	)
 	
-else()	
-
-	#search for an existing library, it's a required dependency
-	find_library(secp256k1
-		NAMES secp256k1 libsecp256k1 
-		PATHS ${SECP256K1_LIB_DIR}
-		REQUIRED
-	)
-
 endif()
 
 #-----------------------------
@@ -371,7 +379,11 @@ message("  Testing enabled: ....... ${NC_BUILD_TESTS}")
 message("  Crypto library: ........ ${CRYPTO_LIB}")
 message("  Input validation off: .. ${NC_DISABLE_INPUT_VALIDATION}")
 message("  Monocypher: ............ ${NC_INCLUDE_MONOCYPHER}")
-message("  Fetched seckp256k1: .... ${NC_FETCH_SECP256K1}")
+if(NOT secp256k1)
+	message("  secp256k1 library: ..... (local)")
+else()
+	message("  secp256k1 library: ..... ${secp256k1}")
+endif()
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
 message(" Defintions: ${NC_PROJ_DEFINTIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")
