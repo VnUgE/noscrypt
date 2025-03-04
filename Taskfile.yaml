@@ -23,8 +23,10 @@ vars:
   TEST_EXE_NAME: 'nctest'
   CI_BUILD_CONFIG: '{{ .CI_BUILD_CONFIG | default "Release" }}'
 
-  MBEDTLS_VERSION: '3.6.2'
-  MBEDTLS_ARCHIVE_SHA: '' 
+  MBEDTLS_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/mbedtls'
+  SECP256_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/secp256k1'
+  OPENSSL_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/openssl'
+  MONOCYPHER_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/monocypher'
 
 tasks:
 
@@ -45,9 +47,8 @@ tasks:
   build-mbedtls:
     desc: "Build the library linking against mbedls as a crypto backend"
     summary: |
-      Downloads, configures, and compiles mbedtls, then builds noscrypt linking against mbedtls 
+      Configures, and compiles mbedtls, then builds noscrypt linking against mbedtls 
       as a crypto backend. 
-      * WSL is required to extract the mbedtls archive on Windows. *
     cmds:
      - task: mbedtls-build
        vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
@@ -173,29 +174,11 @@ tasks:
     requires: { CMAKE_BUILD_DIR }
     cmds:
      - cmd: cd {{ .CMAKE_BUILD_DIR }} && ctest -C Debug --verbose --output-on-failure
-
-  mbedtls-download:
-    internal: true
-    requires: { CMAKE_BUILD_DIR, MBEDTLS_VERSION }
-    vars:
-      MBEDTLS_DOWNLOAD_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
-      MBEDTLS_DOWNLOAD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps'
-      MBEDTLS_SRC_DIR: '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls-{{ .MBEDTLS_VERSION }}'
-    cmds:
-     #ensure directory is created
-     - cmd: '{{ ._MKDIR }} "{{ .MBEDTLS_SRC_DIR }}"'
-      
-     #download mbedtls archive
-     - cmd: curl{{ exeExt }} -L '{{ .MBEDTLS_DOWNLOAD_URL }}' -o '{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2'
- 
-     #extract the archive using bz2 (linux only)
-     - cmd: '{{ if eq OS "windows" }}wsl{{ end }} tar -xjf "{{ .MBEDTLS_DOWNLOAD_DIR }}/mbedtls.tar.bz2" -C "{{ .MBEDTLS_DOWNLOAD_DIR }}"'
   
   mbedtls-configure:
     internal: true
-    requires: { CMAKE_BUILD_DIR, MBEDTLS_VERSION }
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_SRC_DIR }
     vars:
-      MBEDTLS_SRC_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls-{{ .MBEDTLS_VERSION }}'
       MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
@@ -225,11 +208,9 @@ tasks:
     
   mbedtls-build:
     internal: true
-    desc: "Downloads, configures, and compiles mbedtls"
+    desc: "Configures, and compiles mbedtls locally"
     requires: { CMAKE_BUILD_DIR }
     cmds:
-     - task: mbedtls-download
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
      - task: mbedtls-configure
        vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
      - task: mbedtls-compile
@@ -395,66 +376,52 @@ tasks:
   
       #must run serially since git does not support mutliple instances
       - task: dev-update-monocypher
-      - task: dev-update-mbedtls-headers
+      - task: dev-update-mbedtls
       - task: dev-update-openssl-headers
-      - task: dev-set-secp256-headers
+      - task: dev-update-secp256
 
   dev-update-monocypher:
     vars:
-      MC_GIT_URL: 'https://github.com/LoupVaillant/Monocypher'
-      MC_GIT_BRANCH: 'master'       #NOTE: Always update to the latest master branch, then verify changes manually
-      MC_DIR: 'vendor/monocypher'
+      MC_DOWNLOAD_URL: 'https://monocypher.org/download/monocypher-4.0.2.tar.gz'
       TMP_DIR: '.update/mc'
     cmds:
      - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
      
-     - cmd: git clone --depth 1 --branch {{ .MC_GIT_BRANCH }} {{ .MC_GIT_URL }} '{{ .TMP_DIR }}' 
-
+     - cmd: curl {{ .MC_DOWNLOAD_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
+     
+     #copy only the required source code files
      - for: [ 'src/monocypher.h', 'src/monocypher.c' ]
-       cmd: powershell cp '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .MC_DIR }}'
+       cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .MONOCYPHER_SRC_DIR }}"'
 
-  dev-update-mbedtls-headers:
+  dev-update-mbedtls:
+    requires: { MBEDTLS_SRC_DIR }
     vars:
-      MBEDTLS_GIT_URL: 'https://github.com/Mbed-TLS/mbedtls'
-      MBEDTLS_GIT_BRANCH: 'v{{ .MBEDTLS_VERSION }}'
-      MBEDTLS_DIR: 'vendor/mbedtls'
-      TMP_DIR: '.update/mbedtls'
+      TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
     cmds:
-     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
-       ignore_error: true
-
-     - cmd: git clone --depth 1 --branch {{ .MBEDTLS_GIT_BRANCH }} {{ .MBEDTLS_GIT_URL }} '{{ .TMP_DIR }}' 
-
-     - for: [ 'include/mbedtls' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .MBEDTLS_DIR }}'
+     - cmd: '{{ if eq OS "windows" }}wsl{{ end }} 
+        curl {{ .TAR_URL }} --location
+        | tar -xjf - -C "{{ .MBEDTLS_SRC_DIR }}" --strip-components=1'
 
   dev-update-openssl-headers:
+    requires: { OPENSSL_SRC_DIR }
     vars:
-      OPENSSL_GIT_URL: 'https://github.com/openssl/openssl'
-      OPENSSL_GIT_BRANCH: 'openssl-3.4.0'
-      OPENSSL_DIR: 'vendor/openssl'
+      TAG: 'openssl-3.4.1'
+      TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
      - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
-     
-     - cmd: git clone --depth 1 --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
+
+     - cmd: curl {{ .TAG_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
      
      - for: [ 'include/openssl/*' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .OPENSSL_DIR }}'
+       cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .OPENSSL_SRC_DIR }}"'
 
-  dev-set-secp256-headers:
+  dev-update-secp256:
+    requires: { SECP256_SRC_DIR }
     vars:
-      SECP256_GIT_URL: 'https://github.com/bitcoin-core/secp256k1'
-      SECP256_GIT_BRANCH: 'v0.6.0'
-      SECP256_DIR: 'vendor/secp256k1'
-      TMP_DIR: '.update/secp256k1'
+      TAG: 'v0.6.0'
+      TAR_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/{{ .TAG }}.tar.gz'
     cmds:
-     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
-       ignore_error: true
-     
-     - cmd: git clone --depth 1 --branch {{ .SECP256_GIT_BRANCH }} {{ .SECP256_GIT_URL }} '{{ .TMP_DIR }}' 
-     
-     - for: [ 'include/*' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .SECP256_DIR }}'
+     - cmd: curl {{ .TAR_URL }} -L | tar -xzf - -C '{{ .SECP256_SRC_DIR }}' --strip-components=1

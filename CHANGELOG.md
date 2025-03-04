@@ -10,10 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+- Vendored modified copies of libsecp256k1 and mbedtls
 
 ### Changed
- - Added `const` to `NCVerifyMac()` and `NCVerifyMacEx()` args paramter. Maybe a breaking change on some platforms.
+- Added `const` to `NCVerifyMac()` and `NCVerifyMacEx()` args paramter. Maybe a breaking change on some platforms.
+- WSL is no longer required on Windows systems when compiling mbedtls variant 
+- A globally installed libsecp256k1 library is preferred over the vendored source code, and dynamically linked. If not found falls back to vendored source code.
  
+### Updated
+- Updated monocypher to v4.0.2
+- Updated openssl headers to match v3.4.1 (no header changes were found in diff)
+
 ## [0.1.7]
  
 ### Added
