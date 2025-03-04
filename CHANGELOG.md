@@ -10,16 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+
+## [0.1.8]
+
+### Added
 - Vendored modified copies of libsecp256k1 and mbedtls
+- Tests for nip04 padding schemes
+- More internal struct initialization
 
 ### Changed
 - Added `const` to `NCVerifyMac()` and `NCVerifyMacEx()` args paramter. Maybe a breaking change on some platforms.
 - WSL is no longer required on Windows systems when compiling mbedtls variant 
 - A globally installed libsecp256k1 library is preferred over the vendored source code, and dynamically linked. If not found falls back to vendored source code.
+- Internal move to `span_t` for better memory safety
  
 ### Updated
 - Updated monocypher to v4.0.2
 - Updated openssl headers to match v3.4.1 (no header changes were found in diff)
+- `NCUtilGetEncryptionPaddedSize()` and `NCUtilGetEncryptionBufferSize()` now correctly pad for AES nip04 messages
 
 ## [0.1.7]
  
@@ -117,7 +125,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NCContext structure defintion.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.7...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/VnUgE/noscrypt/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/VnUgE/noscrypt/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/VnUgE/noscrypt/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/VnUgE/noscrypt/compare/v0.1.4...v0.1.5

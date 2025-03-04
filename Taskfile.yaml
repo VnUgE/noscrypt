@@ -313,7 +313,7 @@ tasks:
   build:
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
-     - cmd: '{{ ._MKDIR }} {{ .BINARY_DIR }}'
+     - cmd: '{{ ._MKDIR }} "{{ .BINARY_DIR }}"'
   
      #build windows x64
      - task: ci-build-win_x64
