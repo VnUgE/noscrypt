@@ -389,7 +389,7 @@ tasks:
        ignore_error: true
      
      - cmd: curl {{ .MC_DOWNLOAD_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
-
+     
      #copy only the required source code files
      - for: [ 'src/monocypher.h', 'src/monocypher.c' ]
        cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .MONOCYPHER_SRC_DIR }}"'
@@ -406,17 +406,17 @@ tasks:
   dev-update-openssl-headers:
     requires: { OPENSSL_SRC_DIR }
     vars:
-      OPENSSL_GIT_URL: 'https://github.com/openssl/openssl'
-      OPENSSL_GIT_BRANCH: 'openssl-3.4.0'
+      TAG: 'openssl-3.4.1'
+      TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
      - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
        ignore_error: true
-     
-     - cmd: git clone --depth 1 --branch {{ .OPENSSL_GIT_BRANCH }} {{ .OPENSSL_GIT_URL }} '{{ .TMP_DIR }}' 
+
+     - cmd: curl {{ .TAG_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
      
      - for: [ 'include/openssl/*' ]
-       cmd: powershell cp -Recurse -Force '{{ .TMP_DIR }}/{{ .ITEM }}' '{{ .OPENSSL_SRC_DIR }}'
+       cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .OPENSSL_SRC_DIR }}"'
 
   dev-update-secp256:
     requires: { SECP256_SRC_DIR }
