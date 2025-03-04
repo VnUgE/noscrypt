@@ -294,8 +294,6 @@ tasks:
         license.txt"
     
     cmds:
-    #remove deps dir to avoid conflicts with vnbuild
-     - defer: '{{ ._RMDIR }} "{{ .BUILD_DIR }}/_deps"'
 
      #run configure and compile commands 
      - task: cmake-build
