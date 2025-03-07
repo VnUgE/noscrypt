@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - WSL is no longer required on Windows systems when compiling mbedtls variant 
 - A globally installed libsecp256k1 library is preferred over the vendored source code, and dynamically linked. If not found falls back to vendored source code.
 - Internal move to `span_t` for better memory safety
+- Enabled `-Werror` for all gcc builds
+- Addedd extra gcc warnings for better code quality
  
 ### Updated
 - Updated monocypher to v4.0.2

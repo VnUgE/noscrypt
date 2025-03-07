@@ -276,6 +276,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	list(APPEND _NC_COMPILE_OPTS 
 		-Wextra 
 		-fstack-protector
+		-Werror				# warnings as errors
 	)
 
 	#if debug build enable additional debug flags
@@ -285,8 +286,17 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 			-g				# enable debug info
 			-Og				# disable all optimizations
 			-Wall			# enable all warnings
-			-Werror			# warnings as errors
 			-pedantic		# enable pedantic warnings
+			-Winit-self		# warn about self initialization
+			-Wpointer-arith
+			-Wstrict-prototypes
+			-Wswitch-default
+			-Wshadow		# warn when a local variable shadows another
+			-Wformat=2		# warn about format strings
+			-Wundef			# warn about undefined macros
+			-Wcast-align	# warn about pointer casts that increase alignment requirements
+			-Wmissing-prototypes	# warn if a global function is defined without a previous prototype declaration
+			-Wmissing-declarations	# warn if a global function is defined without a previous declaration
 		)
 	endif()
 endif()
