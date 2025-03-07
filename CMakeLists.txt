@@ -160,8 +160,8 @@ endif()
 if(CRYPTO_LIB STREQUAL "mbedtls")
 
 	#make vendored mbedtls headers available to the project
-	target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
-	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
+	target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls/include)
+	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls/include)
 
 	message(STATUS "Linking to MbedTLS crypto library")
 

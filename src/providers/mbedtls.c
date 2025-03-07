@@ -31,25 +31,27 @@
 /* Inline errors on linux in header files on linux */
 #ifndef inline
 	#define inline __inline
-	#include <mbedtls/mbedtls/md.h>
-	#include <mbedtls/mbedtls/hkdf.h>
-	#include <mbedtls/mbedtls/hmac_drbg.h>
-	#include <mbedtls/mbedtls/sha256.h>
-	#include <mbedtls/mbedtls/chacha20.h>
-	#include <mbedtls/mbedtls/constant_time.h>
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/aes.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 	#undef inline
 #else
-	#include <mbedtls/mbedtls/md.h>
-	#include <mbedtls/mbedtls/hkdf.h>
-	#include <mbedtls/mbedtls/hmac_drbg.h>
-	#include <mbedtls/mbedtls/sha256.h>
-	#include <mbedtls/mbedtls/chacha20.h>
-	#include <mbedtls/mbedtls/constant_time.h>
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/aes.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 #endif
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
-	const mbedtls_md_info_t* info;
+	const mbedtls_md_info_t* info; 
 	/* Get sha256 md info for hdkf operations */
 	info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 	DEBUG_ASSERT2(info != NULL, "Expected SHA256 md info pointer to be valid")
@@ -187,6 +189,46 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		}
 
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
+	}
+#endif
+
+#if 0 && _IMPL_AES256_CBC_CRYPT
+
+	#define _IMPL_AES256_CBC_CRYPT
+	_IMPLSTB cstatus_t _mbed_aes_cbc_256(cspan_t key, cspan_t iv, cspan_t input, span_t output)
+	{
+		cstatus_t result;
+		mbedtls_aes_context ctx;
+		uint8_t ivCopy[16];
+
+		DEBUG_ASSERT2(ncSpanGetSizeC(iv) == 16, "Expected iv size to be exactly 16 bytes");
+		DEBUG_ASSERT2(ncSpanGetSizeC(key) == 32, "Expected key size to be exactly 32 bytes");
+		DEBUG_ASSERT2(ncSpanGetSizeC(input) % 16 == 0, "Expected input size to be a multiple of 16 bytes");
+
+		ncSpanReadC(iv, ivCopy, sizeof(ivCopy));
+
+		result = CSTATUS_FAIL;
+
+		mbedtls_aes_init(&ctx);
+
+		/* set cipher encryption key, also enables encryption mode */
+		if (mbedtls_aes_setkey_enc(&ctx, ncSpanGetOffsetC(key, 0), 256) != 0)
+		{
+			goto Exit;
+		}
+	
+		result = mbedtls_aes_crypt_cbc(
+			&ctx,
+			MBEDTLS_AES_ENCRYPT,
+			ncSpanGetSizeC(input),
+			ivCopy,
+			ncSpanGetOffsetC(input, 0),
+			ncSpanGetOffset(output, 0)
+		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
+
+	Exit:
+		mbedtls_aes_free(&ctx);
+		return result;
 	}
 #endif
 
