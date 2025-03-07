@@ -1178,6 +1178,9 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 		args->keyData = value;
 
 		return NC_SUCCESS;
+
+	default:
+		break;
 	}
 
 	return E_INVALID_ARG;
