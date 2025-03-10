@@ -1,4 +1,6 @@
 assembly-versioning-scheme: MajorMinorPatch
+assembly-versioning-format: '{Major}.{Minor}.{Patch}.{CommitsSinceVersionSourcePadded}'
+assembly-file-versioning-format: '{Major}.{Minor}.{Patch}.{CommitsSinceVersionSourcePadded}'
 mode: ContinuousDeployment
 branches: {}
 ignore:
