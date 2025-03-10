@@ -14,6 +14,8 @@ version: '3'
 
 vars:
 
+  PROJECT_NAME: '{{ .PROJECT_NAME | default "noscrypt" }}'
+
   #cross platform commands to make and remove directories
   _RMDIR: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }}'
   _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{ else }}mkdir -p{{ end }}'
@@ -216,6 +218,17 @@ tasks:
      - task: mbedtls-compile
        vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
 
+  print-symbols:
+    requires: { CMAKE_BUILD_DIR }
+    internal: false
+    cmds: 
+     - cmd: dumpbin /EXPORTS '{{ .CMAKE_BUILD_DIR }}/{{ .BUILD_CONFIG }}/{{ .PROJECT_NAME }}.dll'
+       platforms: [ windows ]
+
+     - cmd: nm -D '{{ .CMAKE_BUILD_DIR }}/lib{{ .PROJECT_NAME }}.so'
+       platforms: [ linux ]
+
+
 #################################
 #       
 #       CI TASKS
@@ -245,6 +258,12 @@ tasks:
     cmds:
      #cleanup build directories after testing
      - defer: '{{ ._RMDIR }} "{{ .CMAKE_BUILD_DIR }}/test"'
+
+     #print symbols for both builds
+     - task: print-symbols
+       vars: { CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}', BUILD_CONFIG: debug }
+     - task: print-symbols
+       vars: { CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}', BUILD_CONFIG: debug }
 
      #run tests and memcheck against default build
      - task: cmake-test
