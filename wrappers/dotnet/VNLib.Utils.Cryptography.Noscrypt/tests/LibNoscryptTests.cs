@@ -218,7 +218,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             });
 
             //Empty hex string
-            Assert.ThrowsException<ArgumentException>(() =>
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
                 signer.VerifyData(string.Empty, bin32, bin64)
             );
 
@@ -261,7 +261,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             }
 
             //Empty hex string
-            Assert.ThrowsException<ArgumentException>(() =>
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
                 signer.SignData(string.Empty, bin32, format: null)
             );
         }

@@ -19,7 +19,13 @@ tasks:
     vars:
       CONFIGURATION: '{{ .CONFIGURATION | default "debug" }}'
     cmds:
-      - cmd: dotnet build -c {{ .CONFIGURATION }} {{ .MS_ARGS }}
+     - cmd: dotnet build
+        {{ .CLI_ARGS }}
+        {{ .MS_ARGS }}
+        --nologo
+        --verbosity normal
+        --configuration {{ .CONFIGURATION | default "Debug" }}
+        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
 
 #called by build pipeline to build module
   build:
@@ -51,8 +57,7 @@ tasks:
         --no-restore
         --include-symbols
         --configuration release
-        --output "{{ .PACK_OUT }}/release/" 
-        -p:PackageVersion={{ .BUILD_VERSION }}
+        --output "{{ .PACK_OUT }}/release/"
         {{ .MS_ARGS }}
 
   postbuild_success:
