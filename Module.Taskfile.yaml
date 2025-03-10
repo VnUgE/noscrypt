@@ -10,6 +10,16 @@
 
 version: '3'
 
+includes:
+  lib: 
+    internal: true
+    taskfile: ./Taskfile.yaml
+
+  dotnet:
+    internal: true
+    dir: wrappers/dotnet/VNLib.Utils.Cryptography.Noscrypt
+    taskfile: wrappers/dotnet/VNLib.Utils.Cryptography.Noscrypt/Taskfile.yaml
+
 tasks:
 
 #called by build pipeline to sync repo
@@ -20,26 +30,38 @@ tasks:
      - cmd: git pull origin {{ .BRANCH_NAME }} --verify-signatures 
 
   test:
-    desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'
+    desc: 'Builds and runs noscrypt unit tests for vnbuild CI systems'   
     cmds:
      #run CI tests with utils enabled
-     - cmd: task ci-test
-     - task: test-dotnet  
+     - task: lib:ci-test
+
+     #ci tests clean up after themselves so we need to build the debug version again  
+     - task: lib:default
+       vars:      
+         BUILD_CONFIG: debug
+         CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
+     
+     - task: test-dotnet
+     - task: lib:clean
+    
+     #repeat with mbedtls enabled
+     - task: lib:build-mbedtls 
+       vars:
+         BUILD_CONFIG: debug
+         CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
+     
+     - task: test-dotnet
+     - task: lib:clean
 
   test-dotnet:
     desc: Runs dotnet unit tests for vnbuild CI systems
     vars:
       LIB_NAME: '{{ if eq OS "windows" }}noscrypt.dll{{ else }}libnoscrypt{{ end }}'
       LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
-    
-    cmds:
-     #build the debug library with utils enabled
-     - cmd: task build-debug -- -DNC_ENABLE_UTILS=ON        
-  
-     - cmd: echo "running tests for {{ .PROJECT_NAME }}" 
-       silent: true
+    cmds:   
+
      - cmd: dotnet test 
-        {{ .CLI_ARGS }}
+        --nologo
         --logger "console;verbosity=detailed"
         --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}   
         --configuration {{ .CONFIGURATION | default "Debug" }}     
