@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/mbedtls.c
@@ -31,25 +31,27 @@
 /* Inline errors on linux in header files on linux */
 #ifndef inline
 	#define inline __inline
-	#include <mbedtls/mbedtls/md.h>
-	#include <mbedtls/mbedtls/hkdf.h>
-	#include <mbedtls/mbedtls/hmac_drbg.h>
-	#include <mbedtls/mbedtls/sha256.h>
-	#include <mbedtls/mbedtls/chacha20.h>
-	#include <mbedtls/mbedtls/constant_time.h>
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/aes.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 	#undef inline
 #else
-	#include <mbedtls/mbedtls/md.h>
-	#include <mbedtls/mbedtls/hkdf.h>
-	#include <mbedtls/mbedtls/hmac_drbg.h>
-	#include <mbedtls/mbedtls/sha256.h>
-	#include <mbedtls/mbedtls/chacha20.h>
-	#include <mbedtls/mbedtls/constant_time.h>
+	#include <mbedtls/md.h>
+	#include <mbedtls/hkdf.h>
+	#include <mbedtls/hmac_drbg.h>
+	#include <mbedtls/sha256.h>
+	#include <mbedtls/aes.h>
+	#include <mbedtls/chacha20.h>
+	#include <mbedtls/constant_time.h>
 #endif
 
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
-	const mbedtls_md_info_t* info;
+	const mbedtls_md_info_t* info; 
 	/* Get sha256 md info for hdkf operations */
 	info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 	DEBUG_ASSERT2(info != NULL, "Expected SHA256 md info pointer to be valid")
@@ -79,8 +81,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	#define _IMPL_CHACHA20_CRYPT _mbed_chacha20_encrypt	
 
 	_IMPLSTB cstatus_t _mbed_chacha20_encrypt(
-		const uint8_t* key,
-		const uint8_t* nonce,
+		cspan_t key,
+		cspan_t nonce,
 		cspan_t input,
 		span_t output
 	)
@@ -95,8 +97,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
-			key,
-			nonce,
+			ncSpanGetOffsetC(key, 0),
+			ncSpanGetOffsetC(nonce, 0),
 			0x00u,		/* nip-44 counter version */
 			ncSpanGetSizeC(input),
 			ncSpanGetOffsetC(input, 0), 

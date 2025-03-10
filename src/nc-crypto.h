@@ -1,6 +1,6 @@
 
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: nc-crypto.h
@@ -51,15 +51,15 @@ cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm);
 cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk);
 
 cstatus_t ncCryptoChacha20(
-	const uint8_t key[CHACHA_KEY_SIZE],
-	const uint8_t nonce[CHACHA_NONCE_SIZE],
+	cspan_t key,
+	cspan_t nonce,
 	cspan_t input,
 	span_t output
 );
 
-cstatus_t ncAes256CBCEncrypt(
-	const uint8_t key[32],
-	const uint8_t iv[16],
+cstatus_t ncCryptoAes256CBCEncrypt(
+	cspan_t key,
+	cspan_t iv,
 	cspan_t input,
 	span_t output
 );

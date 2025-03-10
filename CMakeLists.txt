@@ -19,7 +19,6 @@ set(_NC_PROJ_NAME "noscrypt")
 option(NC_BUILD_TESTS "Build tests" OFF)
 option(NC_ENABLE_UTILS "Enables the sidecar utility library" OFF)
 option(NC_DISABLE_INPUT_VALIDATION "Disables public function input validation" OFF)
-option(NC_FETCH_SECP256K1 "Fetch and locally build secp256k1 source code" ON)
 option(NC_INCLUDE_MONOCYPHER "Statically link to vendored monocypher library" ON)
 set(CRYPTO_LIB "" CACHE STRING "The crypto library to link to (mbedtls, openssl, bcrypt)")
 set(CRYPTO_LIB_DIR "" CACHE STRING "The path to the crypto library if it's not globally available")
@@ -32,7 +31,25 @@ set(NC_PROJ_DEFINTIONS "")
 
 include(FetchContent)
 
-if(NC_FETCH_SECP256K1)
+if(SECP256K1_LIB_DIR)
+
+	#search for an existing library, it's a required dependency
+	find_library(secp256k1
+		NAMES secp256k1 libsecp256k1 
+		PATHS ${SECP256K1_LIB_DIR}
+		REQUIRED
+	)
+
+else()
+
+  #try to find the library globally
+  find_library(secp256k1 NAMES secp256k1 libsecp256k1)
+
+endif()
+
+if(NOT secp256k1)
+
+   message(STATUS "No secp256k1 library was found, falling back to build local copy")
 
 	#Fetch libsecp256k1, and build a minimal static library 
 	set(SECP256K1_BUILD_BENCHMARK OFF)
@@ -47,14 +64,7 @@ if(NC_FETCH_SECP256K1)
 	set(SECP256K1_INSTALL OFF)
 	set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
 
-	FetchContent_Declare(
-	  libsecp256k1
-	  GIT_REPOSITORY		https://github.com/bitcoin-core/secp256k1
-	  GIT_TAG				0cdc758a56360bf58a851fe91085a327ec97685a # release-0.6.0
-	  GIT_PROGRESS			TRUE
-	)
-
-	FetchContent_MakeAvailable(libsecp256k1)
+	add_subdirectory(vendor/secp256k1)
 	
 	#Must force FPIC when using secp256k1, ld linker complains otherwise
 	set_target_properties(
@@ -65,15 +75,6 @@ if(NC_FETCH_SECP256K1)
 		POSITION_INDEPENDENT_CODE  ON
 	)
 	
-else()	
-
-	#search for an existing library, it's a required dependency
-	find_library(secp256k1
-		NAMES secp256k1 libsecp256k1 
-		PATHS ${SECP256K1_LIB_DIR}
-		REQUIRED
-	)
-
 endif()
 
 #-----------------------------
@@ -151,8 +152,7 @@ if(CRYPTO_LIB STREQUAL "")
   elseif(OPENSSL_FOUND)
 	set(CRYPTO_LIB "openssl")
   endif()
-
-  message(STATUS "No crypto library was specified, defaulting to ${CRYPTO_LIB}")
+  message(STATUS "No crypto library was specified, defaulting to '${CRYPTO_LIB}'")
 endif()
 
 
@@ -160,8 +160,8 @@ endif()
 if(CRYPTO_LIB STREQUAL "mbedtls")
 
 	#make vendored mbedtls headers available to the project
-	target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
-	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls)
+	target_include_directories(${_NC_PROJ_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls/include)
+	target_include_directories(${_NC_PROJ_NAME}_static SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/mbedtls/include)
 
 	message(STATUS "Linking to MbedTLS crypto library")
 
@@ -276,6 +276,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	list(APPEND _NC_COMPILE_OPTS 
 		-Wextra 
 		-fstack-protector
+		-Werror				# warnings as errors
 	)
 
 	#if debug build enable additional debug flags
@@ -285,8 +286,17 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 			-g				# enable debug info
 			-Og				# disable all optimizations
 			-Wall			# enable all warnings
-			-Werror			# warnings as errors
 			-pedantic		# enable pedantic warnings
+			-Winit-self		# warn about self initialization
+			-Wpointer-arith
+			-Wstrict-prototypes
+			-Wswitch-default
+			-Wshadow		# warn when a local variable shadows another
+			-Wformat=2		# warn about format strings
+			-Wundef			# warn about undefined macros
+			-Wcast-align	# warn about pointer casts that increase alignment requirements
+			-Wmissing-prototypes	# warn if a global function is defined without a previous prototype declaration
+			-Wmissing-declarations	# warn if a global function is defined without a previous declaration
 		)
 	endif()
 endif()
@@ -378,7 +388,11 @@ message("  Testing enabled: ....... ${NC_BUILD_TESTS}")
 message("  Crypto library: ........ ${CRYPTO_LIB}")
 message("  Input validation off: .. ${NC_DISABLE_INPUT_VALIDATION}")
 message("  Monocypher: ............ ${NC_INCLUDE_MONOCYPHER}")
-message("  Fetched seckp256k1: .... ${NC_FETCH_SECP256K1}")
+if(NOT secp256k1)
+	message("  secp256k1 library: ..... (local)")
+else()
+	message("  secp256k1 library: ..... ${secp256k1}")
+endif()
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
 message(" Defintions: ${NC_PROJ_DEFINTIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")
