@@ -65,10 +65,10 @@ Please use the following links to obtain packages and extended documentation.
 
 [__Project homepage__](https://www.vaughnnugent.com/resources/software/modules/noscrypt)  
 [__Startup & Install Guide__](https://www.vaughnnugent.com/resources/software/articles/62ca932f68b8e0b1b99dca6e1c9ffe5538205efb)  
-[__Extended Documentation__](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)    
+[__Extended Documentation__](https://www.vaughnnugent.com/resources/software/articles?tags=docs,_noscrypt)  
 
 ### Super quick start
-If you are in a hurry to try out noscrypt these steps will get you by. Otherwise website documentation is authoritative and I encourage you read the docs.
+If you are in a hurry to try out noscrypt these steps will get you by. Otherwise website documentation is authoritative and I encourage you read it.
 
 #### Prerequisites
 - Supported operating system and compiler from table above
@@ -94,12 +94,13 @@ I use two main branches for development. *master* is considered as stable as a r
 msvc pre-compiled packages available for download on the website package page. I have not compatibility tested them yet so they should only support Windows NT version 1904 (10/Server 2016 and later) running amd64 processors. 
 
 ## License
-The software in this repository is licensed to you under the GNU Lesser GPL v2.1 or later. `SPDX-License-Identifier: LGPL-2.1-or-later` see the [LICENSE](LICENSE) file for more details.    
+The software in this repository is licensed to you under the GNU Lesser GPL v2.1 or later. `SPDX-License-Identifier: LGPL-2.1-or-later` see the [LICENSE](LICENSE) file for more details.  
 
 ## Donations
-If you feel so inclined to support me an this project, donations are welcome and much appreciated. LNURL coming soon.
+If you feel so inclined to support me an this project, donations are welcome and much appreciated.
 
-BTC On-Chain: ``bc1qgj4fk6gdu8lnhd4zqzgxgcts0vlwcv3rqznxn9``  
+Bitcoin: `bc1qgj4fk6gdu8lnhd4zqzgxgcts0vlwcv3rqznxn9`  
+Lightning: ChipTuner@coinos.io
 
 I am also a member of [GitCitadel](https://next.nostrudel.ninja/#/wiki/topic/gitcitadel-project) so feel free to [send some sats](https://geyser.fund/project/gitcitadel) that way too!
 

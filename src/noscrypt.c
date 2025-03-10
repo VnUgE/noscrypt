@@ -24,8 +24,8 @@
 #include "hkdf.h"
 #include "nc-crypto.h"
 
-#include <secp256k1/secp256k1_ecdh.h>
-#include <secp256k1/secp256k1_schnorrsig.h>
+#include <secp256k1/include/secp256k1_ecdh.h>
+#include <secp256k1/include/secp256k1_schnorrsig.h>
 
 /*
 * Local macro for secure zero buffer fill
@@ -390,7 +390,7 @@ static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE],
 static NCResult _verifyMacEx(
 	const NCContext* ctx,
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
-	NCMacVerifyArgs* args
+	const NCMacVerifyArgs* args
 )
 {
 	NCResult result;
@@ -1043,7 +1043,7 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	const NCContext* ctx,
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
-	NCMacVerifyArgs* args
+	const NCMacVerifyArgs* args
 )
 {
 	CHECK_NULL_ARG(ctx, 0)
@@ -1063,7 +1063,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	const NCContext* ctx,
 	const NCSecretKey* sk,
 	const NCPublicKey* pk,
-	NCMacVerifyArgs* args
+	const NCMacVerifyArgs* args
 )
 {
 	NCResult result;
@@ -1178,6 +1178,9 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 		args->keyData = value;
 
 		return NC_SUCCESS;
+
+	default:
+		break;
 	}
 
 	return E_INVALID_ARG;

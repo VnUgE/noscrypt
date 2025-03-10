@@ -470,7 +470,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	const NCContext* ctx,
 	const NCSecretKey* sk,
 	const NCPublicKey* pk,
-	NCMacVerifyArgs* args
+	const NCMacVerifyArgs* args
 );
 
 /*--------------------------------------
@@ -566,7 +566,7 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	const NCContext* ctx,
 	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
-	NCMacVerifyArgs* args
+	const NCMacVerifyArgs* args
 );
 
 /*
