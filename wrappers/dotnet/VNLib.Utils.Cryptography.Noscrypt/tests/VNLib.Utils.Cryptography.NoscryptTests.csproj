@@ -5,10 +5,6 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-c-sharp.95+Branch.c-sharp.Sha.6a4a464d9fdc7821cd5c5695656a3fe385497cc5</InformationalVersion>
-    <Version>0.2.0-c-sharp0095</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
