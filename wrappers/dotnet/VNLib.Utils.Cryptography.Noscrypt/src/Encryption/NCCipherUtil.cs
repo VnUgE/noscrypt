@@ -25,6 +25,10 @@ using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 {
+    /// <summary>
+    /// Provides utility methods for noscrypt cipher operations
+    /// and encryption helpers.
+    /// </summary>
     public unsafe static class NCCipherUtil
     {
         /*
@@ -61,10 +65,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// <param name="size">The size of the input data in bytes</param>
         /// <returns>The padded size of the input data</returns>
         /// <exception cref="ArgumentException"></exception>
-        public static uint GetPaddedSize(NCContext ctx, NoscryptCipherVersion version, uint size)
+        public static uint GetPaddedSize(NCContext ctx, NCCipherVersion version, uint size)
             => GetPaddedSize(ctx, (uint)version, size);
 
-        internal static nint Alloc(NCContext ctx, uint version, uint flags)
+        internal static nint AllocCipher(NCContext ctx, uint version, uint flags)
         {
             //Sanity checks, the library will guard at runtime, just a little uglier
             Debug.Assert(ctx != null);

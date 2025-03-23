@@ -316,6 +316,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
         /// <summary>
         /// Attempts to load the default noscrypt library from the system search path
+        /// or by using the NOSCRYPT_DLL_PATH environment variable.
         /// </summary>
         /// <returns>The loaded library instance</returns>
         /// <exception cref="DllNotFoundException"></exception>
