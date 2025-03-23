@@ -33,7 +33,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void CorrectEncryptionTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
-            using NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault);
+            using NCMessageCipher cipher = NCMessageCipher.Create(context, NCCipherVersion.Nip44, NCCipherFlags.EncryptDefault);
 
             using IMemoryHandle<byte> ctBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
 
@@ -78,7 +78,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void CorrectDecryptionTest()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
-            using NoscryptMessageCipher msgCipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.DecryptDefault);
+            using NCMessageCipher msgCipher = NCMessageCipher.Create(context, NCCipherVersion.Nip44, NCCipherFlags.DecryptDefault);
 
             using IMemoryHandle<byte> ptBuffer = MemoryUtil.SafeAllocNearestPage(1200, false);
 
@@ -122,7 +122,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void InvalidPlaintextSizes()
         {
             using NCContext context = _testLib.AllocContext(NCFallbackRandom.Shared);
-            using NoscryptMessageCipher msgCipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault);
+            using NCMessageCipher msgCipher = NCMessageCipher.Create(context, NCCipherVersion.Nip44, NCCipherFlags.EncryptDefault);
 
             NCPublicKey pubkey;
             NCSecretKey secKey;
@@ -191,7 +191,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 uint inputSize = vector[0];
                 uint desiredPaddingSize = vector[1];
 
-                uint actualSize = NCCipherUtil.GetPaddedSize(context, NoscryptCipherVersion.Nip44, inputSize);
+                uint actualSize = NCCipherUtil.GetPaddedSize(context, NCCipherVersion.Nip44, inputSize);
 
                 Assert.AreEqual<uint>(desiredPaddingSize, actualSize);
             }

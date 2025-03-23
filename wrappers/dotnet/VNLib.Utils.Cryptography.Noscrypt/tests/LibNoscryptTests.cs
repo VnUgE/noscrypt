@@ -189,7 +189,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              * With the signer api
              */
 
-            NoscryptSigner signer = new(context, NCFallbackRandom.Shared);
+            NCSigner signer = new(context, NCFallbackRandom.Shared);
 
             //Null context 
             Assert.ThrowsException<ArgumentNullException>(() =>
@@ -283,11 +283,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              * NOTE:
              *  NIP04 encryption is not supported at the moment
              */
-            using (NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip04, NoscryptCipherFlags.EncryptDefault))
+            using (NCMessageCipher cipher = NCMessageCipher.Create(context, NCCipherVersion.Nip04, NCCipherFlags.EncryptDefault))
             { 
                 //Should be aes cipher at 16 bytes
                 Assert.AreEqual(16, cipher.GetIvSize());
-                Assert.AreEqual((uint)NoscryptCipherFlags.EncryptDefault, cipher.GetFlags());
+                Assert.AreEqual((uint)NCCipherFlags.EncryptDefault, cipher.GetFlags());
 
                 //Should fail to get output before update is called
                 Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());
@@ -297,11 +297,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.ThrowsException<NotSupportedException>(() => cipher.Update(in secKey, in pubKey, bin16));
             }
 
-            using (NoscryptMessageCipher cipher = NoscryptMessageCipher.Create(context, NoscryptCipherVersion.Nip44, NoscryptCipherFlags.EncryptDefault))
+            using (NCMessageCipher cipher = NCMessageCipher.Create(context, NCCipherVersion.Nip44, NCCipherFlags.EncryptDefault))
             {
                 //Should be chacha cipher at with a custom 32 byte nonce/iv
                 Assert.AreEqual(32, cipher.GetIvSize());
-                Assert.AreEqual((uint)NoscryptCipherFlags.EncryptDefault, cipher.GetFlags());
+                Assert.AreEqual((uint)NCCipherFlags.EncryptDefault, cipher.GetFlags());
 
                 //Should fail to get output before update is called
                 Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());

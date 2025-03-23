@@ -50,7 +50,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void TestExistingNotes()
         {
             using NCContext ctx = _testLib.AllocContext(NCFallbackRandom.Shared);
-            NoscryptSigner signer = new(ctx, NCFallbackRandom.Shared);
+            NCSigner signer = new(ctx, NCFallbackRandom.Shared);
 
             JsonSerializerOptions options = new()
             {

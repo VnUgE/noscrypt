@@ -30,7 +30,9 @@ using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
 {
     /// <summary>
-    /// The noscrypt util cipher wapper 
+    /// The noscrypt util cipher wapper. This cipher is NOT thread safe.
+    /// It's generally used as a one-shot cipher for a single message,
+    /// but may be reused if the <see cref="NCCipherFlags.Reusable"/> flag is set.
     /// </summary>
     public class NCMessageCipher : SafeHandleMinusOneIsInvalid
     {
