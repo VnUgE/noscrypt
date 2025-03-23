@@ -284,7 +284,7 @@ tasks:
     requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CI_BUILD_CONFIG, PROJECT_NAME }
     platforms: [ windows ]
     vars:
-      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
+      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
       BUILD_DIR: 'build/win-x64'
 
       TAR_FILES: "

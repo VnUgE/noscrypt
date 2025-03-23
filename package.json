@@ -4,7 +4,11 @@
   "output_dir": "bin",
   "author": "Vaughn Nugent",
   "description": "A compact, C90 cross-platform, cryptography library built specifically for nostr",
-  "copyright": "Copyright \u00A9 2024 Vaughn Nugent",
+  "copyright": "Copyright \u00A9 2025 Vaughn Nugent",
   "company": "Vaughn Nugent",
-  "repository": "https://github.com/VnUgE/noscrypt"
+  "repository": "https://github.com/VnUgE/noscrypt",
+  "artifacts": [
+    "noscrypt-src.tgz",
+    "msvc-x64-release-noscrypt.tgz"
+  ]
 }

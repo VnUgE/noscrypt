@@ -19,6 +19,7 @@
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/noscrypt/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
     <PackageTags>cryptography;nostr;encryption;signatures</PackageTags>
+    <Artifacts>release.tgz,debug.tgz,src.tgz</Artifacts>
   </PropertyGroup>
   
   <ItemGroup>
