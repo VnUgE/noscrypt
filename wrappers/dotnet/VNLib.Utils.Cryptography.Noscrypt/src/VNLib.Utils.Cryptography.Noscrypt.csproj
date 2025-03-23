@@ -14,7 +14,7 @@
     <Authors>Vaughn Nugent</Authors>
     <Company>Vaughn Nugent</Company>
     <Product>VNLib.Utils.Cryptography.Noscrypt</Product>
-    <Description>Provides a managed library wrapper for the noscrypt native library</Description>
+    <Description>Provides a C# managed library wrapper for the noscrypt native library</Description>
     <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VnUgE/noscrypt/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
