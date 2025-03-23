@@ -17,15 +17,15 @@ using System;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
 {
-    public sealed class Base64SignatureEncoder : INostrSignatureEncoder
+    public sealed class NCHexSignatureEncoder : INostrSignatureEncoder
     {
         /// <summary>
-        /// Shared formatter instance for base64 signatures
+        /// Shared formatter instance for hex signatures
         /// </summary>
-        public static Base64SignatureEncoder Instance { get; } = new Base64SignatureEncoder();
+        public static NCHexSignatureEncoder Instance { get; } = new NCHexSignatureEncoder();
 
         ///<inheritdoc/>
-        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToBase64String(signature);
+        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToHexString(signature);
     }
 
 }

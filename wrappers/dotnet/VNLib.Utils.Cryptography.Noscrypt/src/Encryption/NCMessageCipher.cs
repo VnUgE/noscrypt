@@ -32,13 +32,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
     /// <summary>
     /// The noscrypt util cipher wapper 
     /// </summary>
-    public class NoscryptMessageCipher : SafeHandleMinusOneIsInvalid
+    public class NCMessageCipher : SafeHandleMinusOneIsInvalid
     {
         private readonly NCContext _context;
-        private readonly NoscryptCipherVersion _version;
+        private readonly NCCipherVersion _version;
         private IMemoryHandle<byte>? _ivBuffer;
 
-        private NoscryptMessageCipher(NCContext ctx, nint cipher, NoscryptCipherVersion version) 
+        private NCMessageCipher(NCContext ctx, nint cipher, NCCipherVersion version) 
             : base(ownsHandle: true)
         {
             Debug.Assert(ctx != null);
@@ -55,14 +55,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// <param name="context">A reference to the noscrypt library context</param>
         /// <param name="version">The encryption standard to use</param>
         /// <param name="flags">The raw cipher flags to the pass to the cipher initialization function</param>
-        /// <returns>A new <see cref="NoscryptMessageCipher"/> instance</returns>
-        public static NoscryptMessageCipher Create(NCContext context, NoscryptCipherVersion version, NoscryptCipherFlags flags)
+        /// <returns>A new <see cref="NCMessageCipher"/> instance</returns>
+        public static NCMessageCipher Create(NCContext context, NCCipherVersion version, NCCipherFlags flags)
         {
             ArgumentNullException.ThrowIfNull(context);
 
             return new(
                 context,
-                NCCipherUtil.Alloc(context, (uint)version, (uint)flags),
+                NCCipherUtil.AllocCipher(context, (uint)version, (uint)flags),
                 version
             );
         }
@@ -70,7 +70,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// <summary>
         /// The cipher standard version used by this instance
         /// </summary>
-        public NoscryptCipherVersion Version => _version;
+        public NCCipherVersion Version => _version;
 
         /// <summary>
         /// Gets the flags set for the cipher instance
@@ -114,7 +114,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         /// <param name="inputSize">The size of the input buffer in bytes</param>
         /// <exception cref="ArgumentNullException"></exception>
         /// <remarks>
-        /// If the <see cref="NoscryptCipherFlags.Reusable"/> flag is
+        /// If the <see cref="NCCipherFlags.Reusable"/> flag is
         /// set, this function may be considered independent and called repeatedly.
         /// </remarks>
         public unsafe void Update(

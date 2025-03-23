@@ -21,7 +21,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
     /// The Noscrypt utility cipher encryption 
     /// standard version
     /// </summary>
-    public enum NoscryptCipherVersion : uint
+    public enum NCCipherVersion : uint
     {
         /// <summary>
         /// Tells the cipher to use the NIP04 encryption standard

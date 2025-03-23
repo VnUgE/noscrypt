@@ -23,12 +23,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
 {
 
     /// <summary>
-    /// A simple wrapper class to sign nostr message data using 
+    /// A simple OOP wrapper class to sign nostr message data using 
     /// the noscrypt library
     /// </summary>
-    /// <param name="noscrypt">The noscrypt library instance</param>
+    /// <param name="context">The noscrypt library context</param>
     /// <param name="random">A random entropy pool used to source random data for signature entropy</param>
-    public class NoscryptSigner(NCContext context, IRandomSource random)
+    public class NCSigner(NCContext context, IRandomSource random)
     {
         /// <summary>
         /// Gets the size of the buffer required to hold the signature
@@ -45,7 +45,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
         /// <returns>The string encoded nostr signature</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public string SignData(ReadOnlySpan<char> hexPrivateKey, ReadOnlySpan<byte> message, INostrSignatureEncoder? format = null)
+        public string SignData(
+            ReadOnlySpan<char> hexPrivateKey,
+            ReadOnlySpan<byte> message,
+            INostrSignatureEncoder? format = null
+        )
         {
             ArgumentOutOfRangeException.ThrowIfNotEqual(hexPrivateKey.Length / 2, NC_SEC_KEY_SIZE, nameof(hexPrivateKey));
 
@@ -80,8 +84,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
         )
         {
             return SignData(
-                secretkey: in NCKeyUtil.AsSecretKey(secretKey), 
-                message, 
+                secretkey: in NCKeyUtil.AsSecretKey(secretKey),
+                message,
                 format
             );
         }
@@ -103,7 +107,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
         )
         {
             //Default to hex encoding because that is the default NIP-01 format
-            format ??= HexSignatureEncoder.Instance;
+            format ??= NCHexSignatureEncoder.Instance;
 
             Span<byte> sigBuffer = stackalloc byte[SignatureBufferSize];
 
@@ -134,9 +138,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
             random.GetRandomBytes(entropy);
 
             NCSignatureUtil.SignData(
-                context: context, 
+                context: context,
                 secretKey: in secretkey,
-                random32: entropy, 
+                random32: entropy,
                 data: data,
                 signatureBuffer: signature
             );
@@ -153,9 +157,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public bool VerifyData(
-              ReadOnlySpan<char> hexPublicKey,
-              ReadOnlySpan<byte> data,
-              ReadOnlySpan<byte> signature
+            ReadOnlySpan<char> hexPublicKey,
+            ReadOnlySpan<byte> data,
+            ReadOnlySpan<byte> signature
         )
         {
             NCPublicKey npub;
@@ -180,20 +184,19 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
         )
         {
             return VerifyData(
-                in NCKeyUtil.AsPublicKey(publicKey), 
-                data, 
+                in NCKeyUtil.AsPublicKey(publicKey),
+                data,
                 signature
             );
         }
 
         public bool VerifyData(
-            ref readonly NCPublicKey pk, 
-            ReadOnlySpan<byte> data, 
+            ref readonly NCPublicKey pk,
+            ReadOnlySpan<byte> data,
             ReadOnlySpan<byte> signature
         )
         {
             return NCSignatureUtil.VerifyData(context, in pk, data, signature);
         }
     }
-
 }

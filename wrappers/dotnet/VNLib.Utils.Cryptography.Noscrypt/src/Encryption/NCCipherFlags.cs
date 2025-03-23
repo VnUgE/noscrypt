@@ -22,7 +22,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
     /// instance
     /// </summary>
     [Flags]
-    public enum NoscryptCipherFlags : uint
+    public enum NCCipherFlags : uint
     {
         /// <summary>
         /// Puts the cipher into encryption mode
@@ -35,7 +35,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
         ModeDecryption = 0x01u,
 
         /// <summary>
-        /// Forces all internal memory to be freed when 
+        /// Forces all internal cipher memory to be zeroed when 
         /// the cipher is freed
         /// </summary>
         ZeroOnFree = 0x02u,
