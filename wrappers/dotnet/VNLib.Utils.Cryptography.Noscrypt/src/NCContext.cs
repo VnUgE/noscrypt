@@ -18,11 +18,8 @@ using System.Diagnostics;
 
 using Microsoft.Win32.SafeHandles;
 
-using VNLib.Utils.Extensions;
 using VNLib.Utils.Memory;
 
-using VNLib.Utils.Cryptography.Noscrypt.@internal;
-using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
 using NCResult = System.Int64;
 
@@ -30,6 +27,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
     /// The noscrypt library context
+    /// <para>
+    /// This context is considered completely thread-safe for all noscrypt 
+    /// library operations except those that explicitly state otherwise.
+    /// </para>
     /// </summary>
     public sealed class NCContext : SafeHandleZeroOrMinusOneIsInvalid
     {
@@ -40,34 +41,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         public Noscrypt Library { get; }
 
-        internal NCContext(IntPtr handle, IUnmangedHeap heap, Noscrypt library) :base(ownsHandle: true)
+        internal NCContext(IntPtr handle, IUnmangedHeap heap, Noscrypt library) : base(ownsHandle: true)
         {
             ArgumentNullException.ThrowIfNull(heap);
             ArgumentNullException.ThrowIfNull(library);
-            
+
             Heap = heap;
             Library = library;
 
             //Store the handle
             SetHandle(handle);
-        }
-
-        /// <summary>
-        /// Reinitializes the context with the specified entropy
-        /// </summary>
-        /// <param name="entropy">The randomness buffer used to randomize the context</param>
-        /// <param name="size">The random data buffer size (must be 32 bytes)</param>
-        public unsafe void Reinitalize(ref byte entropy, int size)
-        {
-            //Entropy must be exactly 32 bytes
-            ArgumentOutOfRangeException.ThrowIfNotEqual(size, NC_CTX_ENTROPY_SIZE);
-
-            this.ThrowIfClosed();
-            fixed (byte* p = &entropy)
-            {
-                NCResult result = Library.Functions.NCReInitContext.Invoke(handle, p);
-                NCUtil.CheckResult<FunctionTable.NCReInitContextDelegate>(result, raiseOnFailure: true);
-            }
         }
 
         ///<inheritdoc/>

@@ -88,7 +88,6 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public const uint NC_UTIL_CIPHER_MODE           = 0x01u;
 
 
-
         private readonly FunctionTable _functions = FunctionTable.BuildFunctionTable(Library);
 
         /// <summary>
@@ -190,6 +189,84 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             random.GetRandomBytes(entropyBuffer.Span);
 
             return AllocContext(entropyBuffer.Span, heap);
+        }
+
+        /// <summary>
+        /// Reinitializes the context with the specified entropy
+        /// </summary>
+        /// <remarks>
+        /// This function is not thread-safe and should not be called concurrently
+        /// with other functions that rely on the context.
+        /// </remarks>
+        /// <param name="entropy">The randomness buffer used to randomize the context</param>
+        /// <param name="size">The random data buffer size (must be equal to <see cref="NC_CTX_ENTROPY_SIZE"/>)</param>
+        public unsafe void ReinitalizeContext(NCContext context, ref readonly byte entropy, int size)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            //Entropy must be exactly 32 bytes
+            ArgumentOutOfRangeException.ThrowIfNotEqual(size, NC_CTX_ENTROPY_SIZE);
+
+            context.ThrowIfClosed();
+            fixed (byte* pEntropy = &entropy)
+            {                
+                NCResult result = Functions.NCReInitContext.Invoke(
+                    context.DangerousGetHandle(), 
+                    pEntropy
+                );
+                
+                NCUtil.CheckResult<FunctionTable.NCReInitContextDelegate>(result, raiseOnFailure: true);
+            }
+        }
+
+        /// <summary>
+        /// Reinitializes the context with the specified entropy
+        /// </summary>
+        /// <remarks>
+        /// This function is not thread-safe and should not be called concurrently
+        /// with other functions that rely on the context.
+        /// </remarks>
+        /// <param name="context">The context to reinitialize</param>
+        /// <param name="entropy">The randomness buffer used to randomize the context</param>
+        public void ReinitalizeContext(NCContext context, ReadOnlySpan<byte> entropy)
+        {
+            ReinitalizeContext(
+                context, 
+                in MemoryMarshal.GetReference(entropy), 
+                entropy.Length
+            );
+        }
+
+        /// <summary>
+        /// Reinitializes the context with the specified entropy
+        /// </summary>
+        /// <remarks>
+        /// This function is not thread-safe and should not be called concurrently
+        /// with other functions that rely on the context.
+        /// </remarks>
+        /// <param name="context">The context to reinitialize</param>
+        /// <param name="random">The random source to use to generate the new context entropy</param>
+        public void ReinitalizeContext(NCContext context, IRandomSource random)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(random);
+
+            // Allocate a buffer for the entropy from the context's heap
+            using UnsafeMemoryHandle<byte> entropy = context.Heap.UnsafeAlloc<byte>(NC_CTX_ENTROPY_SIZE, zero: true);
+
+            random.GetRandomBytes(entropy.Span);
+
+            ReinitalizeContext(
+                context,
+                in entropy.GetReference(),
+                entropy.IntLength
+            );
+
+            // Clear the buffer
+            MemoryUtil.InitializeBlock(
+                ref entropy.GetReference(),
+                entropy.IntLength
+            );
         }
 
         /// <summary>
