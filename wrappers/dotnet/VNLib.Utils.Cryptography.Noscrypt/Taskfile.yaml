@@ -39,11 +39,13 @@ tasks:
         --nologo
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"'
+    deps:
+     - ensure-nuget-source
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
        silent: true
 
-     #updates the project versions for all inlcuded .NET projects
+     #updates the project versions for all included .NET projects
      - cmd: dotnet-gitversion.exe /updateprojectfiles
 
      #build debug mode first
@@ -107,3 +109,12 @@ tasks:
     - for: [ obj/, bin/ ]
       cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
 
+  ensure-nuget-source:
+    desc: 'Ensures the VN NuGet source is configured'
+    vars:
+      NUGET_SOURCE_NAME: VNLib.Release
+      NUGET_SOURCE_URL: https://www.vaughnnugent.com/public/resources/software/builds/feed/release/index.json
+    cmds:
+      # Check if source exists using a platform-agnostic approach
+      - cmd: dotnet nuget add source '{{ .NUGET_SOURCE_URL }}' -n '{{ .NUGET_SOURCE_NAME }}'
+        ignore_error: true
