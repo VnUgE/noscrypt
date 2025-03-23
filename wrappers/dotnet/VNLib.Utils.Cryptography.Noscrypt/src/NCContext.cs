@@ -20,9 +20,6 @@ using Microsoft.Win32.SafeHandles;
 
 using VNLib.Utils.Memory;
 
-
-using NCResult = System.Int64;
-
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>

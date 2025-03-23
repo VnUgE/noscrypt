@@ -22,11 +22,8 @@ using NCResult = System.Int64;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.@internal
 {
-
-    public static class NCUtil
+    internal static class NCUtil
     {
-
-
         internal static void CheckResult<T>(NCResult result, bool raiseOnFailure) where T : Delegate
         {
             //Only negative values are errors

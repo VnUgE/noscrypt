@@ -51,7 +51,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Random
             SafeLibraryHandle lib = SafeLibraryHandle.LoadLibrary(path, search);
             try
             {
-                return new UnmanagedRandomSource(lib, true);
+                return new UnmanagedRandomSource(lib, ownsHandle: true);
             }
             catch
             {
