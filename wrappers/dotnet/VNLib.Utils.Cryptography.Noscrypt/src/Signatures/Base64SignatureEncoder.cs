@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2024 Vaughn Nugent
+﻿// Copyright (C) 2025 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -15,19 +15,17 @@
 
 using System;
 
-namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
+namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
 {
-    /// <summary>
-    /// Encodes a message signature into it's string representation
-    /// </summary>
-    public interface INostrSignatureEncoder
+    public sealed class Base64SignatureEncoder : INostrSignatureEncoder
     {
         /// <summary>
-        /// Creates a string of the encoded signature data
+        /// Shared formatter instance for base64 signatures
         /// </summary>
-        /// <param name="signature">The signature data to encode into the string</param>
-        /// <returns>The encoded signature string</returns>
-        string GetString(ReadOnlySpan<byte> signature);
+        public static Base64SignatureEncoder Instance { get; } = new Base64SignatureEncoder();
+
+        ///<inheritdoc/>
+        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToBase64String(signature);
     }
 
 }

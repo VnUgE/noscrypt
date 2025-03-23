@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2024 Vaughn Nugent
+﻿// Copyright (C) 2025 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -15,17 +15,19 @@
 
 using System;
 
-namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
+namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
 {
-    public sealed class HexSignatureEncoder : INostrSignatureEncoder
+    /// <summary>
+    /// Encodes a message signature into it's string representation
+    /// </summary>
+    public interface INostrSignatureEncoder
     {
         /// <summary>
-        /// Shared formatter instance for hex signatures
+        /// Creates a string of the encoded signature data
         /// </summary>
-        public static HexSignatureEncoder Instance { get; } = new HexSignatureEncoder();
-
-        ///<inheritdoc/>
-        public string GetString(ReadOnlySpan<byte> signature) => Convert.ToHexString(signature);
+        /// <param name="signature">The signature data to encode into the string</param>
+        /// <returns>The encoded signature string</returns>
+        string GetString(ReadOnlySpan<byte> signature);
     }
 
 }

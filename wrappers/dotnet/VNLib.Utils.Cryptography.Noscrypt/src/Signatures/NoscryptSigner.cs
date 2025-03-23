@@ -19,7 +19,7 @@ using VNLib.Utils.Memory;
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using static VNLib.Utils.Cryptography.Noscrypt.Noscrypt;
 
-namespace VNLib.Utils.Cryptography.Noscrypt.Singatures
+namespace VNLib.Utils.Cryptography.Noscrypt.Signatures
 {
 
     /// <summary>
