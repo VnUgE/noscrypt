@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using VNLib.Utils.Cryptography.Noscrypt.Random;
-using VNLib.Utils.Cryptography.Noscrypt.Singatures;
+using VNLib.Utils.Cryptography.Noscrypt.Signatures;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Tests
 {
