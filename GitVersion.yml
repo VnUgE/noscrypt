@@ -2,9 +2,10 @@ assembly-versioning-scheme: MajorMinorPatch
 assembly-versioning-format: '{Major}.{Minor}.{Patch}.{WeightedPreReleaseNumber}'
 assembly-file-versioning-format: '{Major}.{Minor}.{Patch}.{WeightedPreReleaseNumber}'
 mode: ContinuousDeployment
+increment: Patch
 
 branches:
-  main:    
+  main:
     tag: 'rc'
 ignore:
   sha: []
