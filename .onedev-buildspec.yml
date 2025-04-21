@@ -117,7 +117,7 @@ jobs:
   retryDelay: 30
   timeout: 14400
 - name: Publish on tag
-  jobExecutor: windows
+  jobExecutor: publish-agents
   steps:
   - !CommandStep
     name: checkout
