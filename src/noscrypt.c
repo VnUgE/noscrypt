@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.c
@@ -26,6 +26,21 @@
 
 #include <secp256k1/include/secp256k1_ecdh.h>
 #include <secp256k1/include/secp256k1_schnorrsig.h>
+
+/*
+* CLARIFICATION:
+* Nip44 requires a "nonce" this is different from 
+* the chacha20 nonce parameter. The nip44 nonce can 
+* be accuratly described as an initialization vector.
+* So we will be using the term IV to describe the nip44
+* public facing "nonce" parameter.
+* 
+* Since this size differs, I want to define clarifying 
+* macros to help with the code readability.
+*/
+
+#define NIP44_IV_SIZE       0x20u
+#define NIP04_IV_SIZE       NC_CRYPTO_AES_IV_SIZE
 
 /*
 * Local macro for secure zero buffer fill
@@ -86,8 +101,8 @@ struct message_key {
 * as long as the size is the same.
 */
 struct nc_expand_keys {
-	uint8_t chacha_key[CHACHA_KEY_SIZE];
-	uint8_t chacha_nonce[CHACHA_NONCE_SIZE];
+	uint8_t chacha_key[NC_CRYPTO_CHACHA_KEY_SIZE];
+	uint8_t chacha_nonce[NC_CRYPTO_CHACHA_NONCE_SIZE];
 	uint8_t hmac_key[NC_HMAC_KEY_SIZE];
 };
 
@@ -258,7 +273,7 @@ static _nc_fn_inline const struct nc_expand_keys* _expandKeysFromHkdf(const stru
 	return (const struct nc_expand_keys*)hkdf;
 }
 
-static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, NCEncryptionArgs* args)
+static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, const NCEncryptionArgs* args)
 {
 	span_t outputSpan;
 	cspan_t inputSpan, keySpan, nonceSpan;
@@ -268,15 +283,10 @@ static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, NCEncryption
 
 	ncSpanInit(&outputSpan, args->outputData, args->dataSize);
 	ncSpanInitC(&inputSpan, args->inputData, args->dataSize);
-	ncSpanInitC(&keySpan, keys->chacha_key, CHACHA_KEY_SIZE);
-	ncSpanInitC(&nonceSpan, keys->chacha_nonce, CHACHA_NONCE_SIZE);
+	ncSpanInitC(&keySpan, keys->chacha_key, NC_CRYPTO_CHACHA_KEY_SIZE);
+	ncSpanInitC(&nonceSpan, keys->chacha_nonce, NC_CRYPTO_CHACHA_NONCE_SIZE);
 
-	return ncCryptoChacha20(
-		keySpan,			/* Key */
-		nonceSpan,			/* Nonce */
-		inputSpan,			/* Input data */
-		outputSpan			/* Output data */
-	);
+	return ncCryptoChacha20(keySpan, nonceSpan, inputSpan, outputSpan);
 }
 
 static _nc_fn_inline cstatus_t _getMessageKey(
@@ -317,7 +327,17 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 
 	result = NC_SUCCESS;
 
-	ncSpanInitC(&nonceSpan, args->nonceData, NC_NIP44_IV_SIZE);
+	ncSpanInitC(
+		&nonceSpan, 
+		args->ivData,
+		NCEncryptionGetIvSize(args->version)
+	);
+
+	/* 
+	 * Since were on nip-44 branch, the nonce field should always 
+	 * be equal to the nip44 "nonce" parameter
+	 */
+	DEBUG_ASSERT2(ncSpanGetSizeC(nonceSpan) == NIP44_IV_SIZE, "Expected valid nip44 nonce size");
 	
 	/* Message key will be derrived on every encryption call */
 	if (_getMessageKey(ck, nonceSpan, &messageKey) != CSTATUS_OK)
@@ -355,22 +375,33 @@ Cleanup:
 
 static _nc_fn_inline NCResult _nip04CipherUpdate(
 	const NCContext* ctx,
-	NCEncryptionArgs* args
+	NCEncryptionArgs* args,
+	int encrypt
 ) 
 {
+	int encFlags;
 	span_t outputSpan;
 	cspan_t ivSpan, inputSpan, keySpan;	
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context");
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
-	DEBUG_ASSERT2(args->version == NC_ENC_VERSION_NIP04, "Expected NIP04 encryption version");
+	DEBUG_ASSERT2(args->version == NC_ENC_VERSION_NIP04, "Expected NIP04 encryption version");	
 
-	ncSpanInitC(&ivSpan, args->nonceData, AES_IV_SIZE);
-	ncSpanInitC(&keySpan, args->keyData, AES_KEY_SIZE);
+	ncSpanInitC(&ivSpan, args->ivData, NCEncryptionGetIvSize(args->version));
+	ncSpanInitC(&keySpan, args->keyData, NC_CRYPTO_AES_KEY_SIZE);
 	ncSpanInitC(&inputSpan, args->inputData, args->dataSize);
 	ncSpanInit(&outputSpan, args->outputData, args->dataSize);
 
-	return ncCryptoAes256CBCEncrypt(keySpan, ivSpan, inputSpan, outputSpan) == CSTATUS_OK
+	/*
+	 * Since were on nip-04 branch, the nonce field should always
+	 * be equal to the nip04 aes iv parameter
+	 */
+	DEBUG_ASSERT2(ncSpanGetSizeC(ivSpan) == NC_CRYPTO_AES_IV_SIZE, "Expected valid aes iv size");
+
+	/* For now just the encryption flag must be set if encryption is enabled */
+	encFlags = encrypt ? NC_CRYPTO_AES_MODE_ENCRYPT : NC_CRYPTO_AES_MODE_DECRYPT;
+
+	return ncCryptoAes256CBCUpdate(keySpan, ivSpan, inputSpan, outputSpan, encFlags) == CSTATUS_OK
 		? NC_SUCCESS
 		: E_OPERATION_FAILED;
 }
@@ -403,7 +434,11 @@ static NCResult _verifyMacEx(
 	DEBUG_ASSERT2(conversationKey != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(args != NULL, "Expected valid mac verification args")
 
-	ncSpanInitC(&nonceSpan, args->nonce32, NC_NIP44_IV_SIZE);
+	/*
+	* The nip44 nonce that was used for encryption must be passed to this
+	* function, so it should be the same size as the nip44 iv.
+	*/
+	ncSpanInitC(&nonceSpan, args->nonce32, NIP44_IV_SIZE);
 	ncSpanInitC(&payloadSpan, args->payload, args->payloadSize);
 
 	/*
@@ -823,7 +858,7 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_INVALID_ARG(args->nonceData, 2)
+	CHECK_INVALID_ARG(args->ivData, 2)
 	CHECK_INVALID_ARG(args->keyData, 2)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
@@ -838,7 +873,8 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 			);
 
 		case NC_ENC_VERSION_NIP04:
-			return _nip04CipherUpdate(ctx, args);
+			/* Again, 1 enables encryption mode */
+			return _nip04CipherUpdate(ctx, args, 1);
 
 		default:
 			return E_VERSION_NOT_SUPPORTED;
@@ -866,7 +902,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	/* Validate input/output data */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonceData, 3)
+	CHECK_INVALID_ARG(args->ivData, 3)
 
 	result = E_OPERATION_FAILED;
 
@@ -898,17 +934,16 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 			result = _nip44CipherUpdate(ctx, &conversationKey, args, 1);
 		}
 		break;
-
-		/* At the moment nip04 compatability is not supported */
+		
 		case NC_ENC_VERSION_NIP04:
-			result = _nip04CipherUpdate(ctx, args);
+			/* Enable encryption mode */
+			result = _nip04CipherUpdate(ctx, args, 1);
 			break; 
 			
 		default:
 			result = E_VERSION_NOT_SUPPORTED;
 			break;
-	}
-	
+	}	
 
 Cleanup:
 	/* Clean up sensitive data */
@@ -932,16 +967,18 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
-	CHECK_INVALID_ARG(args->nonceData, 2)
+	CHECK_INVALID_ARG(args->ivData, 2)
 	CHECK_ARG_RANGE(args->dataSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)
 
 	switch (args->version)
 	{
 	case NC_ENC_VERSION_NIP44:
+		/* Run update in decryption mode */
 		return _nip44CipherUpdate(ctx, (struct conversation_key*)conversationKey, args, 0);
 
 	case NC_ENC_VERSION_NIP04:
-		return _nip04CipherUpdate(ctx, args);
+		/* Run update in decryption mode */
+		return _nip04CipherUpdate(ctx, args, 0);
 	default:
 		return E_VERSION_NOT_SUPPORTED;
 	}
@@ -967,7 +1004,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	/* Validte ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
-	CHECK_INVALID_ARG(args->nonceData, 3)
+	CHECK_INVALID_ARG(args->ivData, 3)
 
 	result = E_OPERATION_FAILED;
 
@@ -996,7 +1033,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	break;
 
 	case NC_ENC_VERSION_NIP04:		
-		result = _nip04CipherUpdate(ctx, args);
+		result = _nip04CipherUpdate(ctx, args, 0);
 		break;
 		
 	default:
@@ -1138,7 +1175,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 		* as the hmac key.
 		*/
 
-		CHECK_ARG_RANGE(valueLen, AES_KEY_SIZE, UINT32_MAX, 3)
+		CHECK_ARG_RANGE(valueLen, NC_CRYPTO_AES_KEY_SIZE, UINT32_MAX, 3)
 
 		ENSURE_ENC_MODE(args, NC_ENC_VERSION_NIP04)
 
@@ -1158,7 +1195,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 
 		CHECK_ARG_RANGE(valueLen, ivSize, ivSize, 3)
 
-		args->nonceData = value;
+		args->ivData = value;
 
 		return NC_SUCCESS;
 
@@ -1224,10 +1261,10 @@ NC_EXPORT uint32_t NC_CC NCEncryptionGetIvSize(uint32_t version)
 	switch (version)
 	{
 	case NC_ENC_VERSION_NIP04:
-		return NC_NIP04_IV_SIZE;
+		return NIP04_IV_SIZE;
 
 	case NC_ENC_VERSION_NIP44:
-		return NC_NIP44_IV_SIZE;
+		return NIP44_IV_SIZE;
 
 	default:
 		return 0;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscryptutil.h
@@ -38,7 +38,7 @@
 #define NIP44_VERSION_SIZE		0x01u
 #define NIP44_MAX_PT_SIZE		0xffffu /* 65535 bytes */
 #define NIP44_PT_LEN_SIZE		sizeof(uint16_t)
-#define NIP44_NONCE_SIZE		NC_NIP44_IV_SIZE
+#define NIP44_NONCE_SIZE		0x20u    /* See noscrypt.c for why this is a constant here */
 
 /*
 * minimum size for a valid nip44 payload
@@ -199,7 +199,7 @@ static _nc_fn_inline uint32_t _calcNip44PtPadding(uint32_t plaintextSize)
 static _nc_fn_inline uint32_t _calcNip04PtPadding(uint32_t plaintextSize)
 {
 	/* must be a multiple of the aes block size */
-	return plaintextSize + (AES_IV_SIZE - (plaintextSize % AES_IV_SIZE));
+	return plaintextSize + (NC_CRYPTO_AES_IV_SIZE - (plaintextSize % NC_CRYPTO_AES_IV_SIZE));
 }
 
 static _nc_fn_inline uint32_t _calcNip44TotalOutSize(uint32_t inputSize)
@@ -395,7 +395,7 @@ static NCResult _nip44EncryptCompleteCore(
 	ncSpanAppend(message, &outPos, Nip44VersionValue, sizeof(Nip44VersionValue));
 
 	/* next is nonce data */
-	ncSpanAppend(message, &outPos, encArgs.nonceData, (uint32_t)result);
+	ncSpanAppend(message, &outPos, encArgs.ivData, (uint32_t)result);
 
 	/* 
 	* Assert the output points to the end of the nonce segment 
@@ -589,7 +589,7 @@ static NCResult _nip44DecryptCompleteCore(
 	* manually assign nonce because it's a constant pointer which
 	* is not allowed when calling setproperty 
 	*/
-	encArgs.nonceData = ncSpanGetOffsetC(nonce, 0);
+	encArgs.ivData = ncSpanGetOffsetC(nonce, 0);
 
 	DEBUG_ASSERT2(cipherText.size >= MIN_PADDING_SIZE, "Cipertext segment was parsed incorrectly. Too small");
 	
@@ -966,7 +966,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 		else
 		{
 			/* Ensure the user manually specified a nonce cipher for encryption mode */
-			if (!cipher->encArgs.nonceData)
+			if (!cipher->encArgs.ivData)
 			{
 				return E_CIPHER_BAD_NONCE;
 			}
