@@ -317,7 +317,7 @@
 		* The counter bytes are always set to 0 for the nonce.
 		*/
 
-		ncCryptoSecureZero(chaChaNonce, sizeof(chaChaIv));
+		ncCryptoSecureZero(chaChaNonce, sizeof(chaChaNonce));
 		ncSpanReadC(nonce, chaChaNonce + 4, NC_CRYPTO_CHACHA_NONCE_SIZE);
 
 		if (!_osslEvpCipherInit(&state, key, nonceSpan))
