@@ -72,12 +72,12 @@
 		* needed for noscrypt as encryptions are one-shot, and 
 		* require a new nonce for each encryption.
 		* 
-		* ITEF function uses a 12byte nonce which is required for
-		* nip-44 compliant encryption.
+		* ITEF function uses a 12byte nonce and 32 byte key which 
+		* is required for nip-44 compliant encryption. See monocypher.h
 		*/
 
-		DEBUG_ASSERT(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE);
-		DEBUG_ASSERT(ncSpanGetSizeC(nonce) == 12);
+		DEBUG_ASSERT(ncSpanGetSizeC(key) == 0x20);
+		DEBUG_ASSERT(ncSpanGetSizeC(nonce) == 0x0c);
 
 		crypto_chacha20_ietf(
 			ncSpanGetOffset(output, 0),

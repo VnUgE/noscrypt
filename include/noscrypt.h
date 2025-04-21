@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.h
@@ -76,9 +76,26 @@ extern "C" {
 #define NC_HMAC_KEY_SIZE				0x20
 #define NC_ENCRYPTION_MAC_SIZE			0x20
 #define NC_MESSAGE_KEY_SIZE				NIP44_MESSAGE_KEY_SIZE
-#define NC_NIP04_AES_KEY_SIZE			0x20	/* AES 256 key size */
-#define NC_NIP44_IV_SIZE				0x20	/* 32 bytes */
-#define NC_NIP04_IV_SIZE				0x10	/* 16 bytes */
+#define NC_NIP04_KEY_SIZE				0x20	/* AES 256 key size */
+
+/*
+* DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead.
+* Will be removed in a future version.
+*/
+#if defined(_NC_IS_LINUX)
+	#define NC_NIP04_AES_KEY_SIZE		__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) NC_NIP04_KEY_SIZE	/* AES 256 key size */
+	#define NC_NIP44_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead"))) 0x20	/* 32 bytes */
+	#define NC_NIP04_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) 0x10	/* 16 bytes */
+#elif defined(_NC_IS_WINDOWS)
+	#define NC_NIP04_AES_KEY_SIZE		__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) NC_NIP04_KEY_SIZE	/* AES 256 key size */
+	#define NC_NIP44_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead")) 0x20	/* 32 bytes */
+	#define NC_NIP04_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) 0x10	/* 16 bytes */
+#else
+	/* For compilers without deprecation support */
+	#define NC_NIP04_AES_KEY_SIZE		NC_NIP04_KEY_SIZE	/* AES 256 key size */
+	#define NC_NIP44_IV_SIZE			0x20	/* 32 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead */
+	#define NC_NIP04_IV_SIZE			0x10	/* 16 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead */
+#endif
 
 /*
 * From spec
@@ -179,12 +196,12 @@ typedef struct nc_ctx_struct NCContext;
 /*
 * The encryption arguments structure. This structure is used to pass 
 arguments to the encryption and decryption functions. It stores the
-data buffers and required nonce used for the stream cipher.
+data buffers and required iv used for the stream cipher.
 */
 typedef struct nc_encryption_struct {
 
-	/* The nonce used for the stream cipher. */
-	const uint8_t* nonceData;
+	/* The iv used for the stream cipher. */
+	const uint8_t* ivData;
 
 	/* Writes the hmac key to the buffer during encryption events.
 	Set to NULL on decryption */

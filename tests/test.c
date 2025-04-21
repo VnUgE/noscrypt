@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: test.c
@@ -97,6 +97,12 @@
 #define ARG_INVALID_ERROR_POS_4 ARG_INVALID_ERROR(0x04)
 #define ARG_INVALID_ERROR_POS_5 ARG_INVALID_ERROR(0x05)
 #define ARG_INVALID_ERROR_POS_6 ARG_INVALID_ERROR(0x06)
+
+/*      TEST CONSTATNS     */
+
+#define NC_TEST_NIP04_IV_SIZE	0x10   /* Spec defines nip04 nonce (iv) size must be 16 bytes */
+#define NC_TEST_NIP44_IV_SIZE	0x20   /* Spec defines nip44 nonce (iv) size must be 32 bytes */
+
 
 static int RunTests(void);
 static void FillRandomData(void* pbBuffer, size_t length);
@@ -288,7 +294,7 @@ static int TestPublicApiArgumentValidation()
     NCSecretKey secKey;
     NCPublicKey pubKey;
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
-    uint8_t nonce[NC_NIP44_IV_SIZE];
+    uint8_t iv[NC_TEST_NIP44_IV_SIZE];
    
     NCEncryptionArgs cryptoData;
 
@@ -298,7 +304,9 @@ static int TestPublicApiArgumentValidation()
     ZERO_FILL(&cryptoData, sizeof(cryptoData));
 
     {
-        TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44), sizeof(nonce));
+        TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44), sizeof(iv));
+        TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44), NC_TEST_NIP44_IV_SIZE);
+        TEST(NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04), NC_TEST_NIP04_IV_SIZE);
 
         /*
         * Test arguments for encryption properties
@@ -315,17 +323,17 @@ static int TestPublicApiArgumentValidation()
 		TEST(NCEncryptionSetData(&cryptoData, zero32, sig64, 0), ARG_RANGE_ERROR_POS_3)
 
         /* Setting the IV should fail because a version is not set*/
-        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, nonce, sizeof(nonce)), E_VERSION_NOT_SUPPORTED);
+        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, iv, sizeof(iv)), E_VERSION_NOT_SUPPORTED);
 
         /* Set to nip44 to continue nip44 tests */
         TEST(NCEncryptionSetProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44), NC_SUCCESS)
 
-		TEST(NCEncryptionSetPropertyEx(&cryptoData, 0, nonce, sizeof(nonce)), E_INVALID_ARG)
-		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, NULL, sizeof(nonce)), ARG_ERROR_POS_2)
-		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, nonce, 0), ARG_RANGE_ERROR_POS_3)
-		/* Nonce size should fail if not exactly the required nonce size */
-		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, nonce, NC_NIP44_IV_SIZE - 1), ARG_RANGE_ERROR_POS_3)
-        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, nonce, NC_NIP44_IV_SIZE + 1), ARG_RANGE_ERROR_POS_3)
+		TEST(NCEncryptionSetPropertyEx(&cryptoData, 0, iv, sizeof(iv)), E_INVALID_ARG)
+		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, NULL, sizeof(iv)), ARG_ERROR_POS_2)
+		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, iv, 0), ARG_RANGE_ERROR_POS_3)
+		/* Nonce size should fail if not exactly the required iv size */
+		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, iv, NC_TEST_NIP44_IV_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, iv, NC_TEST_NIP44_IV_SIZE + 1), ARG_RANGE_ERROR_POS_3)
 
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, 0, hmacKeyOut, sizeof(hmacKeyOut)), E_INVALID_ARG)
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, NULL, sizeof(hmacKeyOut)), ARG_ERROR_POS_2)
@@ -346,19 +354,19 @@ static int TestPublicApiArgumentValidation()
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, NULL, sizeof(testBuff32)), ARG_ERROR_POS_2)
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, testBuff32, 0), ARG_RANGE_ERROR_POS_3)
         /* IV size should fail if not exact size IV for the version */
-        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, testBuff32, NC_NIP04_IV_SIZE - 1), ARG_RANGE_ERROR_POS_3)
-        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, testBuff32, NC_NIP04_IV_SIZE + 1), ARG_RANGE_ERROR_POS_3)
+        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, testBuff32, NC_TEST_NIP04_IV_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+        TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, testBuff32, NC_TEST_NIP04_IV_SIZE + 1), ARG_RANGE_ERROR_POS_3)
 
 
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, NULL, sizeof(testBuff32)), ARG_ERROR_POS_2)
 		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, 0), ARG_RANGE_ERROR_POS_3)
 		/* Key size should fail if smaller than the required nip04 key size */
-		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, NC_NIP04_AES_KEY_SIZE - 1), ARG_RANGE_ERROR_POS_3)
+		TEST(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP04_KEY, testBuff32, NC_NIP04_KEY_SIZE - 1), ARG_RANGE_ERROR_POS_3)
     }
 
     /* Prep the crypto structure for proper usage */
 	ENSURE(NCEncryptionSetProperty(&cryptoData, NC_ENC_SET_VERSION, NC_ENC_VERSION_NIP44) == NC_SUCCESS);
-    ENSURE(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, nonce, sizeof(nonce)) == NC_SUCCESS);
+    ENSURE(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_IV, iv, sizeof(iv)) == NC_SUCCESS);
     ENSURE(NCEncryptionSetPropertyEx(&cryptoData, NC_ENC_SET_NIP44_MAC_KEY, hmacKeyOut, sizeof(hmacKeyOut)) == NC_SUCCESS);
 	
     /* Assign the encryption material */
@@ -366,7 +374,7 @@ static int TestPublicApiArgumentValidation()
 
 
     FillRandomData(ctxRandom, 32);
-    FillRandomData(nonce, sizeof(nonce));
+    FillRandomData(iv, sizeof(iv));
 
     /*
     * Alloc context structure on the heap before use. 
@@ -568,7 +576,7 @@ static int TestCorrectEncryption(const NCContext* context)
     NCPublicKey pubKey2;
   
     uint8_t hmacKeyOut[NC_HMAC_KEY_SIZE];
-    uint8_t nonce[NC_NIP44_IV_SIZE];  //nonce is set by cipher spec, shoud use NCEncryptionGetIvSize() in production
+    uint8_t nonce[NC_TEST_NIP44_IV_SIZE];  //nonce is set by cipher spec, shoud use NCEncryptionGetIvSize() in production
     uint8_t mac[NC_ENCRYPTION_MAC_SIZE];
 
     uint8_t plainText[TEST_ENC_DATA_SIZE];
@@ -781,7 +789,7 @@ static int TestUtilFunctions(const NCContext* libCtx)
 	    /* From the nip44 vectors file */
 		span_t sendKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", sizeof(NCSecretKey));
 		span_t recvKey = FromHexString("0000000000000000000000000000000000000000000000000000000000000002", sizeof(NCSecretKey));
-		span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_NIP44_IV_SIZE);
+		span_t nonce = FromHexString("0000000000000000000000000000000000000000000000000000000000000001", NC_TEST_NIP44_IV_SIZE);
         span_t payload = FromHexString("02000000000000000000000000000000000000000000000000000000000000000179ed06e5548ad3ff58ca920e6c0b4329f6040230f7e6e5641f20741780f0adc35a09794259929a02bb06ad8e8cf709ee4ccc567e9d514cdf5781af27a3e905e55b1b", 99);
 		span_t plainText = FromHexString("61", 1);
 
