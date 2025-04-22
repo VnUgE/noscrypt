@@ -82,7 +82,7 @@ extern "C" {
 * DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead.
 * Will be removed in a future version.
 */
-#if defined(_NC_IS_LINUX)
+#if defined(__GNUC__)
 	#define NC_NIP04_AES_KEY_SIZE		__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) NC_NIP04_KEY_SIZE	/* AES 256 key size */
 	#define NC_NIP44_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead"))) 0x20	/* 32 bytes */
 	#define NC_NIP04_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) 0x10	/* 16 bytes */
