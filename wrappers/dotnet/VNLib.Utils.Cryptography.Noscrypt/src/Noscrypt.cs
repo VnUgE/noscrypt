@@ -53,8 +53,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         public const int NC_CTX_ENTROPY_SIZE            = 0x20;
         public const int NC_SIG_ENTROPY_SIZE            = 0x20;
 
-        public const uint NC_ENC_VERSION_NIP04          = 0x00000004u;
-        public const uint NC_ENC_VERSION_NIP44          = 0x00000002c;
+        public const uint NC_ENC_VERSION_NIP04          = 0x4u;
+        public const uint NC_ENC_VERSION_NIP44          = 0x2c;
 
         public const uint NC_ENC_SET_VERSION            = 0x01u;
         public const uint NC_ENC_SET_IV                 = 0x02u;

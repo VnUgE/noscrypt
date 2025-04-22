@@ -9,7 +9,7 @@ vars:
     /p:RunAnalyzersDuringBuild=false 
     /p:BuildInParallel=true 
     /p:MultiProcessorCompilation=true 
-    /p:ErrorOnDuplicatePublishOutputFiles=false  
+    /p:ErrorOnDuplicatePublishOutputFiles=false 
 
 tasks:
 
@@ -46,7 +46,7 @@ tasks:
        silent: true
 
      #updates the project versions for all included .NET projects
-     - cmd: dotnet-gitversion.exe /updateprojectfiles
+     - cmd: dotnet gitversion /updateprojectfiles
 
      #build debug mode first
      - cmd: dotnet publish -c debug {{ .MS_ARGS }}
