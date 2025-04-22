@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking** Renamed `nonceData` field in `NCEncryptionArgs` to `ivData` for consistency with public-facing terminology. ABI is still compatible, but API has changed. 
 This is a breaking change for any code that directly mutates the `NCEncryptionArgs` struct, which is discouraged.
 
+### Updated
+- Updated mbedtls to v3.6.3, see [release notes](https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.3) for all security fixes 
+- Updated OpenSSL headers to v3.5.0 
+
 ## [0.1.8]
 
 ### Added
