@@ -55,6 +55,9 @@ tasks:
      
      - task: test-dotnet
      - task: lib:clean
+     
+     - cmd: echo "all tests passed successfully"
+       silent: true
 
   test-dotnet:
     desc: Runs dotnet unit tests for vnbuild CI systems
