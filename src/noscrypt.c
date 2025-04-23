@@ -396,7 +396,7 @@ static _nc_fn_inline NCResult _nip04CipherUpdate(
 	 * Since were on nip-04 branch, the nonce field should always
 	 * be equal to the nip04 aes iv parameter
 	 */
-	DEBUG_ASSERT2(ncSpanGetSizeC(ivSpan) == NC_CRYPTO_AES_IV_SIZE, "Expected valid aes iv size");
+	DEBUG_ASSERT2(ncSpanGetSizeC(ivSpan) == NIP04_IV_SIZE, "Expected valid nip04 (aes) iv size");
 
 	/* For now just the encryption flag must be set if encryption is enabled */
 	encFlags = encrypt ? NC_CRYPTO_AES_MODE_ENCRYPT : NC_CRYPTO_AES_MODE_DECRYPT;

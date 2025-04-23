@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9]
+
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
-
-## [0.1.9]
 
 ### Changed
 - **Deprecated** `NC_NIP04_IV_SIZE` and `NC_NIP44_IV_SIZE` macros. Use `NCEncryptionGetIvSize()` at runtime instead.
