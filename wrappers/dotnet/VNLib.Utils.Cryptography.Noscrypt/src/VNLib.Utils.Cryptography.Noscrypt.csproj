@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>false</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RootNamespace>VNLib.Utils.Cryptography.Noscrypt</RootNamespace>
+    <AssemblyName>VNLib.Utils.Cryptography.Noscrypt</AssemblyName>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <Authors>Vaughn Nugent</Authors>
+    <Company>Vaughn Nugent</Company>
+    <Product>VNLib.Utils.Cryptography.Noscrypt</Product>
+    <Description>Provides a C# managed library wrapper for the noscrypt native library</Description>
+    <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
+    <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VnUgE/noscrypt/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
+    <PackageTags>cryptography;nostr;encryption;signatures</PackageTags>
+    <Artifacts>release.tgz,debug.tgz,src.tgz</Artifacts>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.0-rc0222" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.0-rc0222" />
+  </ItemGroup>
+  
+</Project>

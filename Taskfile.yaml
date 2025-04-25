@@ -284,7 +284,7 @@ tasks:
     requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CI_BUILD_CONFIG, PROJECT_NAME }
     platforms: [ windows ]
     vars:
-      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
+      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
       BUILD_DIR: 'build/win-x64'
 
       TAR_FILES: "
@@ -307,7 +307,7 @@ tasks:
      - cmd: powershell cp license '{{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }}/license.txt'
 
     #tar up the binaries
-     - cmd: cd {{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }} &&  tar -czf "{{ .TARGET }}" {{ .TAR_FILES }}
+     - cmd: cd {{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }} && tar -czf "{{ .TARGET }}" {{ .TAR_FILES }}
 
  #called by build pipeline to build module
   build:
@@ -395,16 +395,17 @@ tasks:
   dev-update-mbedtls:
     requires: { MBEDTLS_SRC_DIR }
     vars:
+      MBEDTLS_VERSION: '3.6.3'
       TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
+      TAR_TEMP: '.update/mbedtls.tar.bz2'
     cmds:
-     - cmd: '{{ if eq OS "windows" }}wsl{{ end }} 
-        curl {{ .TAR_URL }} --location
-        | tar -xjf - -C "{{ .MBEDTLS_SRC_DIR }}" --strip-components=1'
+     - cmd: curl {{ .TAR_URL }} --location -o {{ .TAR_TEMP }} 
+     - cmd: '{{ if eq OS "windows" }}wsl {{ end }}tar -xjf "{{ .TAR_TEMP }}" -C "{{ .MBEDTLS_SRC_DIR }}" --strip-components=1'
 
   dev-update-openssl-headers:
     requires: { OPENSSL_SRC_DIR }
     vars:
-      TAG: 'openssl-3.4.1'
+      TAG: 'openssl-3.5.0'
       TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:

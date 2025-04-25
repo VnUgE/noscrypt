@@ -1,0 +1,182 @@
+﻿{
+  "external_notes": [
+    {
+      "id": "177dd821ee5bca1c02c19163e9daf82072eeef9c9008b0bdbb4b511a8ff54467",
+      "pubkey": "846ebf79a0a8813274ec9727490621ad423f16a3e474d7fd66e6a98bfe4e39a4",
+      "created_at": 1737527307,
+      "kind": 1,
+      "tags": [
+        [ "t", "Alexandria" ],
+        [ "t", "alexandria" ],
+        [ "r", "https://next-alexandria.gitcitadel.eu/publication?d=dracula-by-bram-stoker-v-1" ],
+        [ "r", "https://github.com/nostr-protocol/nips/pull/1708" ]
+      ],
+      "content": "GM Nostriches,\n\nWe have now:\n* printed Bram Stoker's \"Dracula\" https://next-alexandria.gitcitadel.eu/publication?d=dracula-by-bram-stoker-v-1\n* we corrected the left-margin problem in the books (but not yet in the research paper),\n* we have made #Alexandria logins more persistent and added a logout button,\n* and we have begun a NIP repo PR for storing and documenting citations and references in academic works.\n\nhttps://github.com/nostr-protocol/nips/pull/1708",
+      "sig": "551120dae35f4dc58f1ed97f75b68c9f03df6b35bb306df4d44208897cb076bcb64fc19f77586296c43dee84fad64e48f0ec573b4c9585792ee88e3768d08a55"
+    },
+    {
+      "kind": 1,
+      "id": "c2a3016b8c1610ddc592df5afc68d03a856167dfeb78b04ca4030473e29e9d39",
+      "pubkey": "ce1bf9ad92164df227bfcab2813193c60eb4021d35bf4bbbc6fa24c560d0f3e9",
+      "created_at": 1737049760,
+      "tags": [
+        [
+          "t",
+          "devstr"
+        ],
+        [
+          "t",
+          "asknostr"
+        ]
+      ],
+      "content": "Question for the nostr devs, how can I get my hands on naddr and nrelay encoding examples ?\n\n\n#devstr #asknostr",
+      "sig": "50b8c81619dd717ea17f58c3747be810bb7cf1b664a6677b8bdf80a42f0b55fe298ab5021e72856bca12ba6a33a3268ba7948b7bd7f86b392f2fdcd9bda3b9d0"
+    },
+    {
+      "content": "Good morning, #nostriches! \n\nI'm tired of what a few people are trying to do to the simply brilliant idea of the nostr protocol. \n\nFeatures that don't work are useless. Build a better foundation. If you can't do that, then you don't deserve any of your fawning sycophants lapping at your taint. \n\nStop garekeeping better ideas. \n\n\nStop hacking crap together and then rabbit off to something else. That just makes you look like a retard to those who can see that you are putting your personal foibles on display with how you treat your work and those who criticize the very obvious flaws in it. \n\nYour cavalier cabal of cackling creeps that crow every time you crap put something new will not hold sway forever. You will be swept away by the mostly quiet proof of work from dedicated, persistent, measured builders who know their craft and will apply the best measures to building things that aren't as exciting, but are actually functional. Stop making it harder for those doing work to get more work done. You are not that important. Slapping on a coat of paint to a moldy, holey building is not the same as blasting into bedrock, anchoring into that, and then building the strongest foundation ever seen.\n\nYou. \n\nWill. \n\nLoose. \n\nSo please, get your crap together and fix your BS. Or, at least GTFO of the way of people who are capable, much more so than you, of building the infrastructure of the new internet. \n\n#gm #goodmorning #buildthefuture #nostriches #plebchain #grownostr #infrastructure #nostrisbroken #nostrability #dontbeadouche\nnostr:nevent1qqs8ev6r5w4h0vm9tlexlw7k7cgpqjycccp934rzu8u5kzx87x8wgacprdmhxue69uhhg6r9vehhyetnwshxummnw3erztnrdakj7q3qq6ya7kz84rfnw6yjmg5kyttuplwpauv43a9ug3cajztx4g0v48eqxpqqqqqqzpq04wn",
+      "created_at": 1738240499,
+      "id": "3f6d10950809c72be4699e57c31742e965e45920daa1e9063453d5bf5da2859c",
+      "kind": 1,
+      "pubkey": "0689df5847a8d3376892da29622d7c0fdc1ef1958f4bc4471d90966aa1eca9f2",
+      "sig": "5c8e9fba35f726895b75d4512bfc715d3abbd6b365124b1a1da79d2d66e70f440932e6fc3d94297adc72e99d450cfd1d1f1110ad5696e874d86959dc868964b2",
+      "tags": [
+        [ "e", "7cb343a3ab77b3655ff26fbbd6f610104898c60258d462e1f94b08c7f18ee477", "", "mention" ],
+        [ "p", "0689df5847a8d3376892da29622d7c0fdc1ef1958f4bc4471d90966aa1eca9f2", "", "mention" ],
+        [ "q", "7cb343a3ab77b3655ff26fbbd6f610104898c60258d462e1f94b08c7f18ee477" ],
+        [ "t", "nostriches" ],
+        [ "t", "gm" ],
+        [ "t", "goodmorning" ],
+        [ "t", "buildthefuture" ],
+        [ "t", "plebchain" ],
+        [ "t", "grownostr" ],
+        [ "t", "infrastructure" ],
+        [ "t", "nostrisbroken" ],
+        [ "t", "nostrability" ],
+        [ "t", "dontbeadouche" ]
+      ]
+    },
+    {
+      "content": "Been going ham in Jira today.  Defining and tracking user stories for Alexandria has given us a major boost in efficiency, despite the time spent on planning/administrative tasks involved in maintaining the Jira board.",
+      "created_at": 1736710686,
+      "id": "36429ccede2b23f47d757febd970a7b6f85416fcc226ff7cc13de10b88de2dc6",
+      "kind": 1,
+      "pubkey": "70122128273bdc07af9be7725fa5c4bc0fc146866bec38d44360dc4bc6cc18b9",
+      "sig": "98c7165c146bc3d3131f81dc6abd6d7e2ac133cd70c186e162f73b15f6174a46e2221249f0e896ccdb4b4edc1f98a5c10a7d73669b0156bba7f6017834592a63",
+      "tags": []
+    },
+    {
+      "content": "Only a small fraction of us are obsessing over space. I do it because I love exploring and I can't wait for all the beautiful lives and stories that will happen amongst the stars.\n\nMore space allows more people, and I love people.\n\nBut it is also hard to fix every problem in a closed environment. When people explore it seems obvious that it is a waste of time and resources since there is no way to know what they will find.\n\nExplorers came to the Americas seeking gold, but what they found instead was timber and fertile soil. Those resources absolutely made life in Europe better.\n\nBut space has no timber or fertile soil! Exactly, we will go looking for places to colonize but find???? No idea, but if there is something out there that will make life better on earth, we won't know till we look.\n\nMaybe it will be better to move heavy manufacturing off world so we don't pollute as much. Maybe stricter limitations on resources will lead to more efficient HVAC or water recycling. Worth a try.",
+      "created_at": 1737135480,
+      "id": "ebb6633d9c518fcf1bc82ead02bb17f2980aa117efb5225b2e1358b912c2bfab",
+      "kind": 1,
+      "pubkey": "75656740209960c74fe373e6943f8a21ab896889d8691276a60f86aadbc8f92a",
+      "sig": "a2e0f44562ab0de92a5b35904a4e83bec624ff817ba8d2dd16712ae8e25581b9a53e06b712fe4f759f848ea5d59916c06f66035ab9f2be9000d2a646c61bc4b2",
+      "tags": [
+        [
+          "e",
+          "ef850fbbcf1f56a9a89749a71601529ee3049fea4c981ce7d652155925a3b469",
+          "",
+          "root"
+        ],
+        [
+          "e",
+          "ba91dc0c11645784e5ada9e0ebc881a12918ccf666652ededc18540e682e09df",
+          "",
+          "reply"
+        ],
+        [
+          "p",
+          "b9197a4cefd2a11c898406ef2d893f197ea7c11aafb66af073f4c2678b88a3c8"
+        ],
+        [
+          "p",
+          "70122128273bdc07af9be7725fa5c4bc0fc146866bec38d44360dc4bc6cc18b9"
+        ],
+        [
+          "p",
+          "75d12141a391994c4062501f155c2e34e41a8c3cf9bef9e4d7d298253458d1e2"
+        ]
+      ]
+    },
+    {
+      "content": "",
+      "created_at": 1737497229,
+      "id": "8dd0797c90ad327a3436f4592efe92f4e82277cfb5d34fc24e93e5c644f750c5",
+      "kind": 30311,
+      "pubkey": "cf45a6ba1363ad7ed213a078e710d24115ae721c9b47bd1ebf4458eaefb4c2a5",
+      "sig": "581eddadd4afe23856b92611123228fa0b7c8d909e4ac9da11fe544fa8c404205328695df9f1a9af758a61d76e51ed67142b5428f6aac4ad4c5d67ef0c3f9a5f",
+      "tags": [
+        [
+          "d",
+          "c5eccf48-8cc4-4e5d-9c66-fa18fdc08fdb"
+        ],
+        [
+          "title",
+          "NoGood Radio"
+        ],
+        [
+          "summary",
+          "NoGood Radio is a 24/7 radio station running on scrap parts and broadcasting from a basement somewhere."
+        ],
+        [
+          "image",
+          "https://image.nostr.build/a9762744199c1a1f89c4a7560b00718d8deb8b18eebef24361f9e6b52c63800f.jpg"
+        ],
+        [
+          "status",
+          "live"
+        ],
+        [
+          "p",
+          "55f04590674f3648f4cdc9dc8ce32da2a282074cd0b020596ee033d12d385185",
+          "wss://relay.zap.stream",
+          "host"
+        ],
+        [
+          "relays",
+          "wss://relay.snort.social",
+          "wss://nos.lol",
+          "wss://relay.damus.io",
+          "wss://relay.nostr.band",
+          "wss://nostr.land",
+          "wss://nostr-pub.wellorder.net",
+          "wss://nostr.wine",
+          "wss://relay.nostr.bg",
+          "wss://nostr.oxtr.dev"
+        ],
+        [
+          "starts",
+          "1724860505"
+        ],
+        [
+          "service",
+          "https://api.zap.stream/api/nostr"
+        ],
+        [
+          "streaming",
+          "https://data.zap.stream/stream/c5eccf48-8cc4-4e5d-9c66-fa18fdc08fdb.m3u8"
+        ],
+        [
+          "current_participants",
+          "14"
+        ],
+        [
+          "t",
+          "Radio"
+        ],
+        [
+          "t",
+          "24/7"
+        ],
+        [
+          "t",
+          "internal:music"
+        ],
+        [
+          "goal",
+          "854bac46f638e93f9cdb6aa0f415cbcfb8041e5383571aa5c538ba354145e584"
+        ]
+      ]
+    }
+  ]
+}
