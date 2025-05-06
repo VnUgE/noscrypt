@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+- CMakePresets were updated/adjusted for easier development, still not considered stable though. Users should still use Taskfile for building.
+
 ## [0.1.9]
 
 ### Added

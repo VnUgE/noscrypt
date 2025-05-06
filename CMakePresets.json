@@ -2,61 +2,105 @@
     "version": 3,
     "configurePresets": [
       {
-          "name": "windows-base",
-          "hidden": true,
-          "generator": "Visual Studio 17 2022",
-          "binaryDir": "${sourceDir}/out/build/${presetName}",
-          "installDir": "${sourceDir}/out/install/${presetName}",
-          "cacheVariables": {
-            "CMAKE_C_COMPILER": "cl.exe",
-            "CMAKE_CXX_COMPILER": "cl.exe"
-          },
-          "condition": {
-            "type": "equals",
-            "lhs": "${hostSystemName}",
-            "rhs": "Windows"
-          },
-        },
-        {
-            "name": "x64-debug",
-            "displayName": "x64 Debug",
-            "inherits": "windows-base",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Debug",
-              "NC_BUILD_TESTS": true,
-              "NC_ENABLE_UTILS": true
-            }
-        },
-         {
-            "name": "x64-debug-openssl",
-            "displayName": "x64 Debug Openssl",
-            "inherits": "x64-debug",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-              "CMAKE_BUILD_TYPE": "Debug",
-              "NC_BUILD_TESTS": true,
-              "CRYPTO_LIB": "openssl"
-            }
-        },
+        "name": "debug",
+        "hidden": true,
+        "binaryDir": "${sourceDir}/build/linux",
+        "architecture": "x64",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "NC_BUILD_TESTS": true,
+          "NC_ENABLE_UTILS": true
+        }
+      },
       {
-        "name": "x64-release",
-        "displayName": "x64 Release",
-        "inherits": "windows-base",
-        "architecture": {
-          "value": "x64",
-          "strategy": "external"
-        },
+        "name": "release",
+        "hidden": true,
+        "binaryDir": "${sourceDir}/build/linux",
+        "architecture": "x64",
         "cacheVariables": {
           "CMAKE_BUILD_TYPE": "Release",
           "NC_ENABLE_UTILS": true
         }
-      }
+      },
+      {
+        "name": "debug-mbedtls",
+        "displayName": "Debug MbedTLS",
+        "inherits": "debug",
+        "hidden": false,
+        "cacheVariables": {
+          "CRYPTO_LIB_DIR": "${sourceDir}/build/linux/_deps/mbedtls",
+          "CRYPTO_LIB": "mbedtls"
+        }
+      },
+      {
+        "name": "release-mbedtls",
+        "displayName": "Release MbedTLS",
+        "inherits": [ "debug-mbedtls", "release" ],
+        "hidden": false      
+      },
+      {
+        "name": "win-base",
+        "hidden": true,
+        "generator": "Visual Studio 17 2022",
+        "architecture": "x64",
+        "binaryDir": "${sourceDir}/build/windows",
+        "cacheVariables": {
+          "CMAKE_C_COMPILER": "cl.exe",
+          "CMAKE_CXX_COMPILER": "cl.exe"
+        },
+        "condition": {
+          "type": "equals",
+          "lhs": "${hostSystemName}",
+          "rhs": "Windows"
+        }
+      },
+      {
+        "name": "win-debug",
+        "displayName": "Win Debug",
+        "inherits": [ "win-base", "debug" ],
+        "hidden": false
+      },
+      {
+        "name": "win-release",
+        "displayName": "Win Release",
+        "inherits": [ "win-base", "release" ],
+        "hidden": false
+      },
+      {
+        "name": "win-debug-mbedtls",
+        "displayName": "Win Debug MbedTLS",
+        "inherits": [ "win-base", "debug-mbedtls" ],
+        "hidden": false,
+        "cacheVariables": {
+          "CRYPTO_LIB_DIR": "${sourceDir}/build/windows/_deps/mbedtls"
+        }
+      },
+      {
+        "name": "win-release-mbedtls",
+        "displayName": "Win Release MbedTLS",
+        "inherits": [ "release-mbedtls", "win-base" ],
+        "hidden": false,
+        "cacheVariables": {
+          "CRYPTO_LIB_DIR": "${sourceDir}/build/windows/_deps/mbedtls"
+        }
+      },
+      {
+        "name": "win-debug-openssl",
+        "displayName": "Win Debug OpenSSL",
+        "inherits": [ "debug", "win-base" ],
+        "hidden": false,
+        "cacheVariables": {
+          "CRYPTO_LIB": "openssl"
+        }
+      },
+      {
+        "name": "win-release-openssl",
+        "displayName": "Win Release OpenSSL",
+        "inherits": [ "release", "win-base" ],
+        "hidden": false,
+        "cacheVariables": {
+          "CRYPTO_LIB": "openssl"
+        }
+      }       
     ]
 }
