@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9]
+
 ### Added
 - C# .NET 8.0 library wrapper for noscrypt
 - Full NIP44 vector testing for encryption
+
+### Changed
+- **Deprecated** `NC_NIP04_IV_SIZE` and `NC_NIP44_IV_SIZE` macros. Use `NCEncryptionGetIvSize()` at runtime instead.
+- **Breaking** Renamed `nonceData` field in `NCEncryptionArgs` to `ivData` for consistency with public-facing terminology. ABI is still compatible, but API has changed. 
+This is a breaking change for any code that directly mutates the `NCEncryptionArgs` struct, which is discouraged.
+
+### Updated
+- Updated mbedtls to v3.6.3, see [release notes](https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.3) for all security fixes 
+- Updated OpenSSL headers to v3.5.0 
 
 ## [0.1.8]
 
@@ -127,7 +138,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/VnUgE/noscrypt/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/VnUgE/noscrypt/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/VnUgE/noscrypt/compare/v0.1.5...v0.1.6

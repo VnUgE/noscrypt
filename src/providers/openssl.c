@@ -283,14 +283,14 @@
 	{
 		cstatus_t result;
 		struct ossl_evp_state state;
-		uint8_t chaChaIv[CHACHA_NONCE_SIZE + 4];
+		uint8_t chaChaNonce[NC_CRYPTO_CHACHA_NONCE_SIZE + 4];
 		cspan_t nonceSpan;
 		int bytesWritten;
 
 		result = CSTATUS_FAIL;
 		bytesWritten = 0;
 
-		ncSpanInitC(&nonceSpan, chaChaIv, sizeof(chaChaIv));
+		ncSpanInitC(&nonceSpan, chaChaNonce, sizeof(chaChaNonce));
 
 		/* Ensure output buffer is at least large enough to store input data */
 		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
@@ -307,7 +307,7 @@
 			goto Cleanup;
 		}
 
-		DEBUG_ASSERT2(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE, "ChaCha key buffer size is not correct");
+		DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE, "ChaCha key buffer size is not correct");
 
 		/*
 		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
@@ -317,8 +317,8 @@
 		* The counter bytes are always set to 0 for the nonce.
 		*/
 
-		ncCryptoSecureZero(chaChaIv, sizeof(chaChaIv));		
-		ncSpanReadC(nonce, chaChaIv + 4, CHACHA_NONCE_SIZE);		
+		ncCryptoSecureZero(chaChaNonce, sizeof(chaChaNonce));
+		ncSpanReadC(nonce, chaChaNonce + 4, NC_CRYPTO_CHACHA_NONCE_SIZE);
 
 		if (!_osslEvpCipherInit(&state, key, nonceSpan))
 		{

@@ -105,13 +105,15 @@
 		cspan_t key,
 		cspan_t iv,
 		cspan_t input,
-		span_t output
+		span_t output,
+		int flags
 	)
 	{
 		UNREFPARAM(key);
 		UNREFPARAM(iv);
 		UNREFPARAM(input);
 		UNREFPARAM(output);
+		UNREFPARAM(flags);
 
 		return CSTATUS_FAIL;
 	}
@@ -291,8 +293,8 @@ cstatus_t ncCryptoChacha20(
 	span_t output
 )
 {
-	DEBUG_ASSERT2(ncSpanGetSizeC(key) == CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
-	DEBUG_ASSERT2(ncSpanGetSizeC(nonce) == CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
+	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
+	DEBUG_ASSERT2(ncSpanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
 
 #ifndef _IMPL_CHACHA20_CRYPT
 	#error "No chacha20 implementation defined"
@@ -301,19 +303,20 @@ cstatus_t ncCryptoChacha20(
 	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output);
 }
 
-cstatus_t ncCryptoAes256CBCEncrypt(
+cstatus_t ncCryptoAes256CBCUpdate(
 	cspan_t key,
 	cspan_t iv,
 	cspan_t input,
-	span_t output
+	span_t output,
+	int flags
 )
 {
-	DEBUG_ASSERT2(ncSpanGetSizeC(key) == AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
-	DEBUG_ASSERT2(ncSpanGetSizeC(iv) == AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
+	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
+	DEBUG_ASSERT2(ncSpanGetSizeC(iv) == NC_CRYPTO_AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
 
 #ifndef _IMPL_AES256_CBC_CRYPT
 	#error "No AES256 CBC encrypt implementation defined"
 #endif /* !_IMPL_AES256_CBC_CRYPT */
 
-	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output);
+	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output, flags);
 }

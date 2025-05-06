@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+    <RunConfiguration>
+      <EnvironmentVariables>
+        <NOSCRYPT_DLL_PATH>../../../../../../../build/windows/debug/noscrypt.dll</NOSCRYPT_DLL_PATH>
+      </EnvironmentVariables>
+    </RunConfiguration>
+</RunSettings>
