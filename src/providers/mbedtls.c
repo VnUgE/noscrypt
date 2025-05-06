@@ -192,14 +192,18 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	}
 #endif
 
-#if _IMPL_AES256_CBC_CRYPT
+#ifndef _IMPL_AES256_CBC_CRYPT
 
-	#define _IMPL_AES256_CBC_CRYPT
-	_IMPLSTB cstatus_t _mbed_aes_cbc_256(cspan_t key, cspan_t iv, cspan_t input, span_t output)
+	#define _IMPL_AES256_CBC_CRYPT _mbed_aes_cbc_256
+
+	#define MBEDTLS_AES256_KEY_BITS		256
+
+	_IMPLSTB cstatus_t _mbed_aes_cbc_256(cspan_t key, cspan_t iv, cspan_t input, span_t output, int flags)
 	{
 		cstatus_t result;
 		mbedtls_aes_context ctx;
 		uint8_t ivCopy[16];
+		int cipherMode;
 
 		DEBUG_ASSERT2(ncSpanGetSizeC(iv) == 16, "Expected iv size to be exactly 16 bytes");
 		DEBUG_ASSERT2(ncSpanGetSizeC(key) == 32, "Expected key size to be exactly 32 bytes");
@@ -212,14 +216,19 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		mbedtls_aes_init(&ctx);
 
 		/* set cipher encryption key, also enables encryption mode */
-		if (mbedtls_aes_setkey_enc(&ctx, ncSpanGetOffsetC(key, 0), 256) != 0)
+		if (mbedtls_aes_setkey_enc(&ctx, ncSpanGetOffsetC(key, 0), MBEDTLS_AES256_KEY_BITS) != 0)
 		{
 			goto Exit;
 		}
+
+		/* flags will contain a but for the cipher mode, use it to set the mode of the cbc crypt function */
+		cipherMode = (flags & NC_CRYPTO_AES_MODE_DECRYPT)
+			? MBEDTLS_AES_DECRYPT 
+			: MBEDTLS_AES_ENCRYPT;
 	
 		result = mbedtls_aes_crypt_cbc(
 			&ctx,
-			MBEDTLS_AES_ENCRYPT,
+			cipherMode,
 			ncSpanGetSizeC(input),
 			ivCopy,
 			ncSpanGetOffsetC(input, 0),

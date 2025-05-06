@@ -33,3 +33,7 @@
 #define MBEDTLS_CHACHA20_C
 #define MBEDTLS_SHA256_C
 #define MBEDTLS_ENTROPY_C
+
+/* Rules for enabling AES */
+#define MBEDTLS_AES_C
+#define MBEDTLS_CIPHER_MODE_CBC
