@@ -22,6 +22,14 @@ includes:
 
 tasks:
 
+  default:
+    cmds:
+     - cmd: | 
+         echo "This is the Module taskfile, there is no default task configured"
+         echo "Run 'task -t {{ base .TASKFILE }} --list' to see all available tasks"
+         echo ""
+       silent: true
+
 #called by build pipeline to sync repo
   update:
     cmds:
@@ -88,7 +96,8 @@ tasks:
   clean:
     cmds:
      #clean solution
-     - cmd: powershell rm -Recurse 'out/'
+     - for: ['out/', 'build/']
+       cmd: '{{ if eq OS "windows" }}powershell {{end}}rm -r {{ .ITEM }}'
        ignore_error: true
 
 

@@ -35,13 +35,14 @@ tasks:
     summary: 
       Builds Noscrypt for your system using safe defaults. The default configuration is
       set to 'Release' and the test executable is not built. 
-      You may specify addtional arugments like this 'task -- -DNC_ENABLE_UTILS=ON'
+      You may specify additional arguments like this 'task -- -DNC_ENABLE_UTILS=ON'
     cmds:
      - task: cmake-build
        vars: 
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
          CMAKE_CONFIG_ARGS: '{{ .CMAKE_CONFIG_ARGS }} {{ .CLI_ARGS }}'
          CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
+         BUILD_VERSION: '{{ .BUILD_VERSION | default "develop" }}'    #BUILD_VERSION is a vnbuild variable, so this will be overridden in the build pipeline
          BUILD_CONFIG: '{{ .BUILD_CONFIG | default "Release" }}'
 
   build-mbedtls:
@@ -124,34 +125,36 @@ tasks:
 #
 #################################
 
-  cmake-configue: 
+  cmake-configure: 
     internal: true
-    requires: { CMAKE_BUILD_DIR, BUILD_CONFIG, CMAKE_TEST_STATUS }
+    requires: { CMAKE_BUILD_DIR, BUILD_VERSION, BUILD_CONFIG, CMAKE_TEST_STATUS }
     cmds:
      - cmd: cmake
         -S . 
         -B{{ .CMAKE_BUILD_DIR }} 
         -DCMAKE_BUILD_TYPE={{ .BUILD_CONFIG }} 
+        -DCMAKE_PROJECT_VERSION={{ .BUILD_VERSION }}
         -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }}
         {{ .CMAKE_CONFIG_ARGS }}
-        
+
 
   #perfoms CMake compile step
-  cmake-compile:    
+  cmake-compile:
     internal: true
     requires: { CMAKE_BUILD_DIR, BUILD_CONFIG }
     cmds:
      - cmd: cmake 
         --build {{ .CMAKE_BUILD_DIR }} 
         --config {{ .BUILD_CONFIG }}
-  
+
   #runs the configure and compile cmake steps
   cmake-build:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BUILD_CONFIG, CMAKE_TEST_STATUS }
+    requires: { BUILD_VERSION, CMAKE_BUILD_DIR, BUILD_CONFIG, CMAKE_TEST_STATUS }
     cmds:
-     - task: cmake-configue
+     - task: cmake-configure
        vars: 
+         BUILD_VERSION: '{{ .BUILD_VERSION }}'
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
          BUILD_CONFIG: '{{ .BUILD_CONFIG }}'
          CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS }}'
@@ -229,7 +232,7 @@ tasks:
       DEFAULT_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/default'
       BUILD_ARGS: '-DNC_ENABLE_UTILS=ON'
     deps:
-      - task: cmake-build
+      - task: default
         vars: 
            BUILD_CONFIG: 'Debug'
            CMAKE_TEST_STATUS: 'ON'
@@ -274,6 +277,7 @@ tasks:
         vendor
         readme.md
         CMakePresets.json
+        packaging
 
     cmds:
       #tar up the source
@@ -281,27 +285,27 @@ tasks:
 
   ci-build-win_x64:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CI_BUILD_CONFIG, PROJECT_NAME }
+    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CI_BUILD_CONFIG, PROJECT_NAME, BUILD_VERSION }
     platforms: [ windows ]
     vars:
       TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
       BUILD_DIR: 'build/win-x64'
-
       TAR_FILES: "
         {{ .PROJECT_NAME }}.dll 
         {{ .PROJECT_NAME }}.lib
         {{ .PROJECT_NAME }}_static.lib
         license.txt"
-    
+
     cmds:
 
      #run configure and compile commands 
-     - task: cmake-build
+     - task: default
        vars: 
          CMAKE_BUILD_DIR: '{{ .BUILD_DIR }}'
-         BUILD_CONFIG: '{{ .CI_BUILD_CONFIG }}'
          CMAKE_TEST_STATUS: 'OFF'
          CMAKE_CONFIG_ARGS: '-G "Visual Studio 17 2022" -A x64 -DNC_ENABLE_UTILS=ON'
+         BUILD_CONFIG: '{{ .CI_BUILD_CONFIG }}'
+         BUILD_VERSION: '{{ .BUILD_VERSION }}'
 
     #copy license to build dir
      - cmd: powershell cp license '{{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }}/license.txt'
