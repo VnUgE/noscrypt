@@ -447,3 +447,8 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Include CPack configuration if packaging is enabled
+option(NC_ENABLE_PACKAGING "Enable packaging with CPack" OFF)
+if(NC_ENABLE_PACKAGING)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/packaging/cpack.cmake)
+endif()

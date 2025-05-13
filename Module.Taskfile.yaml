@@ -101,3 +101,34 @@ tasks:
        ignore_error: true
 
 
+### RPM PACKAGES
+
+  pack-rpm-install-deps:
+    desc: "Installs RPM build dependencies using dnf"
+    preconditions:
+      - cmd: which dnf
+    cmds:
+      - cmd: dnf install -y cmake gcc make rpm-build openssl-devel libsecp256k1-devel
+
+  pack-rpm-build:
+    desc: "Build RPM packages for noscrypt"
+    vars:
+      RPM_BUILD_DIR: '{{ .USER_WORKING_DIR }}/build/rpm'
+      PACKAGE_OUTPUT_DIR: '{{ .USER_WORKING_DIR }}/build/rpm/output'
+    preconditions:
+      - cmd: which cpack
+      - cmd: which rpmbuild
+    cmds:
+      - cmd: echo "Building RPM package for noscrypt version {{ .BUILD_VERSION }}"
+      - cmd: mkdir -p {{ .RPM_BUILD_DIR }}
+        ignore_error: true
+
+      # build the library with utils on, packaging on, and force openssl as the crypto lib
+      - task: lib:default
+        vars:
+           CMAKE_BUILD_DIR: '{{ .RPM_BUILD_DIR }}'
+           CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON -DNC_ENABLE_PACKAGING=ON -DCRYPTO_LIB=openssl'
+
+      - cmd: cd {{ .RPM_BUILD_DIR }} && cpack -G RPM -B '{{ .PACKAGE_OUTPUT_DIR }}'
+      - cmd: echo "Packaging RPM completed successfully"
+        silent: true
