@@ -1,0 +1,10 @@
+{
+  "name": "noscrypt-packages",
+  "version": "0.1.0",
+  "output_dir": "bin",
+  "author": "Vaughn Nugent",
+  "description": "Operating system specific packages for noscrypt",
+  "copyright": "Copyright \u00A9 2025 Vaughn Nugent",
+  "company": "Vaughn Nugent",
+  "repository": "https://github.com/VnUgE/noscrypt"
+}

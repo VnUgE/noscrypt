@@ -1,0 +1,73 @@
+version: '3'
+
+# This Taskfile handles RPM packaging operations for noscrypt
+
+includes:
+  lib: 
+    internal: true
+    dir: ..
+    taskfile: ../Taskfile.yaml
+
+vars:
+  # Build directories
+  RPM_BUILD_DIR: '{{ .USER_WORKING_DIR }}/build/rpm'
+  BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
+
+  # Version handling (from environment variable or default)
+  BUILD_VERSION: '{{ .BUILD_VERSION | default "0.1.0" }}'
+
+tasks:
+
+  build:
+    cmds:
+    #leave a build version file in the build directory for packaging
+     - cmd: echo "{{ .ASSEMBLY_SEMVER }}" > .build-version.txt
+
+  publish:
+    vars:
+       PACK_OUT: '{{ .OUTPUT_DIR }}/{{ .HEAD_SHA }}/{{ .PROJECT_NAME }}'
+    cmds:
+      # well have to manually publish the artifacts to the output directory
+      # vnbuild only recognizes a single aritifact file type when scanning binary
+      # directories
+      - 
+      - cmd: xcopy "{{ .BINARY_DIR }}\*.rpm" "{{ osClean .PACK_OUT }}" /Y /i
+
+  pack-rpm-install-deps:
+    desc: "Installs RPM build dependencies using dnf"
+    preconditions:
+      - cmd: which dnf
+    cmds:
+      - cmd: dnf install -y cmake gcc make rpm-build openssl-devel libsecp256k1-devel
+
+  pack-rpm-build:
+    desc: "Build RPM packages for noscrypt"
+    vars:
+      BINARY_DIR: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}'
+      BUILD_VERSION:
+        sh: cat .build-version.txt
+    preconditions:
+      - cmd: which cpack
+      - cmd: which rpmbuild
+    cmds:
+      - cmd: echo "Building RPM package for noscrypt version {{ .BUILD_VERSION }}"
+      - cmd: mkdir -p {{ .RPM_BUILD_DIR }} {{ .BINARY_DIR }}
+        ignore_error: true
+
+      # build the library with utils on, packaging on, and force openssl as the crypto lib
+      - task: lib:default
+        vars:
+           CMAKE_BUILD_DIR: '{{ .RPM_BUILD_DIR }}'
+           CMAKE_BUILD_VERSION: '{{ .BUILD_VERSION }}'
+           CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON -DNC_ENABLE_PACKAGING=ON -DCRYPTO_LIB=openssl'
+
+      - defer: rm -r {{ .RPM_BUILD_DIR }}
+
+      - cmd: cd {{ .RPM_BUILD_DIR }} && cpack -G RPM -B '{{ .BINARY_DIR }}'
+      - cmd: echo "Packaging RPM completed successfully"
+        silent: true
+
+  clean:
+    desc: "Clean up the RPM build directory"
+    cmds:
+      - cmd: 'rm -rf "{{ .RPM_BUILD_DIR }}"'
