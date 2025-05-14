@@ -19,9 +19,13 @@ vars:
   _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{ else }}mkdir -p{{ end }}'
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
 
-  CMAKE_BUILD_DIR: 'build/{{ OS }}'
   TEST_EXE_NAME: 'nctest'
-  CI_BUILD_CONFIG: '{{ .CI_BUILD_CONFIG | default "Release" }}'
+
+  #cmake defaults
+  CMAKE_BUILD_DIR: 'build/{{ OS }}'
+  CMAKE_BUILD_VERSION: '{{ .ASSEMBLY_SEMVER | default "0.0.0.0" }}'
+  CMAKE_BUILD_CONFIG: '{{ .CMAKE_BUILD_CONFIG | default "Release" }}'
+  CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
 
   MBEDTLS_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/mbedtls'
   SECP256_SRC_DIR: '{{ .USER_WORKING_DIR }}/vendor/secp256k1'
@@ -40,29 +44,34 @@ tasks:
      - task: cmake-build
        vars: 
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         CMAKE_BUILD_CONFIG: '{{ .CMAKE_BUILD_CONFIG }}'
+         CMAKE_BUILD_VERSION: '{{ .CMAKE_BUILD_VERSION }}'
+         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS }}'
          CMAKE_CONFIG_ARGS: '{{ .CMAKE_CONFIG_ARGS }} {{ .CLI_ARGS }}'
-         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
-         BUILD_VERSION: '{{ .BUILD_VERSION | default "develop" }}'    #BUILD_VERSION is a vnbuild variable, so this will be overridden in the build pipeline
-         BUILD_CONFIG: '{{ .BUILD_CONFIG | default "Release" }}'
 
   build-mbedtls:
-    desc: "Build the library linking against mbedls as a crypto backend"
+    desc: "Build the library linking against mbedtls as a crypto backend"
     summary: |
       Configures, and compiles mbedtls, then builds noscrypt linking against mbedtls 
       as a crypto backend. 
+    vars:
+       MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
     cmds:
      - task: mbedtls-build
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         MBEDTLS_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'
 
      - task: default
        vars: 
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
-         BUILD_CONFIG: '{{ .BUILD_CONFIG | default "Release" }}'
-         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS | default "OFF" }}'
+         CMAKE_BUILD_CONFIG: '{{ .CMAKE_BUILD_CONFIG }}'
+         CMAKE_BUILD_VERSION: '{{ .CMAKE_BUILD_VERSION }}'
+         CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS }}'
          CMAKE_CONFIG_ARGS: '
           {{ .CMAKE_CONFIG_ARGS }}
           -DCRYPTO_LIB=mbedtls
-          -DCRYPTO_LIB_DIR={{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
+          -DCRYPTO_LIB_DIR={{ .MBEDTLS_BUILD_DIR }}'
 
   build-debug:
     desc: "Build libraries and test executable in debug mode"
@@ -71,7 +80,13 @@ tasks:
       and test executable in debug mode.
     cmds:
      - task: default
-       vars: { CMAKE_TEST_STATUS: 'ON', BUILD_CONFIG: 'Debug' }
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         CMAKE_BUILD_CONFIG: 'Debug'
+         CMAKE_BUILD_VERSION: '{{ .CMAKE_BUILD_VERSION }}'
+         CMAKE_TEST_STATUS: 'ON'
+         CMAKE_CONFIG_ARGS: '{{ .CMAKE_CONFIG_ARGS }}'
+
 
   #available to users and vnbuild runner
   test:
@@ -127,43 +142,42 @@ tasks:
 
   cmake-configure: 
     internal: true
-    requires: { CMAKE_BUILD_DIR, BUILD_VERSION, BUILD_CONFIG, CMAKE_TEST_STATUS }
+    requires: { CMAKE_BUILD_DIR, CMAKE_BUILD_VERSION, CMAKE_BUILD_CONFIG, CMAKE_TEST_STATUS }
     cmds:
      - cmd: cmake
         -S . 
         -B{{ .CMAKE_BUILD_DIR }} 
-        -DCMAKE_BUILD_TYPE={{ .BUILD_CONFIG }} 
-        -DCMAKE_PROJECT_VERSION={{ .BUILD_VERSION }}
+        -DCMAKE_BUILD_TYPE={{ .CMAKE_BUILD_CONFIG }} 
+        -DCMAKE_PROJECT_VERSION={{ .CMAKE_BUILD_VERSION }}
         -DNC_BUILD_TESTS={{ .CMAKE_TEST_STATUS }}
         {{ .CMAKE_CONFIG_ARGS }}
-
 
   #perfoms CMake compile step
   cmake-compile:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BUILD_CONFIG }
+    requires: { CMAKE_BUILD_DIR, CMAKE_BUILD_CONFIG }
     cmds:
      - cmd: cmake 
         --build {{ .CMAKE_BUILD_DIR }} 
-        --config {{ .BUILD_CONFIG }}
+        --config {{ .CMAKE_BUILD_CONFIG }}
 
   #runs the configure and compile cmake steps
   cmake-build:
     internal: true
-    requires: { BUILD_VERSION, CMAKE_BUILD_DIR, BUILD_CONFIG, CMAKE_TEST_STATUS }
+    requires: { CMAKE_BUILD_VERSION, CMAKE_BUILD_DIR, CMAKE_BUILD_CONFIG, CMAKE_TEST_STATUS, CMAKE_CONFIG_ARGS }
     cmds:
      - task: cmake-configure
        vars: 
-         BUILD_VERSION: '{{ .BUILD_VERSION }}'
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
-         BUILD_CONFIG: '{{ .BUILD_CONFIG }}'
+         CMAKE_BUILD_CONFIG: '{{ .CMAKE_BUILD_CONFIG }}'
+         CMAKE_BUILD_VERSION: '{{ .CMAKE_BUILD_VERSION }}'
          CMAKE_TEST_STATUS: '{{ .CMAKE_TEST_STATUS }}'
          CMAKE_CONFIG_ARGS: '{{ .CMAKE_CONFIG_ARGS }}'
-     
+
      - task: cmake-compile
        vars: 
          CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
-         BUILD_CONFIG: '{{ .BUILD_CONFIG }}'
+         CMAKE_BUILD_CONFIG: '{{ .CMAKE_BUILD_CONFIG }}'
 
   #runs the cmake install step
   cmake-install:
@@ -180,13 +194,12 @@ tasks:
   
   mbedtls-configure:
     internal: true
-    requires: { CMAKE_BUILD_DIR, MBEDTLS_SRC_DIR }
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_SRC_DIR, MBEDTLS_BUILD_DIR }
     vars:
-      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
      #clear build dir before re-configuring
-     - cmd: '{{ .RMDIR }} "{{ .MBEDTLS_BUILD_DIR }}"'
+     - cmd: '{{ ._RMDIR }} "{{ .MBEDTLS_BUILD_DIR }}"'
        ignore_error: true
 
      - cmd: cmake 
@@ -203,21 +216,24 @@ tasks:
 
   mbedtls-compile:
     internal: true
-    requires: { CMAKE_BUILD_DIR }
-    vars:
-      MBEDTLS_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/_deps/mbedtls'
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_BUILD_DIR }
     cmds:
      - cmd: cmake --build '{{ .MBEDTLS_BUILD_DIR }}' --config Release
     
   mbedtls-build:
     internal: true
     desc: "Configures, and compiles mbedtls locally"
-    requires: { CMAKE_BUILD_DIR }
+    requires: { CMAKE_BUILD_DIR, MBEDTLS_BUILD_DIR }
     cmds:
      - task: mbedtls-configure
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         MBEDTLS_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'
+
      - task: mbedtls-compile
-       vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
+       vars: 
+         CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}'
+         MBEDTLS_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'
 
 #################################
 #       
@@ -232,18 +248,16 @@ tasks:
       DEFAULT_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}/test/default'
       BUILD_ARGS: '-DNC_ENABLE_UTILS=ON'
     deps:
-      - task: default
+      - task: build-debug
         vars: 
-           BUILD_CONFIG: 'Debug'
-           CMAKE_TEST_STATUS: 'ON'
            CMAKE_BUILD_DIR: '{{ .DEFAULT_BUILD_DIR }}'
            CMAKE_CONFIG_ARGS: '{{ .BUILD_ARGS }}'
 
       - task: build-mbedtls
         vars: 
-          BUILD_CONFIG: 'Debug'
-          CMAKE_TEST_STATUS: 'ON'
           CMAKE_BUILD_DIR: '{{ .MBEDTLS_BUILD_DIR }}'
+          CMAKE_BUILD_CONFIG: 'Debug'
+          CMAKE_TEST_STATUS: 'ON'
           CMAKE_CONFIG_ARGS: '{{ .BUILD_ARGS }}'
     cmds:
      #cleanup build directories after testing
@@ -277,7 +291,6 @@ tasks:
         vendor
         readme.md
         CMakePresets.json
-        packaging
 
     cmds:
       #tar up the source
@@ -285,10 +298,10 @@ tasks:
 
   ci-build-win_x64:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CI_BUILD_CONFIG, PROJECT_NAME, BUILD_VERSION }
+    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CMAKE_BUILD_CONFIG, PROJECT_NAME, CMAKE_BUILD_VERSION }
     platforms: [ windows ]
     vars:
-      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CI_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
+      TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CMAKE_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
       BUILD_DIR: 'build/win-x64'
       TAR_FILES: "
         {{ .PROJECT_NAME }}.dll 
@@ -302,16 +315,15 @@ tasks:
      - task: default
        vars: 
          CMAKE_BUILD_DIR: '{{ .BUILD_DIR }}'
+         CMAKE_BUILD_VERSION: '{{ .ASSEMBLY_SEMVER }}'
          CMAKE_TEST_STATUS: 'OFF'
          CMAKE_CONFIG_ARGS: '-G "Visual Studio 17 2022" -A x64 -DNC_ENABLE_UTILS=ON'
-         BUILD_CONFIG: '{{ .CI_BUILD_CONFIG }}'
-         BUILD_VERSION: '{{ .BUILD_VERSION }}'
 
     #copy license to build dir
-     - cmd: powershell cp license '{{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }}/license.txt'
+     - cmd: powershell cp license '{{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }}/license.txt'
 
     #tar up the binaries
-     - cmd: cd {{ .BUILD_DIR }}/{{ .CI_BUILD_CONFIG }} && tar -czf "{{ .TARGET }}" {{ .TAR_FILES }}
+     - cmd: cd {{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }} && tar -czf "{{ .TARGET }}" {{ .TAR_FILES }}
 
  #called by build pipeline to build module
   build:
@@ -335,7 +347,7 @@ tasks:
     desc: "Re-runs compilation phase and test executable"
     cmds:
      - task: cmake-compile
-       vars: { BUILD_CONFIG: 'Debug' }
+       vars: { CMAKE_BUILD_CONFIG: 'Debug' }
 
      - task: cmake-test
        vars: { CMAKE_BUILD_DIR: '{{ .CMAKE_BUILD_DIR }}' }
@@ -367,7 +379,7 @@ tasks:
     interactive: true
     cmds:
      - task: cmake-compile
-       vars: { BUILD_CONFIG: 'Debug' }
+       vars: { CMAKE_BUILD_CONFIG: 'Debug' }
 
      - cmd: gdb '{{ .CMAKE_BUILD_DIR }}/{{ .TEST_EXE_NAME }}'
   
