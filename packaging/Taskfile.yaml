@@ -30,7 +30,6 @@ tasks:
       # well have to manually publish the artifacts to the output directory
       # vnbuild only recognizes a single aritifact file type when scanning binary
       # directories
-      - 
       - cmd: xcopy "{{ .BINARY_DIR }}\*.rpm" "{{ osClean .PACK_OUT }}" /Y /i
 
   pack-rpm-install-deps:
