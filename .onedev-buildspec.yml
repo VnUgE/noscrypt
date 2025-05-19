@@ -116,7 +116,7 @@ jobs:
   retryDelay: 30
   timeout: 14400
 - name: Publish branch
-  jobExecutor: windows
+  jobExecutor: publish-agents
   steps:
   - !CommandStep
     name: checkout
