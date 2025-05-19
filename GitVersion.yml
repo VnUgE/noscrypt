@@ -7,7 +7,12 @@ increment: Patch
 branches:
   main:
     label: 'rc'
-
+    increment: Patch
+  
+  develop:
+    label: 'alpha'
+    increment: Patch
+    
 ignore:
   sha: []
 merge-message-formats: {}
