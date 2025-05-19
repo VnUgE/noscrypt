@@ -823,16 +823,12 @@ static void FillRandomData(void* pbBuffer, size_t length)
 {
 
 #ifdef IS_WINDOWS
-
-    HCRYPTPROV hCryptProv;
-
-    TASSERT(CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, 0));
-    TASSERT(CryptGenRandom(hCryptProv, (DWORD)length, pbBuffer))
-    TASSERT(CryptReleaseContext(hCryptProv, 0));
+    NTSTATUS status = BCryptGenRandom(NULL, pbBuffer, (ULONG)length, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    TASSERT(NT_SUCCESS(status));
 #else
     FILE* f = fopen("/dev/urandom", "rb");
-	TASSERT(f != NULL);
-	TASSERT(fread(pbBuffer, 1, length, f) == length);
-	fclose(f);
+    TASSERT(f != NULL);
+    TASSERT(fread(pbBuffer, 1, length, f) == length);
+    fclose(f);
 #endif
 }
