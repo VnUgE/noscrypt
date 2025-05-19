@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changes
+## [0.1.10]
+
+### Added
+- PSA crypto configuration file (`crypto_config.h`) in the `mbedTLS` vendor directory.
+- CI builds are now versioned using Major.Minor.Patch.BuildNumber format in reflection with the new semver Major.Minor.Patch-Meta.BuildNumber versioning scheme on the website.
+
+### Changed
+- Updated `mbedTLS` to version `3.6.3.1` (no code changes, build-change release).
+- Updated `.NET` dependencies in the `VNLib.Utils.Cryptography.Noscrypt` wrapper to `0.1.2-rc.1`.
+- Replaced deprecated Windows cryptographic APIs with modern equivalents in `test.c`.
+- Adjusted GitVersion configuration to use `ContinuousDelivery` mode.
+- Improved task management and build configurations in `Taskfile.yaml` and `Module.Taskfile.yaml`.
 - CMakePresets were updated/adjusted for easier development, still not considered stable though. Users should still use Taskfile for building.
+
+### Fixed
+- Corrected typos and improved comments in `CMakeLists.txt`.
 
 ## [0.1.9]
 
@@ -141,7 +155,8 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/VnUgE/noscrypt/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/VnUgE/noscrypt/compare/v0.1.6...v0.1.7
