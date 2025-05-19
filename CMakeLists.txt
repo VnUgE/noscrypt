@@ -366,12 +366,17 @@ if(NC_BUILD_TESTS)
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})
 
+	if(MSVC)
+		#link bcrypt to test application for Windows platforms
+		target_link_libraries(nctest "bcrypt.lib")
+	endif()
+
 	target_include_directories(nctest PRIVATE include)
 	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
-	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})
+	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})	
 
 	enable_testing()
 

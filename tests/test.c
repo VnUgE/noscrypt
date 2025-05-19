@@ -31,7 +31,7 @@
 #ifdef IS_WINDOWS
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
-	#include <wincrypt.h>
+    #include <bcrypt.h>
 #endif
 
 #ifdef IS_WINDOWS
@@ -824,7 +824,7 @@ static void FillRandomData(void* pbBuffer, size_t length)
 
 #ifdef IS_WINDOWS
     NTSTATUS status = BCryptGenRandom(NULL, pbBuffer, (ULONG)length, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-    TASSERT(NT_SUCCESS(status));
+    TASSERT(BCRYPT_SUCCESS(status));
 #else
     FILE* f = fopen("/dev/urandom", "rb");
     TASSERT(f != NULL);
