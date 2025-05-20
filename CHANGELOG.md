@@ -10,16 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.10]
 
 ### Added
-- PSA crypto configuration file (`crypto_config.h`) in the `mbedTLS` vendor directory.
 - CI builds are now versioned using Major.Minor.Patch.BuildNumber format in reflection with the new semver Major.Minor.Patch-Meta.BuildNumber versioning scheme on the website.
 
 ### Changed
-- Updated `mbedTLS` to version `3.6.3.1` (no code changes, build-change release).
-- Updated `.NET` dependencies in the `VNLib.Utils.Cryptography.Noscrypt` wrapper to `0.1.2-rc.1`.
 - Replaced deprecated Windows cryptographic APIs with modern equivalents in `test.c`.
 - Adjusted GitVersion configuration to use `ContinuousDelivery` mode.
 - Improved task management and build configurations in `Taskfile.yaml` and `Module.Taskfile.yaml`.
 - CMakePresets were updated/adjusted for easier development, still not considered stable though. Users should still use Taskfile for building.
+
+### Updated
+- `mbedTLS` to version `3.6.3.1` (no code changes, build-change release).
+- `.NET` dependencies in the `VNLib.Utils.Cryptography.Noscrypt` wrapper to `0.1.2-rc.1`.
 
 ### Fixed
 - Corrected typos and improved comments in `CMakeLists.txt`.
