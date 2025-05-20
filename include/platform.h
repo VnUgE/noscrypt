@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: platform.h
@@ -28,11 +28,11 @@
 #define _NC_PLATFORM_H
 
 #if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
-	#define _NC_IS_WINDOWS
+	#define _NC_IS_WINDOWS 1
 #elif defined(__linux__) || defined(__unix__) || defined(__posix__)
-	#define _NC_IS_LINUX
+	#define _NC_IS_LINUX 1
 #elif defined(__APPLE__) || defined(__MACH__)
-	#define _NC_IS_MAC
+	#define _NC_IS_MAC 1
 #endif
 
 /*
