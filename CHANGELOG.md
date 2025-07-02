@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Updated
+- Updated `mbedTLS` to version `3.6.4`
+- Updated openSSL headers to version `3.5.1`
+
 ## [0.1.10]
 
 ### Added

@@ -411,10 +411,10 @@ tasks:
   dev-update-mbedtls:
     requires: { MBEDTLS_SRC_DIR }
     vars:
-      MBEDTLS_VERSION: '3.6.3.1'
-      TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/v{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
+      MBEDTLS_VERSION: 'mbedtls-3.6.4'
+      TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/{{ .MBEDTLS_VERSION }}/{{ .MBEDTLS_VERSION }}.tar.bz2'
       TAR_TEMP: '.update/mbedtls.tar.bz2'
-      ARCHIVE_HASH: '243ed496d5f88a5b3791021be2800aac821b9a4cc16e7134aa413c58b4c20e0c'
+      ARCHIVE_HASH: 'ec35b18a6c593cf98c3e30db8b98ff93e8940a8c4e690e66b41dfc011d678110 '
     cmds:
      - cmd: curl {{ .TAR_URL }} --location -o {{ .TAR_TEMP }} 
      - cmd: powershell "(Get-FileHash '{{ .TAR_TEMP }}' -Algorithm SHA256).Hash -eq '{{ .ARCHIVE_HASH }}'"
@@ -426,7 +426,7 @@ tasks:
   dev-update-openssl-headers:
     requires: { OPENSSL_SRC_DIR }
     vars:
-      TAG: 'openssl-3.5.0'
+      TAG: 'openssl-3.5.1'
       TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
