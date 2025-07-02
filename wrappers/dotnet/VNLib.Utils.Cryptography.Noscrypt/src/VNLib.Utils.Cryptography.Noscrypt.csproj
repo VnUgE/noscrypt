@@ -8,7 +8,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RootNamespace>VNLib.Utils.Cryptography.Noscrypt</RootNamespace>
     <AssemblyName>VNLib.Utils.Cryptography.Noscrypt</AssemblyName>
-    <RestoreSources>$(RestoreSources);https://www.vaughnnugent.com/public/resources/software/builds/feed/release/index.json;</RestoreSources>
   </PropertyGroup>
   
   <PropertyGroup>
