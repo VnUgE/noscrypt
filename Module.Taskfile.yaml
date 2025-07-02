@@ -71,6 +71,7 @@ tasks:
     cmds:
     
      - task: dotnet:ci-test
+       dir: '{{ .USER_WORKING_DIR }}'
        vars:
          NOSCRYPT_DLL_PATH: '{{ osClean .LIB_PATH }}'   
 
@@ -91,5 +92,7 @@ tasks:
      - for: ['out/', 'build/']
        cmd: '{{ if eq OS "windows" }}powershell {{end}}rm -r {{ .ITEM }}'
        ignore_error: true
+     
+     - task: dotnet:clean
 
 

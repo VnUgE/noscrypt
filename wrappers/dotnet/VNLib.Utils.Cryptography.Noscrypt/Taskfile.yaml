@@ -28,11 +28,11 @@ tasks:
         --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
 
   ci-test:
-    desc: 'Runs unit tests for vnbuild CI systems'
+    desc: 'Runs unit tests for vnbuild CI systems called from the solution working directory'
     requires: { NOSCRYPT_DLL_PATH }
-    dir: '{{ .TASKFILE_DIR }}/tests'
+    dir: '{{ .USER_WORKING_DIR }}'
     cmds:
-     - cmd: dotnet build 
+     - cmd: dotnet build
         {{ .MS_ARGS }}
         --configuration debug 
         --nologo 
