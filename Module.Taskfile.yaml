@@ -48,9 +48,6 @@ tasks:
        vars:
          CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
 
-     # ensure the nuget source is configured 
-     - task: dotnet:ensure-nuget-source
-
      - task: test-dotnet
      - task: lib:clean
     
