@@ -27,6 +27,27 @@ tasks:
         --configuration {{ .CONFIGURATION | default "Debug" }}
         --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
 
+  ci-test:
+    desc: 'Runs unit tests for vnbuild CI systems'
+    requires: { NOSCRYPT_DLL_PATH }
+    dir: '{{ .TASKFILE_DIR }}/tests'
+    cmds:
+     - cmd: dotnet build 
+        {{ .MS_ARGS }}
+        --configuration debug 
+        --nologo 
+        --verbosity minimal
+
+     - cmd: dotnet test
+        {{ .CLI_ARGS }}
+        --no-build
+        --nologo
+        --logger "console;verbosity=detailed"
+        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
+        --configuration {{ .CONFIGURATION | default "Debug" }}
+        --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
+        --environment 'NOSCRYPT_DLL_PATH="{{ .NOSCRYPT_DLL_PATH }}"'
+
 #called by build pipeline to build module
   build:
     desc: "Used by vnbuild to build the entire module at CI time"
