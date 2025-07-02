@@ -426,7 +426,7 @@ tasks:
   dev-update-openssl-headers:
     requires: { OPENSSL_SRC_DIR }
     vars:
-      TAG: 'openssl-3.5.0'
+      TAG: 'openssl-3.5.1'
       TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
