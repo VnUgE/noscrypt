@@ -48,9 +48,6 @@ tasks:
        vars:
          CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
 
-     # ensure the nuget source is configured 
-     - task: dotnet:ensure-nuget-source
-
      - task: test-dotnet
      - task: lib:clean
     
@@ -72,14 +69,11 @@ tasks:
       LIB_NAME: '{{ if eq OS "windows" }}noscrypt.dll{{ else }}libnoscrypt{{ end }}'
       LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
     cmds:
-
-     - cmd: dotnet test 
-        --nologo
-        --logger "console;verbosity=detailed"
-        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
-        --configuration {{ .CONFIGURATION | default "Debug" }}
-        --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
-        --environment 'NOSCRYPT_DLL_PATH="{{ osClean .LIB_PATH }}"'
+    
+     - task: dotnet:ci-test
+       dir: '{{ .USER_WORKING_DIR }}'
+       vars:
+         NOSCRYPT_DLL_PATH: '{{ osClean .LIB_PATH }}'   
 
 #called by build pipeline to build module
   build:
@@ -98,5 +92,7 @@ tasks:
      - for: ['out/', 'build/']
        cmd: '{{ if eq OS "windows" }}powershell {{end}}rm -r {{ .ITEM }}'
        ignore_error: true
+     
+     - task: dotnet:clean
 
 
