@@ -298,7 +298,7 @@ tasks:
 
   ci-build-win_x64:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CMAKE_BUILD_CONFIG, PROJECT_NAME, CMAKE_BUILD_VERSION }
+    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CMAKE_BUILD_CONFIG, PROJECT_NAME }
     platforms: [ windows ]
     vars:
       TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CMAKE_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
@@ -311,7 +311,9 @@ tasks:
 
     cmds:
 
-     #run configure and compile commands 
+     # run configure and compile commands 
+     # when running in CI the assembly version is set to the build number
+     # because it's all numbers and does not contain metadata
      - task: default
        vars: 
          CMAKE_BUILD_DIR: '{{ .BUILD_DIR }}'
