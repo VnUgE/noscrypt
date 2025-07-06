@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Updated
 - Updated `mbedTLS` to version `3.6.4`
 - Updated openSSL headers to version `3.5.1`
+- Updated vnlib.core to version `0.1.2-rc.6`
 
 ### Changed
-- Building no longer require manually adding vnlib release nuget feed to your package sources.
+- Building no longer requires manually adding vnlib release nuget feed to your package sources.
 
 ## [0.1.10]
 
