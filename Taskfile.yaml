@@ -298,7 +298,7 @@ tasks:
 
   ci-build-win_x64:
     internal: true
-    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CMAKE_BUILD_CONFIG, PROJECT_NAME, CMAKE_BUILD_VERSION }
+    requires: { CMAKE_BUILD_DIR, BINARY_DIR, PROJECT_DIR, CMAKE_BUILD_CONFIG, PROJECT_NAME }
     platforms: [ windows ]
     vars:
       TARGET: '{{ .PROJECT_DIR }}/{{ .BINARY_DIR }}/msvc-x64-{{ lower .CMAKE_BUILD_CONFIG }}-{{ .PROJECT_NAME }}.tgz'
@@ -311,7 +311,9 @@ tasks:
 
     cmds:
 
-     #run configure and compile commands 
+     # run configure and compile commands 
+     # when running in CI the assembly version is set to the build number
+     # because it's all numbers and does not contain metadata
      - task: default
        vars: 
          CMAKE_BUILD_DIR: '{{ .BUILD_DIR }}'
@@ -411,10 +413,10 @@ tasks:
   dev-update-mbedtls:
     requires: { MBEDTLS_SRC_DIR }
     vars:
-      MBEDTLS_VERSION: '3.6.3.1'
-      TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/v{{ .MBEDTLS_VERSION }}/mbedtls-{{ .MBEDTLS_VERSION }}.tar.bz2'
+      MBEDTLS_VERSION: 'mbedtls-3.6.4'
+      TAR_URL: 'https://github.com/Mbed-TLS/mbedtls/releases/download/{{ .MBEDTLS_VERSION }}/{{ .MBEDTLS_VERSION }}.tar.bz2'
       TAR_TEMP: '.update/mbedtls.tar.bz2'
-      ARCHIVE_HASH: '243ed496d5f88a5b3791021be2800aac821b9a4cc16e7134aa413c58b4c20e0c'
+      ARCHIVE_HASH: 'ec35b18a6c593cf98c3e30db8b98ff93e8940a8c4e690e66b41dfc011d678110 '
     cmds:
      - cmd: curl {{ .TAR_URL }} --location -o {{ .TAR_TEMP }} 
      - cmd: powershell "(Get-FileHash '{{ .TAR_TEMP }}' -Algorithm SHA256).Hash -eq '{{ .ARCHIVE_HASH }}'"
@@ -426,7 +428,7 @@ tasks:
   dev-update-openssl-headers:
     requires: { OPENSSL_SRC_DIR }
     vars:
-      TAG: 'openssl-3.5.0'
+      TAG: 'openssl-3.5.1'
       TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
