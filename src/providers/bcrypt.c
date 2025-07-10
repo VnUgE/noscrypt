@@ -40,6 +40,22 @@ struct _bcrypt_ctx
 	BCRYPT_HASH_HANDLE hHash;
 };
 
+#ifndef _IMPL_SECURE_ZERO_MEMSET
+	/*
+	* On Windows, we can use SecureZeroMemory
+	* as platform zeroing function.
+	*
+	* NOTE:
+	* SecureZeroMemory2 uses volitle function argument
+	* pointers, which is a contested mehtod of compiler
+	* optimization prevention. GNU seems to oppose this method
+	*
+	* https://learn.microsoft.com/en-us/windows/win32/memory/winbase-securezeromemory2
+	*/
+	#define _IMPL_SECURE_ZERO_MEMSET SecureZeroMemory
+#endif /* !_IMPL_SECURE_ZERO_MEMSET */
+
+
 _IMPLSTB NTSTATUS _bcInitSha256(struct _bcrypt_ctx* ctx, DWORD flags)
 {
 	NTSTATUS result;
@@ -90,7 +106,7 @@ _IMPLSTB NTSTATUS _bcCreate(struct _bcrypt_ctx* ctx)
 	cspan_t key;
 	
 	/* Zero out key span for 0 size and NULL data ptr */
-	SecureZeroMemory(&key, sizeof(cspan_t));
+	_IMPL_SECURE_ZERO_MEMSET(&key, sizeof(cspan_t));
 
 	return _bcCreateHmac(ctx, key);
 }
@@ -121,21 +137,6 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	ctx->hHash = NULL;
 	ctx->hAlg = NULL;	
 }
-
-#ifndef _IMPL_SECURE_ZERO_MEMSET
-	/*
-	* On Windows, we can use SecureZeroMemory
-	* as platform zeroing function.
-	*
-	* NOTE:
-	* SecureZeroMemory2 uses volitle function argument
-	* pointers, which is a contested mehtod of compiler
-	* optimization prevention. GNU seems to oppose this method
-	*
-	* https://learn.microsoft.com/en-us/windows/win32/memory/winbase-securezeromemory2
-	*/
-	#define _IMPL_SECURE_ZERO_MEMSET SecureZeroMemory
-#endif /* !_IMPL_SECURE_ZERO_MEMSET */
 
 /*
 * Provide win32 fallback for sha256 digest if needed

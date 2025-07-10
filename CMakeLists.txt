@@ -12,8 +12,10 @@ project(
 	noscrypt
 	LANGUAGES C
 	DESCRIPTION "A compact, C90 cross-platform, cryptography library built specifically for nostr"
-	HOMEPAGE_URL "https://www.vaughnnugent.com/resources/software/modules/noscrypt"	
+	HOMEPAGE_URL "https://www.vaughnnugent.com/resources/software/modules/noscrypt"
+	VERSION ${CMAKE_PROJECT_VERSION}
 )
+
 set(_NC_PROJ_NAME "noscrypt")
 
 option(NC_BUILD_TESTS "Build tests" OFF)
@@ -27,7 +29,7 @@ set(SECP256K1_LIB_DIR "" CACHE STRING "An optional path to search for the secp25
 string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
 
 #list of noscrypt project defitnions
-set(NC_PROJ_DEFINTIONS "")
+set(NC_PROJ_DEFINITIONS "")
 
 include(FetchContent)
 
@@ -51,7 +53,7 @@ if(NOT secp256k1)
 
    message(STATUS "No secp256k1 library was found, falling back to build local copy")
 
-	#Fetch libsecp256k1, and build a minimal static library 
+	#Use the inlcuded libsecp256k1 source, and build a minimal static library 
 	set(SECP256K1_BUILD_BENCHMARK OFF)
 	set(SECP256K1_BUILD_TESTS OFF)
 	set(SECP256K1_BUILD_EXAMPLES OFF)
@@ -66,7 +68,7 @@ if(NOT secp256k1)
 
 	add_subdirectory(vendor/secp256k1)
 	
-	#Must force FPIC when using secp256k1, ld linker complains otherwise
+	#Must force FPIC when using secp256k1 since noscrypt is also a library
 	set_target_properties(
 		secp256k1 
 		secp256k1_precomputed 
@@ -101,7 +103,7 @@ if(NC_ENABLE_UTILS)
 	list(APPEND NOSCRYPT_HEADERS "include/noscryptutil.h")
 
 	#notify the project that utils are enabled
-	list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_UTILS)
+	list(APPEND NC_PROJ_DEFINITIONS NC_ENABLE_UTILS)
 endif()
 
 #static/shared library
@@ -202,7 +204,7 @@ if(CRYPTO_LIB STREQUAL "mbedtls")
 	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE ${MBEDTLS_LIB_CRYPTO} PRIVATE ${MBEDTLS_LIB_TLS})
 	
 	#enable mbedtls crypto library bindings
-	list(APPEND NC_PROJ_DEFINTIONS MBEDTLS_CRYPTO_LIB)
+	list(APPEND NC_PROJ_DEFINITIONS MBEDTLS_CRYPTO_LIB)
 
 elseif(CRYPTO_LIB STREQUAL "openssl")
 
@@ -215,7 +217,7 @@ elseif(CRYPTO_LIB STREQUAL "openssl")
 	target_link_libraries(${_NC_PROJ_NAME}_static PRIVATE OpenSSL::Crypto)
 
 	#enable openssl crypto library bindings
-	list(APPEND NC_PROJ_DEFINTIONS OPENSSL_CRYPTO_LIB)
+	list(APPEND NC_PROJ_DEFINITIONS OPENSSL_CRYPTO_LIB)
 
 elseif(CRYPTO_LIB STREQUAL "bcrypt")
 
@@ -237,7 +239,7 @@ add_compile_definitions($<$<CONFIG:Debug>:DEBUG>)
 add_compile_definitions(NOSCRYPT_EXPORTING)			#enable exporting symbols
 
 if(NC_DISABLE_INPUT_VALIDATION)
-	list(APPEND NC_PROJ_DEFINTIONS NC_INPUT_VALIDATION_OFF)
+	list(APPEND NC_PROJ_DEFINITIONS NC_INPUT_VALIDATION_OFF)
 endif()
 
 set(_NC_COMPILE_OPTS)
@@ -265,7 +267,7 @@ if(MSVC)
    )
 
 	#set build macros
-	list(APPEND NC_PROJ_DEFINTIONS
+	list(APPEND NC_PROJ_DEFINITIONS
 		$<$<CONFIG:DEBUG>:DEBUG>
 		$<$<CONFIG:RELEASE>:RELEASE>
 	)
@@ -336,22 +338,22 @@ if(NC_INCLUDE_MONOCYPHER)
 		)
 
 		#enable monocypher crypto library bindings
-		list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_MONOCYPHER)
+		list(APPEND NC_PROJ_DEFINITIONS NC_ENABLE_MONOCYPHER)
 
 	elseif(CMAKE_COMPILER_IS_GNUCC)
 		#from monocypher's Makefile
 		target_compile_options(monocypher PRIVATE -pedantic -Wall -Wextra -O3 -march=native)
 
 		#enable monocypher crypto library bindings
-		list(APPEND NC_PROJ_DEFINTIONS NC_ENABLE_MONOCYPHER)
+		list(APPEND NC_PROJ_DEFINITIONS NC_ENABLE_MONOCYPHER)
 	else()
 		message(WARNING "Monocypher is not supported on this platform")
 	endif()
 endif()
 
 #Set NC variables to both projects
-target_compile_definitions(${_NC_PROJ_NAME} PRIVATE ${NC_PROJ_DEFINTIONS})
-target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINTIONS})
+target_compile_definitions(${_NC_PROJ_NAME} PRIVATE ${NC_PROJ_DEFINITIONS})
+target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINITIONS})
 
 ############################
 #
@@ -364,12 +366,17 @@ if(NC_BUILD_TESTS)
 	add_executable(nctest tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})
 
+	if(MSVC)
+		#link bcrypt to test application for Windows platforms
+		target_link_libraries(nctest "bcrypt.lib")
+	endif()
+
 	target_include_directories(nctest PRIVATE include)
 	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
 
 	#enable c11 for testing
 	target_compile_features(nctest PRIVATE c_std_11)
-	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINTIONS})
+	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})	
 
 	enable_testing()
 
@@ -383,6 +390,7 @@ endif()
 
 message("\n${_NC_PROJ_NAME} project summary")
 message("=====================================")
+message(" -- Version: ${CMAKE_PROJECT_VERSION} --")
 message(" -- Configuration: ${build_type} --")
 message("  Testing enabled: ....... ${NC_BUILD_TESTS}")
 message("  Crypto library: ........ ${CRYPTO_LIB}")
@@ -394,7 +402,7 @@ else()
 	message("  secp256k1 library: ..... ${secp256k1}")
 endif()
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
-message(" Defintions: ${NC_PROJ_DEFINTIONS}")
+message(" Defintions: ${NC_PROJ_DEFINITIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")
 message("=====================================")
 
@@ -405,25 +413,23 @@ message("=====================================")
 #
 ###########################
 
-#export shared library
-install(TARGETS ${_NC_PROJ_NAME} 
-	EXPORT MyLibraryTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
+#export shared library for normal install
+install(
+	TARGETS ${_NC_PROJ_NAME} ${_NC_PROJ_NAME}_static
+    LIBRARY DESTINATION lib COMPONENT devel
+    ARCHIVE DESTINATION lib COMPONENT devel
+    RUNTIME DESTINATION bin COMPONENT devel
 )
 
-#export static library
-install(TARGETS ${_NC_PROJ_NAME}_static
-	EXPORT MyLibraryTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
+install(
+	TARGETS ${_NC_PROJ_NAME}
+    LIBRARY DESTINATION lib COMPONENT release
+    ARCHIVE DESTINATION lib COMPONENT release
+    RUNTIME DESTINATION bin COMPONENT release
 )
 
-SET(NC_INSTALL_HEADERS 
+
+SET(NC_INSTALL_HEADERS
 	include/noscrypt.h	#static install headers
 	include/platform.h
 )
@@ -435,9 +441,9 @@ if(NC_ENABLE_UTILS)
 	)
 endif()
 
-install(FILES 
-	${NC_INSTALL_HEADERS}
-	DESTINATION noscrypt
+install(
+	FILES ${NC_INSTALL_HEADERS} 
+	DESTINATION include/noscrypt COMPONENT devel
 )
 
 # Enable Hot Reload for MSVC compilers if supported.
@@ -445,3 +451,4 @@ if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
+

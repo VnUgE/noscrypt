@@ -46,7 +46,7 @@ jobs:
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
-    branches: '** -master'
+    branches: '-master'
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -75,7 +75,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        vnbuild publish --sign
+        vnbuild publish
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
@@ -110,13 +110,13 @@ jobs:
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   triggers:
   - !BranchUpdateTrigger
-    branches: '** -master'
+    branches: '-master'
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
 - name: Publish branch
-  jobExecutor: windows
+  jobExecutor: publish-agents
   steps:
   - !CommandStep
     name: checkout

@@ -22,6 +22,14 @@ includes:
 
 tasks:
 
+  default:
+    cmds:
+     - cmd: | 
+         echo "This is the Module taskfile, there is no default task configured"
+         echo "Run 'task -t {{ base .TASKFILE }} --list' to see all available tasks"
+         echo ""
+       silent: true
+
 #called by build pipeline to sync repo
   update:
     cmds:
@@ -36,13 +44,9 @@ tasks:
      - task: lib:ci-test
 
      #ci tests clean up after themselves so we need to build the debug version again  
-     - task: lib:default
+     - task: lib:build-debug
        vars:
-         BUILD_CONFIG: debug
          CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
-
-     # ensure the nuget source is configured 
-     - task: dotnet:ensure-nuget-source
 
      - task: test-dotnet
      - task: lib:clean
@@ -50,7 +54,7 @@ tasks:
      #repeat with mbedtls enabled
      - task: lib:build-mbedtls 
        vars:
-         BUILD_CONFIG: debug
+         CMAKE_BUILD_CONFIG: debug
          CMAKE_CONFIG_ARGS: '-DNC_ENABLE_UTILS=ON'
      
      - task: test-dotnet
@@ -65,14 +69,11 @@ tasks:
       LIB_NAME: '{{ if eq OS "windows" }}noscrypt.dll{{ else }}libnoscrypt{{ end }}'
       LIB_PATH: '{{ .USER_WORKING_DIR }}/build/{{ OS }}/{{ if eq OS "windows" }}debug/{{ end }}{{ .LIB_NAME }}'
     cmds:
-
-     - cmd: dotnet test 
-        --nologo
-        --logger "console;verbosity=detailed"
-        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}   
-        --configuration {{ .CONFIGURATION | default "Debug" }}     
-        --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
-        --environment 'NOSCRYPT_DLL_PATH="{{ osClean .LIB_PATH }}"'
+    
+     - task: dotnet:ci-test
+       dir: '{{ .USER_WORKING_DIR }}'
+       vars:
+         NOSCRYPT_DLL_PATH: '{{ osClean .LIB_PATH }}'   
 
 #called by build pipeline to build module
   build:
@@ -88,7 +89,10 @@ tasks:
   clean:
     cmds:
      #clean solution
-     - cmd: powershell rm -Recurse 'out/'
+     - for: ['out/', 'build/']
+       cmd: '{{ if eq OS "windows" }}powershell {{end}}rm -r {{ .ITEM }}'
        ignore_error: true
+     
+     - task: dotnet:clean
 
 
