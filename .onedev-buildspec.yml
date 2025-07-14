@@ -25,6 +25,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
+
 - name: Windows Testing
   jobExecutor: windows
   steps:
@@ -33,7 +34,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+        git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
@@ -59,7 +60,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+        git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
@@ -88,6 +89,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
+
 - name: Ubuntu Testing
   jobExecutor: docker
   steps:
@@ -115,6 +117,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
+
 - name: Publish branch
   jobExecutor: publish-agents
   steps:
@@ -123,7 +126,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @branch@ @project_name@
+        git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
@@ -151,6 +154,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
+
 - name: Publish on tag
   jobExecutor: publish-agents
   steps:
@@ -159,7 +163,7 @@ jobs:
     runInContainer: false
     interpreter: !DefaultInterpreter
       commands: |
-        git clone @server_url@/@project_name@ --branch @tag@ @project_name@
+        git clone @server_url@/@project_path@ --branch @tag@ @project_name@
     useTTY: true
     condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
   - !CommandStep
