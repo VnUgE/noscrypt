@@ -41,19 +41,57 @@ typedef uint8_t cstatus_t;
 
 typedef uint8_t sha256_t[SHA256_DIGEST_SIZE];
 
+/*
+ * Introducing a new structure and type that allows for adding 
+ * a long running state/context object to the crypto functions. 
+ */
+
+typedef struct nc_crypto_context_struct nc_crypto_t;
+
+struct nc_crypto_context_struct {
+
+	#ifdef OPENSSL_CRYPTO_LIB
+	
+	#endif	
+};
+
+cstatus_t ncCryptoInit(nc_crypto_t* ctx);
+
+void ncCryptoDestroy(nc_crypto_t* ctx);
+
 uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size);
 
 void ncCryptoSecureZero(void* ptr, uint32_t size);
 
-cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32);
+cstatus_t ncCryptoDigestSha256(
+	const nc_crypto_t* ctx, 
+	cspan_t data, 
+	sha256_t digestOut32
+);
 
-cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32);
+cstatus_t ncCryptoHmacSha256(
+	const nc_crypto_t* ctx, 
+	cspan_t key, 
+	cspan_t data, 
+	sha256_t hmacOut32
+);
 
-cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm);
+cstatus_t ncCryptoSha256HkdfExpand(
+	const nc_crypto_t* ctx, 
+	cspan_t prk, 
+	cspan_t info, 
+	span_t okm
+);
 
-cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk);
+cstatus_t ncCryptoSha256HkdfExtract(
+	const nc_crypto_t* ctx, 
+	cspan_t salt, 
+	cspan_t ikm, 
+	sha256_t prk
+);
 
 cstatus_t ncCryptoChacha20(
+	const nc_crypto_t* ctx,
 	cspan_t key,
 	cspan_t nonce,
 	cspan_t input,
@@ -61,6 +99,7 @@ cstatus_t ncCryptoChacha20(
 );
 
 cstatus_t ncCryptoAes256CBCUpdate(
+	const nc_crypto_t* ctx,
 	cspan_t key,
 	cspan_t iv,
 	cspan_t input,

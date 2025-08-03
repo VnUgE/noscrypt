@@ -196,6 +196,20 @@
 * function has been used correctly.
 */
 
+cstatus_t ncCryptoInit(nc_crypto_t* ctx)
+{
+	DEBUG_ASSERT2(ctx != NULL, "Expected ctx to be non-null")
+
+	/* TODO: implement platform specific conext init */
+	return CSTATUS_OK;	/* No context to init, so just return OK */
+}
+
+void ncCryptoDestroy(nc_crypto_t* ctx)
+{
+	DEBUG_ASSERT2(ctx != NULL, "Expected ctx to be non-null")
+
+}
+
 void ncCryptoSecureZero(void* ptr, uint32_t size)
 {
 	DEBUG_ASSERT2(ptr != NULL, "Expected ptr to be non-null")
@@ -219,9 +233,10 @@ uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size
 	return _IMPL_CRYPTO_FIXED_TIME_COMPARE(a, b, size);
 }
 
-cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
+cstatus_t ncCryptoDigestSha256(const nc_crypto_t* ctx, cspan_t data, sha256_t digestOut32)
 {
 	/* Debug arg validate */
+	DEBUG_ASSERT2(ctx != NULL,			"Expected ctx to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
 	DEBUG_ASSERT2(digestOut32 != NULL,	"Expected digestOut32 to be non-null")
 
@@ -232,9 +247,10 @@ cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
 	return _IMPL_CRYPTO_SHA256_DIGEST(data, digestOut32);
 }
 
-cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
+cstatus_t ncCryptoHmacSha256(const nc_crypto_t* ctx, cspan_t key, cspan_t data, sha256_t hmacOut32)
 {
 	/* Debug arg validate */
+	DEBUG_ASSERT2(ctx != NULL,			"Expected ctx to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(key),	"Expected key to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
 	DEBUG_ASSERT2(hmacOut32 != NULL,	"Expected hmacOut32 to be non-null")
@@ -246,9 +262,10 @@ cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 	return _IMPL_CRYPTO_SHA256_HMAC(key, data, hmacOut32);
 }
 
-cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
+cstatus_t ncCryptoSha256HkdfExpand(const nc_crypto_t* ctx, cspan_t prk, cspan_t info, span_t okm)
 {
 	/* Debug arg validate */
+	DEBUG_ASSERT2(ctx != NULL,			"Expected ctx to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(prk),	"Expected prk to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(info),	"Expected info to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValid(okm),	"Expected okm to be non-null")
@@ -260,7 +277,7 @@ cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 	* important as the counter is 1 byte, so it cannot overflow
 	*/
 
-	if(okm.size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
+	if (okm.size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
 	{
 		return CSTATUS_FAIL;
 	}
@@ -272,9 +289,10 @@ cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 	return _IMPL_CRYPTO_SHA256_HKDF_EXPAND(prk, info, okm);
 }
 
-cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
+cstatus_t ncCryptoSha256HkdfExtract(const nc_crypto_t* ctx, cspan_t salt, cspan_t ikm, sha256_t prk)
 {
 	/* Debug arg validate */
+	DEBUG_ASSERT2(ctx != NULL,			"Expected ctx to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(salt), "Expected salt to be non-null")
 	DEBUG_ASSERT2(ncSpanIsValidC(ikm),	"Expected ikm to be non-null")
 	DEBUG_ASSERT2(prk != NULL,			"Expected prk to be non-null")
@@ -287,12 +305,14 @@ cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 }
 
 cstatus_t ncCryptoChacha20(
+	const nc_crypto_t* ctx,
 	cspan_t key,
 	cspan_t nonce,
 	cspan_t input,
 	span_t output
 )
 {
+	DEBUG_ASSERT2(ctx != NULL, "Expected ctx to be non-null");
 	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
 	DEBUG_ASSERT2(ncSpanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
 
@@ -304,6 +324,7 @@ cstatus_t ncCryptoChacha20(
 }
 
 cstatus_t ncCryptoAes256CBCUpdate(
+	const nc_crypto_t* ctx,
 	cspan_t key,
 	cspan_t iv,
 	cspan_t input,
@@ -311,6 +332,7 @@ cstatus_t ncCryptoAes256CBCUpdate(
 	int flags
 )
 {
+	DEBUG_ASSERT2(ctx != NULL, "Expected ctx to be non-null");
 	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
 	DEBUG_ASSERT2(ncSpanGetSizeC(iv) == NC_CRYPTO_AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
 

@@ -73,6 +73,7 @@ struct nc_ctx_struct {
 
 	void* secpCtx;
 
+	nc_crypto_t cryptoCtx;	/* Crypto context for long running operations */
 };
 
 /*
@@ -541,7 +542,17 @@ NC_EXPORT NCResult NC_CC NCInitContext(
 
 	ZERO_FILL(ctx, sizeof(NCContext));
 
+	/* init crypto context */
+	if (ncCryptoInit(&ctx->cryptoCtx) != CSTATUS_OK)
+	{
+		return E_OPERATION_FAILED;	/* Failed to init crypto context */
+	}
+
 	ctx->secpCtx = secp256k1_context_create(SECP256K1_CONTEXT_NONE);
+	if (ctx->secpCtx == NULL)
+	{
+		return E_OPERATION_FAILED;	/* Failed to create secp256k1 context */
+	}	
 
 	/* 
 	* Randomize once on init, users can call reinit to 
@@ -565,11 +576,16 @@ NC_EXPORT NCResult NC_CC NCReInitContext(
 
 NC_EXPORT NCResult NC_CC NCDestroyContext(NCContext* ctx)
 {
+	int ret;
+
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
 
 	/* Destroy secp256k1 context */
 	secp256k1_context_destroy(ctx->secpCtx);
+
+	/* Destroy crypto context */
+	ncCryptoDestroy(&ctx->cryptoCtx);
 
 	/* Wipe the context */
 	ZERO_FILL(ctx, sizeof(NCContext));
