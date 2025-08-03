@@ -1,4 +1,4 @@
-﻿﻿
+﻿
 # noscrypt  
 
 <h4 align="left">
@@ -18,7 +18,7 @@
 ## What is noscrypt?
 A high-level C utility library built specifically for nostr cryptography operations such as those defined in NIP-01 and the new NIP-44 (NIP-04 [coming soon](https://www.vaughnnugent.com/Resources/Software/Modules/noscrypt-issues?id=42)). Noscrypt simplifies key generation, note signing & verification, NIP-44 data encryption, NIP-44 private message encryption, and much more. Noscrypt has very low dependency requirements with a focus on portability and performance for desktop and (eventually) embedded systems alike.
 
-API Example:
+## API Example
 ```C
 NCValidateSecretKey()
 NCGetPublicKey()
@@ -35,7 +35,7 @@ NCVerifyMac()
 At the time of building this project I have not come across any C-only libraries that exposed functionality for nostr specific cryptography. IMO it is easy to use the secp256k1 library [incorrectly](https://www.vaughnnugent.com/blog/d9ab8a46cfa8d6bd59cf048fec8d73ffc44f881c). In the process of building [NVault](https://www.vaughnnugent.com/resources/software/modules/nvault) NIP-44 came out in December and I realized my libraries were falling short for my needs for proper and safe nostr cryptographic operations, and I needed to start over and start with a good base that has all the basic functionality built with trusted and tested libraries. I also really care about performance and resource requirements that many other nostr projects seem to completely ignore, if you follow me on nostr, you know I can be quite the pest.
 
 ### Testing
-Testing is an will be important to a cryptography library, I take that responsibility seriously. My goal is to achieve enterprise level testing and security. There are some basic api validation and correctness tests that can be built into an executable called nctest. Full automated testing suite is done in [C# interop](https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/log/?h=c-sharp). This includes testing against the official NIP-44 [vector file](https://github.com/paulmillr/nip44/blob/main/nip44.vectors.json). I'm very dependency adverse so native C90 testing using only stdlibs can get gross in a hurry. It will likely happen in the future but not right now. 
+Testing is an will be important to a cryptography library, I take that responsibility seriously. My goal is to achieve enterprise level testing and security. There are some basic api validation and correctness tests that can be built into an executable called nctest. Alongside that test, a fully automated testing suite is done using the [C# interop](wrappers/dotnet/VNLib.Utils.Cryptography.Noscrypt/tests/). This includes testing against the official NIP-44 [vector file](https://github.com/paulmillr/nip44/blob/main/nip44.vectors.json). I'm very dependency adverse so native C90 testing using only stdlibs can get gross in a hurry. It will likely happen in the future but not right now. 
 
 ### Hardness
 - Time sensitive verification always uses fixed time comparison
@@ -73,8 +73,9 @@ If you are in a hurry to try out noscrypt these steps will get you by. Otherwise
 #### Prerequisites
 - Supported operating system and compiler from table above
 - [CMake](https://cmake.org/download) build system
-- [Taskfile.dev](https://taskfile.dev) to execute build recipe
+- [Taskfile.dev](https://taskfile.dev) to execute build recipes
 
+To build and install noscrypt:
 ```shell
 mkdir noscrypt/ && cd noscrypt/
 wget https://www.vaughnnugent.com/public/resources/software/builds/noscrypt/<master-git-hash>/noscrypt/noscrypt-src.tgz

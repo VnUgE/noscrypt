@@ -223,7 +223,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             );
         }
 
-        private IMemoryHandle<byte> AllocIvBuffer()
+        private unsafe IMemoryHandle<byte> AllocIvBuffer()
         {
             //Use the context heap to allocate the internal iv buffer
             MemoryHandle<byte> buffer = MemoryUtil.SafeAlloc<byte>(_context.Heap, GetIvSize(), zero: true);
@@ -235,7 +235,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
                  * 
                  * NOTE: This pointer will be held as long as the cipher 
                  * context is allocated. So the buffer must be held until
-                 * the cipher is freed. Because of this an umnanaged heap 
+                 * the cipher is freed. Because of this an unmanaged heap 
                  * buffer is required so we don't need to pin managed memory
                  * nor worry about the GC moving the buffer.
                  */
@@ -243,7 +243,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
                    ctx: _context,
                    cipher: DangerousGetHandle(),
                    property: NC_ENC_SET_IV,
-                   value: ref buffer.GetReference(),
+                   value: buffer.Base,
                    valueLen: (uint)buffer.Length
                );
             }

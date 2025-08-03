@@ -27,6 +27,27 @@ tasks:
         --configuration {{ .CONFIGURATION | default "Debug" }}
         --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
 
+  ci-test:
+    desc: 'Runs unit tests for vnbuild CI systems called from the solution working directory'
+    requires: { NOSCRYPT_DLL_PATH }
+    dir: '{{ .USER_WORKING_DIR }}'
+    cmds:
+     - cmd: dotnet build
+        {{ .MS_ARGS }}
+        --configuration debug 
+        --nologo 
+        --verbosity minimal
+
+     - cmd: dotnet test
+        {{ .CLI_ARGS }}
+        --no-build
+        --nologo
+        --logger "console;verbosity=detailed"
+        --framework {{ .TARGET_FRAMEWORK | default "net8.0" }}
+        --configuration {{ .CONFIGURATION | default "Debug" }}
+        --environment VNLIB_SHARED_HEAP_DIAGNOSTICS="1"
+        --environment 'NOSCRYPT_DLL_PATH="{{ .NOSCRYPT_DLL_PATH }}"'
+
 #called by build pipeline to build module
   build:
     desc: "Used by vnbuild to build the entire module at CI time"
@@ -39,8 +60,6 @@ tasks:
         --nologo
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"'
-    deps:
-     - ensure-nuget-source
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
        silent: true
@@ -108,13 +127,3 @@ tasks:
     - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
     - for: [ obj/, bin/ ]
       cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
-
-  ensure-nuget-source:
-    desc: 'Ensures the VN NuGet source is configured'
-    vars:
-      NUGET_SOURCE_NAME: VNLib.Release
-      NUGET_SOURCE_URL: https://www.vaughnnugent.com/public/resources/software/builds/feed/release/index.json
-    cmds:
-      # Check if source exists using a platform-agnostic approach
-      - cmd: dotnet nuget add source '{{ .NUGET_SOURCE_URL }}' -n '{{ .NUGET_SOURCE_NAME }}'
-        ignore_error: true

@@ -114,18 +114,15 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Encryption
             return checked((int)result);
         }
 
-        internal static void SetProperty(NCContext ctx, nint cipher, uint property, ref readonly byte value, uint valueLen)
+        internal static void SetProperty(NCContext ctx, nint cipher, uint property, byte* value, uint valueLen)
         {
             //Sanity checks, the library will guard at runtime, just a little uglier
             Debug.Assert(ctx != null);
             Debug.Assert(cipher != 0);
 
-            fixed (byte* valPtr = &value)
-            {
-                NCResult result = GetTable(ctx).NCUtilCipherSetProperty(cipher, property, valPtr, valueLen);
+            NCResult result = GetTable(ctx).NCUtilCipherSetProperty(cipher, property, value, valueLen);
 
-                NCUtil.CheckResult<FunctionTable.NCUtilCipherSetPropertyDelegate>(result, raiseOnFailure: true);
-            }
+            NCUtil.CheckResult<FunctionTable.NCUtilCipherSetPropertyDelegate>(result, raiseOnFailure: true);
         }
 
         internal static uint GetOutputSize(NCContext ctx, nint cipher)
