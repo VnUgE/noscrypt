@@ -1,4 +1,4 @@
-version: 37
+version: 40
 jobs:
 - name: Git mirror push
   steps:
@@ -8,24 +8,24 @@ jobs:
     userName: VnUgE
     passwordSecret: github-access-token
     force: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !PushRepository
     name: Codeberg push sync
     remoteUrl: https://codeberg.org/VnUgE/noscrypt.git
     userName: VnUgE
     passwordSecret: codeberg-access-token
     force: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
-  - !TagCreateTrigger
-    projects: noscrypt
-  - !BranchUpdateTrigger
-    projects: noscrypt
+  - !TagCreateTrigger {}
+  - !BranchUpdateTrigger {}
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
-
+  
 - name: Windows Testing
   jobExecutor: windows
   steps:
@@ -36,7 +36,8 @@ jobs:
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: run unit tests
     runInContainer: false
@@ -44,10 +45,11 @@ jobs:
       commands: |
         vnbuild test -i @project_name@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !BranchUpdateTrigger
-    branches: '-master'
+    branches: -master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -62,7 +64,8 @@ jobs:
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild build
     runInContainer: false
@@ -70,7 +73,8 @@ jobs:
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild mock publish
     runInContainer: false
@@ -78,7 +82,8 @@ jobs:
       commands: |
         vnbuild publish
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !BranchUpdateTrigger
     branches: develop master
@@ -88,8 +93,8 @@ jobs:
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  timeout: 14400
-
+  timeout: 
+  
 - name: Ubuntu Testing
   jobExecutor: docker
   steps:
@@ -99,7 +104,8 @@ jobs:
     withLfs: false
     withSubmodules: false
     checkoutPath: '@project_name@'
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: run unit tests
     runInContainer: true
@@ -109,10 +115,11 @@ jobs:
         cd @project_name@
         task -t Module.Taskfile.yaml test
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !BranchUpdateTrigger
-    branches: '-master'
+    branches: -master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -128,7 +135,8 @@ jobs:
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild build
     runInContainer: false
@@ -136,7 +144,8 @@ jobs:
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild publish
     runInContainer: false
@@ -149,7 +158,8 @@ jobs:
     - name: FTP_PASSWORD
       value: '@secret:ftp_password@'
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -165,7 +175,8 @@ jobs:
       commands: |
         git clone @server_url@/@project_path@ --branch @tag@ @project_name@
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild build
     runInContainer: false
@@ -173,7 +184,8 @@ jobs:
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: VNBuild publish
     runInContainer: false
@@ -186,7 +198,8 @@ jobs:
     - name: FTP_PASSWORD
       value: '@secret:ftp_password@'
     useTTY: true
-    condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+    condition: SUCCESSFUL
+    optional: false
   triggers:
   - !TagCreateTrigger
     branches: master
