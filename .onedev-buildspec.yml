@@ -25,7 +25,7 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 3600
-  
+
 - name: Windows Testing
   jobExecutor: windows
   steps:
@@ -93,8 +93,8 @@ jobs:
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
-  timeout: 
-  
+  timeout: 14400
+
 - name: Ubuntu Testing
   jobExecutor: docker
   steps:
