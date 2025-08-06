@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Updated
 - Updated `libsecp256k1` to version `0.7.0`
+- Updated `vnlib.core` to version `0.1.2-rc.7`
 
 ### Changed
 - CMake minimum version is now 3.22 in line with secp256k1 0.7.0 requirements.
