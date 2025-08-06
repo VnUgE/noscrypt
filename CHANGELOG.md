@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Updated
+- Updated `libsecp256k1` to version `0.7.0`
+
+### Changed
+- CMake minimum version is now 3.22 in line with secp256k1 0.7.0 requirements.
+- Trimmed secp256k1 source slightly more to remove all unnecessary files.
+
 ## [0.1.11]
 
 ### Added
@@ -12,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Updated
 - Updated `mbedTLS` to version `3.6.4`
-- Updated openSSL headers to version `3.5.1`
-- Updated vnlib.core to version `0.1.2-rc.6`
+- Updated `openSSL` headers to version `3.5.1`
+- Updated `vnlib.core` to version `0.1.2-rc.6`
 
 ### Changed
 - Building no longer requires manually adding vnlib release nuget feed to your package sources.
