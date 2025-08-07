@@ -443,7 +443,7 @@ tasks:
   dev-update-secp256:
     requires: { SECP256_SRC_DIR }
     vars:
-      TAG: 'v0.6.0'
+      TAG: 'v0.7.0'
       TAR_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/{{ .TAG }}.tar.gz'
     cmds:
      - cmd: curl {{ .TAR_URL }} -L | tar -xzf - -C '{{ .SECP256_SRC_DIR }}' --strip-components=1
