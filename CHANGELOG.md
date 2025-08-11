@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.12]
 
 ### Updated
 - Updated `libsecp256k1` to version `0.7.0`
@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CMake minimum version is now 3.22 in line with secp256k1 0.7.0 requirements.
 - Trimmed secp256k1 source slightly more to remove all unnecessary files.
+- Improve memory safety in C# wrapper
+- Added internal debug checks for openssl backend. Closes [#20](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?number=20)
 
 ## [0.1.11]
 
