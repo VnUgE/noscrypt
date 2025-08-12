@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/openssl-helpers.c
@@ -243,6 +243,7 @@ static cstatus_t _osslEvpFinal(const struct ossl_evp_state* state, span_t out)
 		return __cipherFinal(state, out);
 
 	default:
+		DEBUG_ASSERT2(0, "Called final on an invalid state type");
 		break;
 	}
 
@@ -318,6 +319,7 @@ _IMPLSTB void _osslEvpFree(struct ossl_evp_state* state)
 		if (state->_providerHandle) EVP_CIPHER_free(state->_providerHandle);
 		break;
 	default:
+		DEBUG_ASSERT2(0, "Called free on an invalid state type");
 		break;
 	}
 }
@@ -357,6 +359,7 @@ _IMPLSTB cstatus_t _osslEvpInit(
 		break;
 
 	default:
+		DEBUG_ASSERT2(0, "Called init on an invalid state type");
 		return CSTATUS_FAIL;
 	}
 

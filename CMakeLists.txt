@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2024 Vaughn Nugent
+﻿# Copyright (c) 2025 Vaughn Nugent
 # See the LICENSE in this directory for terms of use
 #
 # This file configures noscrypt with best defaults as possible while offering 
@@ -6,7 +6,7 @@
 # worst case fallback functions are defined and will get better as time goes on
 # 
 
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.22)
 
 project(
 	noscrypt
@@ -51,20 +51,23 @@ endif()
 
 if(NOT secp256k1)
 
-   message(STATUS "No secp256k1 library was found, falling back to build local copy")
+	message(STATUS "No secp256k1 library was found, falling back to build local copy")
 
-	#Use the inlcuded libsecp256k1 source, and build a minimal static library 
-	set(SECP256K1_BUILD_BENCHMARK OFF)
-	set(SECP256K1_BUILD_TESTS OFF)
-	set(SECP256K1_BUILD_EXAMPLES OFF)
-	set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF)
-	set(SECP256K1_ENABLE_MODULE_ECDH ON)
-	set(SECP256K1_ENABLE_MODULE_RECOVERY OFF)
-	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
-	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
-	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF)
-	set(SECP256K1_INSTALL OFF)
-	set(SECP256K1_DISABLE_SHARED ON)			#disales shared library output
+	#Use the included libsecp256k1 source, and build a minimal static library 
+	set(SECP256K1_BUILD_BENCHMARK OFF CACHE BOOL "Disable benchmark module" FORCE)
+	set(SECP256K1_BUILD_TESTS OFF CACHE BOOL "Disable unit testing" FORCE)
+	set(SECP256K1_BUILD_EXAMPLES OFF CACHE BOOL "Disable secp256k1 example programs" FORCE)
+	set(SECP256K1_BUILD_EXHAUSTIVE_TESTS OFF CACHE BOOL "Disable exhaustive testing programs" FORCE)
+	set(SECP256K1_BUILD_CTIME_TESTS OFF CACHE BOOL "Disable ctime tests" FORCE)
+	set(SECP256K1_ENABLE_MODULE_ECDH ON CACHE BOOL "Enable the ECDH module (required for noscrypt)" FORCE)
+	set(SECP256K1_ENABLE_MODULE_RECOVERY OFF CACHE BOOL "Disable the key recovery module" FORCE)
+	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON CACHE BOOL "Enable the schnorr signature module (required for noscrypt)" FORCE)
+	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON CACHE BOOL "Enable the extra keys module (required for noscrypt)" FORCE)
+	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF CACHE BOOL "Disable the Elliptic Swift module" FORCE)
+	set(SECP256K1_INSTALL OFF CACHE BOOL "Disable installation of secp256k1 library" FORCE)
+	set(SECP256K1_DISABLE_SHARED ON CACHE BOOL "Disable shared library build, we're linking statically" FORCE)
+	#new in 0.7.0
+	set(SECP256K1_ENABLE_API_VISIBILITY_ATTRIBUTES OFF CACHE BOOL "Disable API visibility attributes" FORCE)
 
 	add_subdirectory(vendor/secp256k1)
 	

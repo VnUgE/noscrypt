@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12]
+
+### Updated
+- Updated `libsecp256k1` to version `0.7.0`
+- Updated `vnlib.core` to version `0.1.2-rc.7`
+
+### Changed
+- CMake minimum version is now 3.22 in line with secp256k1 0.7.0 requirements.
+- Trimmed secp256k1 source slightly more to remove all unnecessary files.
+- Improve memory safety in C# wrapper
+- Added internal debug checks for openssl backend. Closes [#20](https://www.vaughnnugent.com/resources/software/modules/noscrypt-issues?number=20)
+
 ## [0.1.11]
 
 ### Added
@@ -12,8 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Updated
 - Updated `mbedTLS` to version `3.6.4`
-- Updated openSSL headers to version `3.5.1`
-- Updated vnlib.core to version `0.1.2-rc.6`
+- Updated `openSSL` headers to version `3.5.1`
+- Updated `vnlib.core` to version `0.1.2-rc.6`
 
 ### Changed
 - Building no longer requires manually adding vnlib release nuget feed to your package sources.
@@ -167,7 +179,8 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/VnUgE/noscrypt/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...v0.1.9
