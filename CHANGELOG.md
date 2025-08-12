@@ -179,7 +179,8 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/VnUgE/noscrypt/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...v0.1.9
