@@ -39,7 +39,6 @@
 #ifdef IS_WINDOWS
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
-    #include <bcrypt.h>
 #endif
 
 #ifdef IS_WINDOWS
@@ -53,9 +52,18 @@
 /*Prints a string literal to the console*/
 #define PRINTL(x) puts(x); puts("\n");
 #define ENSURE(x) if(!(x)) { printf("Test assumption failed on line %d\n", __LINE__); return 1; } 
-#define TEST(x, expected) printf("\tTesting %s\n", #x); if(((long)x) != ((long)expected)) \
+
+#define EXPECT_THAT(message, bool_expr) printf("\tTesting %s\n", #bool_expr); \
+if(!(bool_expr))\
+{ printf("FAILED: %s @ callsite %s. Line: %d \n", message, #bool_expr, __LINE__); return 1; }
+
+#define EXPECT_EQ(x, expected) printf("\tTesting %s\n", #x); if(((long)x) != ((long)expected)) \
 { printf("FAILED: Expected %ld but got %ld @ callsite %s. Line: %d \n", ((long)expected), ((long)x), #x, __LINE__); return 1; }
 
+#define EXPECT_TRUE(x) EXPECT_THAT("Expected true", (x))
+#define EXPECT_FALSE(x) EXPECT_THAT("Expected false", !(x))
+
+#define TEST EXPECT_EQ
 
 #ifdef IS_WINDOWS
     #define ZERO_FILL(x, size) SecureZeroMemory(x, size)
@@ -71,6 +79,17 @@
 #endif
 
 #define strlen32(x) (uint32_t)strlen(x)
+
+#define RUN_TEST(result) \
+  PRINTL("RUNNING TEST: " #result); \
+  if (result != 0) \
+  { \
+	  return 1; \
+  } \
+  else \
+  { \
+      PRINTL("\nPASSED: " #result); \
+  } \
 
 /*Pre-computed constants for argument errors */
 #define ARG_ERROR_POS_0 E_NULL_PTR
@@ -100,69 +119,8 @@
 #define ARG_INVALID_ERROR_POS_5 ARG_INVALID_ERROR(0x05)
 #define ARG_INVALID_ERROR_POS_6 ARG_INVALID_ERROR(0x06)
 
-#include "hex.h"
-
-#define RUN_TEST(result) \
-  PRINTL("RUNNING TEST: " #result); \
-  if (result != 0) \
-  { \
-	  return 1; \
-  } \
-  else \
-  { \
-      PRINTL("\nPASSED: " #result); \
-  } \
-
-static inline void FillRandomData(void* pbBuffer, size_t length)
-{
-
-#ifdef IS_WINDOWS
-    NTSTATUS status = BCryptGenRandom(NULL, pbBuffer, (ULONG)length, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-    TASSERT(BCRYPT_SUCCESS(status));
-#else
-    FILE* f = fopen("/dev/urandom", "rb");
-    TASSERT(f != NULL);
-    TASSERT(fread(pbBuffer, 1, length, f) == length);
-    fclose(f);
+#ifndef TEST_BASE
+    extern const NCContext* TestContext;
 #endif
-}
 
-static NCContext* TestContext = NULL;
-
-#ifndef NC_TEST_ENTRY
-    #error "NC_TEST_ENTRY not defined, please define this to the test entry function"
-#endif // !NC_TEST_ENTRY
-
-static int main(void)
-{
-    uint8_t ctxRandom[32];
-
-    PRINTL("Begining test routines")
-
-    FillRandomData(ctxRandom, 32);
-
-    /*
-    * Can use the shared/global context for tests that won't modify
-    * the structure
-    */
-    TestContext = NCGetSharedContext();
-
-    TASSERT(TestContext != NULL);
-
-    TEST(NCInitContext(TestContext, ctxRandom), NC_SUCCESS);
-
-    int result = NC_TEST_ENTRY();
-
-	TEST(NCDestroyContext(TestContext), NC_SUCCESS);
-
-	// Free any hex bytes allocated during tests to avoid memory leaks for valgrind etc
-    FreeHexBytes();
-
-    if (result == 0)
-    {
-        PRINTL("\nSUCCESS All tests passed");
-    }
-
-    return result;
-}
-
+void FillRandomData(void* pbBuffer, size_t length);
