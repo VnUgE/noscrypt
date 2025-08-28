@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hex.h
@@ -28,8 +28,13 @@
 
 #include <nc-util.h>
 
+#ifndef HEX_BYTE_LIST_SIZE
+	#error "HEX_BYTE_LIST_SIZE must be set to a maximum assumption of the number of hexbyte stings that will be allocated"
+#endif // !HEX_BYTE_LIST_SIZE
+
+
 /* Deferred list of span_t to be freed on exit */
-static span_t _hdeferList[20];
+static span_t _hdeferList[HEX_BYTE_LIST_SIZE];
 static size_t _hdeferListIndex = 0;
 
 /* 
