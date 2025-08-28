@@ -38,8 +38,6 @@
 */
 #define FromHexString(str, len) _fromHexString(str, sizeof(str) - 1); STATIC_ASSERT((sizeof(str) - 1)/2 == len && len > 0, "Invalid length hex string literal");
 
-span_t __allocHexBytes(size_t length);
-
 span_t _fromHexString(const char* hexLiteral, uint32_t strLen);
 
 /*
