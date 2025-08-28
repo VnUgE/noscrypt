@@ -153,8 +153,8 @@
 	#define _IMPL_CRYPTO_FIXED_TIME_COMPARE	_fallbackFixedTimeCompare
 
 	/*
-	* This implemntation is a slightly simplified version of 
-	* MBed TLS constant time memcmp function, knowm to be a 32bit 
+	* This implementation is a slightly simplified version of 
+	* MBed TLS constant time memcmp function, known to be a 32bit 
 	* integer size
 	*/
 
@@ -163,7 +163,7 @@
 		size_t i;
 		uint32_t result;
 		uint8_t O;
-		volatile const uint8_t* A, * B;		
+		volatile const uint8_t* A, * B;
 
 		result = 0;
 		O = 0;
@@ -171,7 +171,7 @@
 		B = (volatile const uint8_t*)b;
 
 		/* Compare each byte */
-		for(i = 0; i < size; i++)
+		for (i = 0; i < size; i++)
 		{
 			/* Handle volatile read */
 			O |= (A[i] ^ B[i]);
