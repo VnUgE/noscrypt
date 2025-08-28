@@ -18,11 +18,8 @@
 * along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
-#define NC_TEST_ENTRY RunTests
-#define HEX_BYTE_LIST_SIZE 16
-
 #include "test.h"
-
+#include "hex.h"
 
 /*      TEST CONSTANTS     */
 
@@ -456,7 +453,7 @@ static int TestCorrectEncryption()
     return 0;
 }
 
-static int RunTests(void)
+int RunTests(void)
 {
     NCSecretKey secKey;
     NCPublicKey pubKey;

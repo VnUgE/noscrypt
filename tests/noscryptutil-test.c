@@ -2,7 +2,7 @@
 * Copyright (c) 2025 Vaughn Nugent
 *
 * Package: noscrypt
-* File: nc-util-test.c
+* File: noscryptutil-test.c
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -23,10 +23,9 @@
 #define NC_TEST_NIP04_IV_SIZE	0x10   /* Spec defines nip04 nonce (iv) size must be 16 bytes */
 #define NC_TEST_NIP44_IV_SIZE	0x20   /* Spec defines nip44 nonce (iv) size must be 32 bytes */
 
-#define NC_TEST_ENTRY TestUtilFunctions
-#define HEX_BYTE_LIST_SIZE 25
 
 #include "test.h"
+#include "hex.h"
 #include <noscryptutil.h>
 
 static int TestUtilNip44Encryption(
@@ -182,7 +181,7 @@ static int TestPadding(void)
     return 0;
 }
 
-static int TestUtilFunctions(void)
+int RunTests(void)
 {
     PRINTL("TEST: Util functions");
 
