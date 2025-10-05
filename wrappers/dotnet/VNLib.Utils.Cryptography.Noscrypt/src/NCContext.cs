@@ -31,14 +31,14 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// </summary>
     public sealed class NCContext : SafeHandleZeroOrMinusOneIsInvalid
     {
-        internal readonly IUnmangedHeap Heap;
+        internal readonly IUnmanagedHeap Heap;
 
         /// <summary>
         /// The library this context was created from
         /// </summary>
         public Noscrypt Library { get; }
 
-        internal NCContext(IntPtr handle, IUnmangedHeap heap, Noscrypt library) : base(ownsHandle: true)
+        internal NCContext(IntPtr handle, IUnmanagedHeap heap, Noscrypt library) : base(ownsHandle: true)
         {
             ArgumentNullException.ThrowIfNull(heap);
             ArgumentNullException.ThrowIfNull(library);
