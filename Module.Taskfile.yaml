@@ -90,7 +90,7 @@ tasks:
     cmds:
      #clean solution
      - for: ['out/', 'build/']
-       cmd: '{{ if eq OS "windows" }}powershell {{end}}rm -r {{ .ITEM }}'
+       cmd: rm -rf "{{ .ITEM }}"
        ignore_error: true
      
      - task: dotnet:clean

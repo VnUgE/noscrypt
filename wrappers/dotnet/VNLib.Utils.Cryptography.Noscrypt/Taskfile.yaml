@@ -91,7 +91,7 @@ tasks:
       SOURCE: 'bin/{{ .CONFIG }}/{{ .TARGET_FRAMEWORK }}/publish'
       TARGET: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/{{ .CONFIG }}.tgz'
     cmds:
-      - cmd: cd {{ .SOURCE }} && tar -czf '{{ lower .TARGET }}' .
+      - cmd: cd {{ .SOURCE }} && tar{{ if eq OS "windows" }}.exe{{ end }} -czf '{{ lower .TARGET }}' .
 
   pack_source:
     dir: '{{ .USER_WORKING_DIR }}'
@@ -108,7 +108,7 @@ tasks:
         --exclude='*bin/'
     cmds:
      #copy source code to target
-     - cmd: cd .. && tar {{ .EXCLUDES }} -czf '{{ .TARGET }}/src.tgz' {{ .INCLUDES }}
+     - cmd: cd .. && tar{{ if eq OS "windows" }}.exe{{ end }} {{ .EXCLUDES }} -czf '{{ .TARGET }}/src.tgz' {{ .INCLUDES }}
 
 #called by build pipeline to clean module
   clean:
@@ -117,4 +117,4 @@ tasks:
     #clean solution
     - cmd: dotnet clean
     - for: [ obj/, bin/ ]
-      cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
+      cmd: rm -rf "{{ .ITEM }}"
