@@ -110,39 +110,39 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              * The important part about this test is that, null references become null 
              * pointers and the base library guards against null pointers
              */
-            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(null!, ref NCSecretKey.NullRef));
-            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(context, ref NCSecretKey.NullRef));
+            Assert.ThrowsExactly<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(null!, ref NCSecretKey.NullRef));
+            Assert.ThrowsExactly<ArgumentNullException>(() => NCKeyUtil.ValidateSecretKey(context, ref NCSecretKey.NullRef));
 
             //public key
-            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(null!, in secKey, ref pubKey));
-            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, ref NCSecretKey.NullRef, ref pubKey));
-            Assert.ThrowsException<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, in secKey, ref NCPublicKey.NullRef));
+            Assert.ThrowsExactly<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(null!, in secKey, ref pubKey));
+            Assert.ThrowsExactly<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, ref NCSecretKey.NullRef, ref pubKey));
+            Assert.ThrowsExactly<ArgumentNullException>(() => NCKeyUtil.GetPublicKey(context, in secKey, ref NCPublicKey.NullRef));
 
             /*
              *       VERIFY DATA
              */
             //Null context 
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 NCSignatureUtil.VerifyData(null!, ref pubKey, bin32, bin64)
             );
 
             //Null pubkey
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 NCSignatureUtil.VerifyData(context, ref NCPublicKey.NullRef, bin32, bin64)
             );
 
             //No data buffer
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.VerifyData(context, ref pubKey, [], bin64)
             );
 
             //No signature
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.VerifyData(context, ref pubKey, bin32, [])
             );
 
             //Signature too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                NCSignatureUtil.VerifyData(context, ref pubKey, bin32, bin32)
             );
 
@@ -151,37 +151,37 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              */
 
             //Null context
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 NCSignatureUtil.SignData(null!, ref secKey, bin32, bin32, bin64)
             );
 
             //Null secret key
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 NCSignatureUtil.SignData(context, ref NCSecretKey.NullRef, bin32, bin32, bin64)
             );
 
             //No entropy
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.SignData(context, ref secKey, [], bin32, bin64)
             );
 
             //No data
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.SignData(context, ref secKey, bin32, [], bin64)
             );
 
             //No signature
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.SignData(context, ref secKey, bin32, bin32, [])
             );
 
             //Signature too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.SignData(context, ref secKey, bin32, bin32, bin32)
             );  
 
             //Entropy too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 NCSignatureUtil.SignData(context, ref secKey, bin16, bin32, bin32)
             );
 
@@ -192,33 +192,33 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             NCSigner signer = new(context, NCFallbackRandom.Shared);
 
             //Null context 
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 signer.VerifyData(ref NCPublicKey.NullRef, bin32, bin64)
             );
 
             //No data buffer
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.VerifyData(ref pubKey, [], bin64)
             );
 
             //No signature
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.VerifyData(ref pubKey, bin32, [])
             );
 
             //Signature too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                signer.VerifyData(ref pubKey, bin32, bin32)
             );
 
             //Key too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => {
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => {
                 Span<byte> key = stackalloc byte[NCPublicKey.Size - 1];
                 signer.VerifyData(key, bin32, bin32);
             });
 
             //Empty hex string
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.VerifyData(string.Empty, bin32, bin64)
             );
 
@@ -227,27 +227,27 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              */
 
             //Null secret key
-            Assert.ThrowsException<ArgumentNullException>(() =>
+            Assert.ThrowsExactly<ArgumentNullException>(() =>
                 signer.SignData(ref NCSecretKey.NullRef, bin32, bin64)
             );
 
             //No data
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.SignData(ref secKey, [], bin64)
             );
 
             //No signature
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.SignData(ref secKey, bin32, [])
             );         
 
             //Signature too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.SignData(ref secKey, bin32, bin32)
             );
 
             //Key too small
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
             {
                 Span<byte> key = stackalloc byte[NCSecretKey.Size - 1];
                 _ = signer.SignData(key, bin32, format: null);
@@ -261,7 +261,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             }
 
             //Empty hex string
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
                 signer.SignData(string.Empty, bin32, format: null)
             );
         }
@@ -290,11 +290,11 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.AreEqual((uint)NCCipherFlags.EncryptDefault, cipher.GetFlags());
 
                 //Should fail to get output before update is called
-                Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());
+                Assert.ThrowsExactly<InvalidOperationException>(() => cipher.GetOutputSize());
 
                 cipher.SetRandomIv(NCFallbackRandom.Shared);
 
-                Assert.ThrowsException<NotSupportedException>(() => cipher.Update(in secKey, in pubKey, bin16));
+                Assert.ThrowsExactly<NotSupportedException>(() => cipher.Update(in secKey, in pubKey, bin16));
             }
 
             using (NCMessageCipher cipher = NCMessageCipher.Create(context, NCCipherVersion.Nip44, NCCipherFlags.EncryptDefault))
@@ -304,7 +304,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.AreEqual((uint)NCCipherFlags.EncryptDefault, cipher.GetFlags());
 
                 //Should fail to get output before update is called
-                Assert.ThrowsException<InvalidOperationException>(() => cipher.GetOutputSize());
+                Assert.ThrowsExactly<InvalidOperationException>(() => cipher.GetOutputSize());
 
                 cipher.SetRandomIv(NCFallbackRandom.Shared);
                 cipher.Update(in secKey, in pubKey, bin16);

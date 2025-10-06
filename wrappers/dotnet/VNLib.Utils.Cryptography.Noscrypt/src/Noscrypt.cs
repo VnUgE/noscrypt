@@ -120,7 +120,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext AllocContext(ref readonly byte entropy32, int size, IUnmangedHeap? heap = null)
+        public NCContext AllocContext(ref readonly byte entropy32, int size, IUnmanagedHeap? heap = null)
         {
             heap ??= MemoryUtil.Shared;
 
@@ -160,7 +160,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext AllocContext(ReadOnlySpan<byte> enropy32, IUnmangedHeap? heap = null)
+        public NCContext AllocContext(ReadOnlySpan<byte> enropy32, IUnmanagedHeap? heap = null)
         {
             return AllocContext(
                 ref MemoryMarshal.GetReference(enropy32),
@@ -179,7 +179,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext AllocContext(IRandomSource random, IUnmangedHeap? heap = null)
+        public NCContext AllocContext(IRandomSource random, IUnmanagedHeap? heap = null)
         {
             ArgumentNullException.ThrowIfNull(random);
 

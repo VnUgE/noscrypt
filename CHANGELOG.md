@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Updated
+- Updated `vnlib.core` to version `0.1.3` (new stable release)
+
 ### Changed
 - Updated certain shell commands in Taskfiles to be compatible with [Task v3.45](https://taskfile.dev/blog/windows-core-utils) release.
+- Changed build scripts to use a new Directory.Build.props file and removed redundant properties from Taskfiles.
+- **Breaking**: Updated the usage of `IUnmanagedHeap` following [breaking changes](https://git.vaughnnugent.com/cgit/vnuge/vnlib-core.git/commit/?id=95c28b2d68fdb2249dcfcf4c0e6c175ecdc83cb3) in `vnlib.core` 0.1.3.
+- Corrected the usage of `Assert.Throws` to `Assert.ThrowsExactly` to satisfy stricter exception testing in newer MSTest versions.
 
 ## [0.1.12]
 
