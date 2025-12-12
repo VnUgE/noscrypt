@@ -1,0 +1,12 @@
+.{
+    .name = .noscrypt,
+    .version = "0.1.9",
+    .fingerprint = 0x6cd8d40563fe7dab,
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "include",
+        "vendor",
+    },
+}

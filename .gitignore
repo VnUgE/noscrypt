@@ -367,3 +367,7 @@ MigrationBackup/
 /.editorconfig
 
 **/out/*
+
+# Zig
+.zig-cache/
+zig-out/
