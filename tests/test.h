@@ -53,11 +53,11 @@
 #define PRINTL(x) puts(x); puts("\n");
 #define ENSURE(x) if(!(x)) { printf("Test assumption failed on line %d\n", __LINE__); return 1; } 
 
-#define EXPECT_THAT(message, bool_expr) printf("\tTesting %s\n", #bool_expr); \
+#define EXPECT_THAT(message, bool_expr) printf("\tTesting %s [%s:%d]\n", #bool_expr, __FILE__, __LINE__); \
 if(!(bool_expr))\
 { printf("FAILED: %s @ callsite %s. Line: %d \n", message, #bool_expr, __LINE__); return 1; }
 
-#define EXPECT_EQ(x, expected) printf("\tTesting %s\n", #x); if(((long)x) != ((long)expected)) \
+#define EXPECT_EQ(x, expected) printf("\tTesting %s == %s [%s:%d]\n", #x, #expected, __FILE__, __LINE__); if(((long)x) != ((long)expected)) \
 { printf("FAILED: Expected %ld but got %ld @ callsite %s. Line: %d \n", ((long)expected), ((long)x), #x, __LINE__); return 1; }
 
 #define EXPECT_TRUE(x) EXPECT_THAT("Expected true", (x))
