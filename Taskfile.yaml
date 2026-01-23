@@ -112,7 +112,7 @@ tasks:
     platforms:
       - linux 
     preconditions:
-      - which valgrind
+      - command -v valgrind
     cmds:
      - cmd: echo "Running valgrind memory check on test executable"
        silent: true
@@ -210,6 +210,7 @@ tasks:
         -DUSE_SHARED_MBEDTLS_LIBRARY=OFF
         -DUSE_STATIC_MBEDTLS_LIBRARY=ON
         -DDISABLE_PACKAGE_CONFIG_AND_INSTALL=ON
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DMBEDTLS_CONFIG_FILE='{{ .MBEDTLS_CONFIG_FILE }}'
 
   mbedtls-compile:

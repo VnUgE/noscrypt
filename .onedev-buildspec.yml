@@ -1,26 +1,27 @@
-version: 40
+version: 43
 jobs:
 - name: Git mirror push
   steps:
-  - !PushRepository
+  - type: PushRepository
     name: Github push sync
     remoteUrl: https://github.com/VnUgE/noscrypt.git
     userName: VnUgE
     passwordSecret: github-access-token
     force: true
-    condition: SUCCESSFUL
+    condition: ALWAYS
     optional: false
-  - !PushRepository
+  - type: PushRepository
     name: Codeberg push sync
     remoteUrl: https://codeberg.org/VnUgE/noscrypt.git
     userName: VnUgE
     passwordSecret: codeberg-access-token
     force: true
-    condition: SUCCESSFUL
+    condition: ALWAYS
     optional: false
   triggers:
-  - !TagCreateTrigger {}
-  - !BranchUpdateTrigger {}
+  - type: TagCreateTrigger
+  - type: BranchUpdateTrigger
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -29,64 +30,72 @@ jobs:
 - name: Windows Testing
   jobExecutor: windows
   steps:
-  - !CommandStep
+  - type: CommandStep
     name: checkout
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: run unit tests
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild test -i @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
   triggers:
-  - !BranchUpdateTrigger
+  - type: BranchUpdateTrigger
     branches: -master
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
+
 - name: Staging build
   jobExecutor: windows
   steps:
-  - !CommandStep
+  - type: CommandStep
     name: checkout
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild build
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild mock publish
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild publish
     useTTY: true
     condition: SUCCESSFUL
     optional: false
   triggers:
-  - !BranchUpdateTrigger
+  - type: BranchUpdateTrigger
     branches: develop master
+    userMatch: anyone
   jobDependencies:
   - jobName: Windows Testing
     requireSuccessful: true
@@ -95,31 +104,79 @@ jobs:
   retryDelay: 30
   timeout: 14400
 
-- name: Ubuntu Testing
+- name: Ubuntu Tests
   jobExecutor: docker
   steps:
-  - !CheckoutStep
+  - type: CheckoutStep
     name: checkout
-    cloneCredential: !DefaultCredential {}
+    cloneCredential:
+      type: DefaultCredential
     withLfs: false
     withSubmodules: false
     checkoutPath: '@project_name@'
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
-    name: run unit tests
+  - type: CommandStep
+    name: ubuntu x64 tests
     runInContainer: true
-    image: noscrypt-ubuntu:latest
-    interpreter: !DefaultInterpreter
+    image: mcr.microsoft.com/dotnet/sdk:8.0.415-noble-amd64@@sha256:a0f438b4cfbfd28cefa865facd9d1359732f8fb266a83a515a3634b0e8ac4f0b
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         cd @project_name@
-        task -t Module.Taskfile.yaml test
+
+        export DOTNET_ROOT=$(pwd)/.dotnet
+        export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
+        export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+        bash ci/scripts/linux-setup-amd64.sh install
+
+        vnbuild test -i @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
   triggers:
-  - !BranchUpdateTrigger
+  - type: BranchUpdateTrigger
     branches: -master
+    userMatch: anyone
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+
+- name: Fedora Tests
+  jobExecutor: docker
+  steps:
+  - type: CheckoutStep
+    name: checkout
+    cloneCredential:
+      type: DefaultCredential
+    withLfs: false
+    withSubmodules: false
+    checkoutPath: '@project_name@'
+    condition: SUCCESSFUL
+    optional: false
+  - type: CommandStep
+    name: fedora-43 x64 tests
+    runInContainer: true
+    image: docker.io/fedora:43@@sha256:2ad3073554aef41c15b2c52e968ec0540c931bc3dab8c599ca6eb6f32f3f2d14
+    interpreter:
+      type: DefaultInterpreter
+      commands: |
+        cd @project_name@
+
+        export DOTNET_ROOT=$(pwd)/.dotnet
+        export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
+        export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+        bash ci/scripts/linux-setup-amd64.sh install
+
+        vnbuild test -i @project_name@
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  triggers:
+  - type: BranchUpdateTrigger
+    branches: -master
+    userMatch: anyone
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -128,28 +185,31 @@ jobs:
 - name: Publish branch
   jobExecutor: publish-agents
   steps:
-  - !CommandStep
+  - type: CommandStep
     name: checkout
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild build
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild build --verbose --no-delay
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  - !CommandStep
+  - type: CommandStep
     name: VNBuild publish
     runInContainer: false
-    interpreter: !DefaultInterpreter
+    interpreter:
+      type: DefaultInterpreter
       commands: |
         vnbuild publish --ftp "@secret:ftp_server_address@" --sign
     envVars:
@@ -160,49 +220,6 @@ jobs:
     useTTY: true
     condition: SUCCESSFUL
     optional: false
-  retryCondition: never
-  maxRetries: 3
-  retryDelay: 30
-  timeout: 14400
-
-- name: Publish on tag
-  jobExecutor: publish-agents
-  steps:
-  - !CommandStep
-    name: checkout
-    runInContainer: false
-    interpreter: !DefaultInterpreter
-      commands: |
-        git clone @server_url@/@project_path@ --branch @tag@ @project_name@
-    useTTY: true
-    condition: SUCCESSFUL
-    optional: false
-  - !CommandStep
-    name: VNBuild build
-    runInContainer: false
-    interpreter: !DefaultInterpreter
-      commands: |
-        vnbuild build --verbose --no-delay
-    useTTY: true
-    condition: SUCCESSFUL
-    optional: false
-  - !CommandStep
-    name: VNBuild publish
-    runInContainer: false
-    interpreter: !DefaultInterpreter
-      commands: |
-        vnbuild publish --ftp "@secret:ftp_server_address@" --sign
-    envVars:
-    - name: FTP_USERNAME
-      value: '@secret:ftp_username@'
-    - name: FTP_PASSWORD
-      value: '@secret:ftp_password@'
-    useTTY: true
-    condition: SUCCESSFUL
-    optional: false
-  triggers:
-  - !TagCreateTrigger
-    branches: master
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
