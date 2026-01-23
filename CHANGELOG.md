@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.13]
+
+### Updated
+- Updated `vnlib.core` to version `0.1.3` (new stable release)
+- Updated `MStest` to version `3.11.0` 
+
+### Changed
+- Updated most shell commands in Taskfiles to be compatible with [Task v3.45](https://taskfile.dev/blog/windows-core-utils) release.
+- Changed build scripts to use a new Directory.Build.props file and removed redundant properties from Taskfiles.
+- **Breaking**: Updated the usage of `IUnmanagedHeap` following [breaking changes](https://git.vaughnnugent.com/cgit/vnuge/vnlib-core.git/commit/?id=95c28b2d68fdb2249dcfcf4c0e6c175ecdc83cb3) in `vnlib.core` 0.1.3.
+- Corrected the usage of `Assert.Throws` to `Assert.ThrowsExactly` to satisfy stricter exception testing in newer MSTest versions.
+- Added cmake `-j` to `numCPU` to enable parallel builds on all platforms.
+
 ## [0.1.12]
 
 ### Updated
@@ -179,7 +192,8 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.12...HEAD
+[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/VnUgE/noscrypt/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/VnUgE/noscrypt/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...v0.1.10

@@ -14,9 +14,6 @@ version: '3'
 
 vars:
 
-  #cross platform commands to make and remove directories
-  _RMDIR: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }}'
-  _MKDIR: '{{ if eq OS "windows" }}powershell mkdir -Force{{ else }}mkdir -p{{ end }}'
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
 
   TEST_EXE_NAME: 'nctest'
@@ -115,7 +112,7 @@ tasks:
     platforms:
       - linux 
     preconditions:
-      - which valgrind
+      - command -v valgrind
     cmds:
      - cmd: echo "Running valgrind memory check on test executable"
        silent: true
@@ -132,7 +129,7 @@ tasks:
     ignore_error: true
     cmds:
     - for: [ bin/, build/ ]
-      cmd: '{{ ._RMDIR }} "{{ .ITEM }}"'
+      cmd: rm -rf "{{ .ITEM }}"
 
 #################################
 #
@@ -160,6 +157,7 @@ tasks:
      - cmd: cmake 
         --build {{ .CMAKE_BUILD_DIR }} 
         --config {{ .CMAKE_BUILD_CONFIG }}
+        -j {{ numCPU }}
 
   #runs the configure and compile cmake steps
   cmake-build:
@@ -199,7 +197,7 @@ tasks:
       MBEDTLS_CONFIG_FILE: '{{ .USER_WORKING_DIR }}/vendor/mbedtls/mbedtls_noscrypt_config.h'
     cmds:
      #clear build dir before re-configuring
-     - cmd: '{{ ._RMDIR }} "{{ .MBEDTLS_BUILD_DIR }}"'
+     - cmd: rm -rf "{{ .MBEDTLS_BUILD_DIR }}"
        ignore_error: true
 
      - cmd: cmake 
@@ -212,6 +210,7 @@ tasks:
         -DUSE_SHARED_MBEDTLS_LIBRARY=OFF
         -DUSE_STATIC_MBEDTLS_LIBRARY=ON
         -DDISABLE_PACKAGE_CONFIG_AND_INSTALL=ON
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DMBEDTLS_CONFIG_FILE='{{ .MBEDTLS_CONFIG_FILE }}'
 
   mbedtls-compile:
@@ -261,7 +260,7 @@ tasks:
           CMAKE_CONFIG_ARGS: '{{ .BUILD_ARGS }}'
     cmds:
      #cleanup build directories after testing
-     - defer: '{{ ._RMDIR }} "{{ .CMAKE_BUILD_DIR }}/test"'
+     - defer: rm -rf "{{ .CMAKE_BUILD_DIR }}/test"
 
      #run tests and memcheck against default build
      - task: cmake-test
@@ -294,7 +293,7 @@ tasks:
 
     cmds:
       #tar up the source
-     - cmd: tar -czf "{{ .TARGET_SOURCE }}" {{ .SOURCE_FILES | join " " }}  
+     - cmd: tar{{ if eq OS "windows" }}.exe{{ end }} -czf "{{ .TARGET_SOURCE }}" {{ .SOURCE_FILES | join " " }}  
 
   ci-build-win_x64:
     internal: true
@@ -322,22 +321,25 @@ tasks:
          CMAKE_CONFIG_ARGS: '-G "Visual Studio 17 2022" -A x64 -DNC_ENABLE_UTILS=ON'
 
     #copy license to build dir
-     - cmd: powershell cp license '{{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }}/license.txt'
+     - cmd: cp license '{{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }}/license.txt'
 
     #tar up the binaries
-     - cmd: cd {{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }} && tar -czf "{{ .TARGET }}" {{ .TAR_FILES }}
+     - cmd: cd {{ .BUILD_DIR }}/{{ .CMAKE_BUILD_CONFIG }} && tar{{ if eq OS "windows" }}.exe{{ end }} -czf "{{ .TARGET }}" {{ .TAR_FILES }}
 
  #called by build pipeline to build module
   build:
     cmds:
      - cmd: echo "building project {{ .PROJECT_NAME }}" 
-     - cmd: '{{ ._MKDIR }} "{{ .BINARY_DIR }}"'
+     - cmd: mkdir -p "{{ .BINARY_DIR }}"
   
      #build windows x64
      - task: ci-build-win_x64
 
      #pack source
      - task: ci-pack-source
+
+  postbuild_success:
+    cmds: []  
 
 #################################
 #
@@ -388,7 +390,7 @@ tasks:
   dev-update-deps:
      desc: "Updates vendored projects files (headers mostly) from their source repositories to the configured version"
      cmds:
-      - defer: '{{ ._RMDIR }} .update/'
+      - defer: rm -rf .update/
   
       #must run serially since git does not support mutliple instances
       - task: dev-update-monocypher
@@ -401,14 +403,14 @@ tasks:
       MC_DOWNLOAD_URL: 'https://monocypher.org/download/monocypher-4.0.2.tar.gz'
       TMP_DIR: '.update/mc'
     cmds:
-     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
+     - cmd: mkdir -p "{{ .TMP_DIR }}"
        ignore_error: true
      
      - cmd: curl {{ .MC_DOWNLOAD_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
      
      #copy only the required source code files
      - for: [ 'src/monocypher.h', 'src/monocypher.c' ]
-       cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .MONOCYPHER_SRC_DIR }}"'
+       cmd: cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .MONOCYPHER_SRC_DIR }}"
 
   dev-update-mbedtls:
     requires: { MBEDTLS_SRC_DIR }
@@ -432,13 +434,13 @@ tasks:
       TAG_URL: https://github.com/openssl/openssl/releases/download/{{ .TAG }}/{{ .TAG }}.tar.gz
       TMP_DIR: '.update/openssl'
     cmds:
-     - cmd: '{{ ._MKDIR }} "{{ .TMP_DIR }}"'
+     - cmd: mkdir -p "{{ .TMP_DIR }}"
        ignore_error: true
 
      - cmd: curl {{ .TAG_URL }} -L | tar -xzf - -C '{{ .TMP_DIR }}' --strip-components=1
      
-     - for: [ 'include/openssl/*' ]
-       cmd: '{{ if eq OS "windows" }}powershell{{ end }} cp "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .OPENSSL_SRC_DIR }}"'
+     - for: [ 'include/openssl/' ]
+       cmd: cp -r "{{ .TMP_DIR }}/{{ .ITEM }}" "{{ .OPENSSL_SRC_DIR }}"
 
   dev-update-secp256:
     requires: { SECP256_SRC_DIR }

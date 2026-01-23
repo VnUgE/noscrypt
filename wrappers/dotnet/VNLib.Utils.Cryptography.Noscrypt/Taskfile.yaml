@@ -5,11 +5,6 @@ version: '3'
 vars:  
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'
   ARCHIVE_FILE_NAME: '{{ .ARCHIVE_FILE_NAME | default "archive.tgz" }}'
-  MS_ARGS: 
-    /p:RunAnalyzersDuringBuild=false 
-    /p:BuildInParallel=true 
-    /p:MultiProcessorCompilation=true 
-    /p:ErrorOnDuplicatePublishOutputFiles=false 
 
 tasks:
 
@@ -21,7 +16,6 @@ tasks:
     cmds:
      - cmd: dotnet build
         {{ .CLI_ARGS }}
-        {{ .MS_ARGS }}
         --nologo
         --verbosity normal
         --configuration {{ .CONFIGURATION | default "Debug" }}
@@ -33,7 +27,6 @@ tasks:
     dir: '{{ .USER_WORKING_DIR }}'
     cmds:
      - cmd: dotnet build
-        {{ .MS_ARGS }}
         --configuration debug 
         --nologo 
         --verbosity minimal
@@ -56,7 +49,6 @@ tasks:
       PACK_OUT: '{{ .OUTPUT_DIR }}/{{ .HEAD_SHA }}/pkg'
       INT_DIR: '{{ .SCRATCH_DIR }}/obj/{{ .MODULE_NAME }}/'
       MS_ARGS: ' 
-        {{ .MS_ARGS }} 
         --nologo
         /p:UseCommonOutputDirectory=true 
         /p:IntermediateOutputPath="{{ .INT_DIR }}"'
@@ -79,7 +71,6 @@ tasks:
         --include-symbols
         --configuration release
         --output "{{ .PACK_OUT }}/release/"
-        {{ .MS_ARGS }}
 
   postbuild_success:
     deps:
@@ -100,7 +91,7 @@ tasks:
       SOURCE: 'bin/{{ .CONFIG }}/{{ .TARGET_FRAMEWORK }}/publish'
       TARGET: '{{ .USER_WORKING_DIR }}/{{ .BINARY_DIR }}/{{ .CONFIG }}.tgz'
     cmds:
-      - cmd: cd {{ .SOURCE }} && tar -czf '{{ lower .TARGET }}' .
+      - cmd: cd {{ .SOURCE }} && tar{{ if eq OS "windows" }}.exe{{ end }} -czf '{{ lower .TARGET }}' .
 
   pack_source:
     dir: '{{ .USER_WORKING_DIR }}'
@@ -117,13 +108,13 @@ tasks:
         --exclude='*bin/'
     cmds:
      #copy source code to target
-     - cmd: cd .. && tar {{ .EXCLUDES }} -czf '{{ .TARGET }}/src.tgz' {{ .INCLUDES }}
+     - cmd: cd .. && tar{{ if eq OS "windows" }}.exe{{ end }} {{ .EXCLUDES }} -czf '{{ .TARGET }}/src.tgz' {{ .INCLUDES }}
 
 #called by build pipeline to clean module
   clean:
     dir: '{{ .USER_WORKING_DIR }}'
     cmds:
     #clean solution
-    - cmd: dotnet clean /p:BuildInParallel=true /p:MultiProcessorCompilation=true
+    - cmd: dotnet clean
     - for: [ obj/, bin/ ]
-      cmd: '{{ if eq OS "windows" }}powershell rm -Recurse -Force{{ else }}rm -rf{{ end }} "{{ .ITEM }}"'
+      cmd: rm -rf "{{ .ITEM }}"

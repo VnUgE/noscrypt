@@ -14,7 +14,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void AsSecretKeyTest()
         {
             //Empty span should raise exception
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => NCKeyUtil.AsSecretKey(default));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NCKeyUtil.AsSecretKey(default));
 
             Span<byte> dummySecKey = stackalloc byte[NCSecretKey.Size];
 
@@ -30,7 +30,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
 
             {
@@ -43,7 +43,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
         }
 
@@ -51,7 +51,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
         public void AsPublicKeyTest()
         {
             //Empty span should raise exception
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => NCKeyUtil.AsPublicKey(default));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NCKeyUtil.AsPublicKey(default));
 
             Span<byte> dummyPubKey = stackalloc byte[NCPublicKey.Size];
 
@@ -67,7 +67,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
 
             {
@@ -80,7 +80,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
         }
 
@@ -122,6 +122,4 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             }
         }
     }
-
-
 }

@@ -1,0 +1,21 @@
+<Project>
+   <PropertyGroup>
+      <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+      <BuildInParallel>true</BuildInParallel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation> 
+      <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+
+      <!-- 
+        Solution wide warnings as errors.
+
+        CS0618: Errors when using obsolete APIs.
+        CS9113: Unread function parameters
+        IDE0251: Apply readonly modifier to parameters
+      -->
+      <WarningsAsErrors>CS0618;IDE0251;CS9113;</WarningsAsErrors>
+      
+      <!-- Ignore underscores in public constant fields -->
+      <NoWarn>CS1591;MSTEST0001</NoWarn>
+
+   </PropertyGroup>
+</Project>
