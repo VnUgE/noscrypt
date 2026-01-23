@@ -107,12 +107,20 @@ typedef struct read_only_memory_span_struct
 
 static _nc_fn_inline int ncSpanIsValid(span_t span)
 {
+#if EMPTY_SPANS
+	return span.size == 0 || span.data != NULL;
+#else
 	return span.data != NULL;
+#endif
 }
 
 static _nc_fn_inline int ncSpanIsValidC(cspan_t span)
 {
+#if EMPTY_SPANS
+	return span.size == 0 || span.data != NULL;
+#else
 	return span.data != NULL;
+#endif
 }
 
 static _nc_fn_inline int ncSpanIsValidRange(span_t span, uint32_t offset, uint32_t size)
