@@ -107,22 +107,34 @@ typedef struct read_only_memory_span_struct
 
 static _nc_fn_inline int ncSpanIsValid(span_t span)
 {
+#if EMPTY_SPANS
+	return span.size == 0 || span.data != NULL;
+#else
 	return span.data != NULL;
+#endif
 }
 
 static _nc_fn_inline int ncSpanIsValidC(cspan_t span)
 {
+#if EMPTY_SPANS
+	return span.size == 0 || span.data != NULL;
+#else
 	return span.data != NULL;
+#endif
 }
 
 static _nc_fn_inline int ncSpanIsValidRange(span_t span, uint32_t offset, uint32_t size)
 {
-	return ncSpanIsValid(span) && offset + size <= span.size;
+	return ncSpanIsValid(span)
+		&& offset <= span.size
+		&& size <= span.size - offset;
 }
 
 static _nc_fn_inline int ncSpanIsValidRangeC(cspan_t span, uint32_t offset, uint32_t size)
 {
-	return ncSpanIsValidC(span) && offset + size <= span.size;
+	return ncSpanIsValidC(span)
+		&& offset <= span.size
+		&& size <= span.size - offset;
 }
 
 static _nc_fn_inline void ncSpanInitC(cspan_t* span, const uint8_t* data, uint32_t size)
@@ -185,6 +197,11 @@ static _nc_fn_inline void ncSpanWrite(span_t span, uint32_t offset, const uint8_
 	DEBUG_ASSERT2(ncSpanIsValid(span),	"Expected span to be non-null")
 	DEBUG_ASSERT2(data != NULL,			"Expected data to be non-null")
 	DEBUG_ASSERT2(offset + size <= span.size, "Expected offset + size to be less than span size")
+
+	if (size == 0)
+	{
+		return;
+	}
 
 	/* Copy data to span */
 	MEMMOV(span.data + offset, data, size);
@@ -256,6 +273,11 @@ static _nc_fn_inline void ncSpanCopyC(cspan_t src, span_t dest)
 	DEBUG_ASSERT2(ncSpanIsValidC(src), "Expected span to be non-null");
 	DEBUG_ASSERT2(ncSpanIsValid(dest), "Expected offset + size to be less than span size");
 	DEBUG_ASSERT2(dest.size >= src.size, "Output buffer too small. Overrun detected");
+
+	if (src.size == 0)
+	{
+		return;
+	}
 
 	/* Copy data to span */
 	MEMMOV(dest.data, src.data, src.size);
