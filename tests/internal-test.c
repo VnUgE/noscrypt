@@ -271,6 +271,74 @@ static int UtilEmptySpanBehaviorTest(void)
         EXPECT_EQ(off, 3u);
     }
 
+    /* Writing zero bytes to empty span should be safe */
+    {
+        span_t empty;
+        ncSpanInit(&empty, NULL, 0);
+
+        const uint8_t data[] = { 1, 2, 3 };
+        ncSpanWrite(empty, 0, data, 0);  /* Should not crash */
+    }
+
+    return 0;
+}
+
+static int UtilSpanRangeOverflowTest(void)
+{
+    uint8_t buf[64] = { 0 };
+    span_t s;
+    cspan_t cs;
+
+    ncSpanInit(&s, buf, (uint32_t)sizeof(buf));
+    ncSpanInitC(&cs, buf, (uint32_t)sizeof(buf));
+
+    /* Test overflow protection: offset + size would overflow uint32_t */
+    {
+        uint32_t large_offset = 0xFFFFFFF0u;  /* Close to UINT32_MAX */
+        uint32_t large_size = 0x20u;          /* Would overflow when added */
+
+        /* These should return false due to overflow protection */
+        EXPECT_FALSE(ncSpanIsValidRange(s, large_offset, large_size));
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, large_offset, large_size));
+    }
+
+    /* Test boundary condition: exact overflow at UINT32_MAX */
+    {
+        uint32_t max_offset = UINT32_MAX;
+        uint32_t any_size = 1;
+
+        EXPECT_FALSE(ncSpanIsValidRange(s, max_offset, any_size));
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, max_offset, any_size));
+    }
+
+    /* Test valid boundary: end exactly at span size */
+    {
+        EXPECT_TRUE(ncSpanIsValidRange(s, 0, 64));
+        EXPECT_TRUE(ncSpanIsValidRange(s, 64, 0));
+        EXPECT_TRUE(ncSpanIsValidRange(s, 32, 32));
+        
+        EXPECT_TRUE(ncSpanIsValidRangeC(cs, 0, 64));
+        EXPECT_TRUE(ncSpanIsValidRangeC(cs, 64, 0));
+        EXPECT_TRUE(ncSpanIsValidRangeC(cs, 32, 32));
+    }
+
+    /* Test invalid boundary: offset or size exceeds span */
+    {
+        EXPECT_FALSE(ncSpanIsValidRange(s, 65, 0));   /* offset > size */
+        EXPECT_FALSE(ncSpanIsValidRange(s, 0, 65));   /* size > span.size */
+        EXPECT_FALSE(ncSpanIsValidRange(s, 32, 33));  /* offset + size > span.size */
+        
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, 65, 0));
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, 0, 65));
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, 32, 33));
+    }
+
+    /* Test edge case: both offset and size at limit */
+    {
+        EXPECT_FALSE(ncSpanIsValidRange(s, UINT32_MAX, UINT32_MAX));
+        EXPECT_FALSE(ncSpanIsValidRangeC(cs, UINT32_MAX, UINT32_MAX));
+    }
+
     return 0;
 }
 
@@ -283,6 +351,8 @@ int RunTests(void)
     RUN_TEST(UtilSpanSliceAndRangeTest());
 
     RUN_TEST(UtilEmptySpanBehaviorTest());
+
+    RUN_TEST(UtilSpanRangeOverflowTest());
 
     return 0;
 }
