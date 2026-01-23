@@ -215,14 +215,14 @@ install_deps() {
             
             # Install additional dependencies passed as arguments
             apt-get update -qq
-            apt-get install -y "$@" build-essential curl ca-certificates libssl-dev
+            apt-get install -y "$@" build-essential curl ca-certificates libssl-dev valgrind
             ;;
         redhat)
             log_info "Setting up RedHat/Fedora/Alma environment..."
     
             # Collect additional dependencies passed as arguments
             dnf group install -y c-development
-            dnf install -y "$@" curl ca-certificates openssl-devel
+            dnf install -y "$@" curl ca-certificates openssl-devel valgrind
             ;;
         *)
             log_error "Unsupported OS type: ${os_type}"
@@ -276,6 +276,7 @@ test_installation() {
     test_command "ctest" "--version" || ((failed++))
     test_command "gcc" "--version" || ((failed++))
     test_command "dotnet" "--version" || ((failed++))
+    test_command "valgrind" "--version" || ((failed++))
     
     # Test GitVersion tool
     if command_exists dotnet; then
