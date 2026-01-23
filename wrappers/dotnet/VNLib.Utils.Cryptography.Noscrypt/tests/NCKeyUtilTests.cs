@@ -30,7 +30,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
 
             {
@@ -43,7 +43,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
         }
 
@@ -67,7 +67,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
 
             {
@@ -80,7 +80,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 Assert.IsTrue(Unsafe.AreSame(in b1, in b2));
 
                 //Dereference and compare
-                Assert.IsTrue(b1 == b2);
+                Assert.AreEqual(b2, b1);
             }
         }
 
@@ -122,6 +122,4 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             }
         }
     }
-
-
 }

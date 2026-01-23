@@ -102,7 +102,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
                 );
 
                 int outLen = msgCipher.GetOutputSize();
-                Assert.IsTrue(outLen == expectedPt.Length);
+                Assert.AreEqual(expectedPt.Length, outLen);
 
                 Span<byte> plaintext = ptBuffer.AsSpan(0, outLen);
 
@@ -133,7 +133,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
             msgCipher.SetRandomIv(NCFallbackRandom.Shared);
 
             //update performs the decryption operation (mac is also verified by default)
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 0));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 0));
 
             //Should be fine
             msgCipher.Update(in secKey, in pubkey, in testByte, 1);
@@ -143,8 +143,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Tests
              *  the pointer is dereferences/read from. Otherwise this will probably 
              *  cause a segfault.
              */
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 65536));
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 100000));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 65536));
+            Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => msgCipher.Update(in secKey, in pubkey, in testByte, 100000));
         }
 
 
