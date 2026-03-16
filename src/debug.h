@@ -28,7 +28,7 @@
 	/* Must include assert.h for assertions */
 	#include <assert.h> 
 	#define DEBUG_ASSERT(x) assert(x);
-	#define DEBUG_ASSERT2(x, message) assert(x && message);	
+	#define DEBUG_ASSERT2(x, message) assert((x) && (message));	
 
 	/*
 	* Compiler enabled static assertion keywords are 
