@@ -662,7 +662,7 @@ static int TestUtilNip44Encryption(
     
     ENSURE(ctx != NULL);
 
-    TEST(ncSpanGetSize(nonce), (uint32_t)NCUtilCipherGetIvSize(ctx));
+    TEST(spanGetSize(nonce), (uint32_t)NCUtilCipherGetIvSize(ctx));
 
     TEST(NCUtilCipherInit(ctx, plainText.data, plainText.size), NC_SUCCESS);
 

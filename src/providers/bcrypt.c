@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/bcrypt.c
@@ -95,8 +95,8 @@ _IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, cspan_t key)
 		&ctx->hHash, 
 		NULL, 
 		0, 
-		(uint8_t*)ncSpanGetOffsetC(key, 0), 
-		ncSpanGetSizeC(key),
+		(uint8_t*)spanGetOffsetC(key, 0), 
+		spanGetSizeC(key),
 		BCRYPT_HASH_REUSABLE_FLAG	/* Enable reusable for expand function */
 	);
 }
@@ -115,8 +115,8 @@ _IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, cspan_t data)
 {
 	return BCryptHashData(
 		ctx->hHash, 
-		(uint8_t*)ncSpanGetOffsetC(data, 0),
-		ncSpanGetSizeC(data),
+		(uint8_t*)spanGetOffsetC(data, 0),
+		spanGetSizeC(data),
 		0
 	);
 }

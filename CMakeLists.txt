@@ -95,9 +95,10 @@ set(NOSCRYPT_SRCS
 set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
-	"src/nc-util.h"
 	"src/hkdf.h"
 	"src/nc-crypto.h"
+	"src/debug.h"
+	"src/span.h"
 )
 
 #if utils are enabled, add the source files
