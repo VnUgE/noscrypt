@@ -31,10 +31,10 @@
 
 #include <monocypher/monocypher.h>
 
-/* Export secure memse0 */
+/* Export secure zero memset */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
 
-	/* export cytpo wipe function as is */
+	/* export crypto wipe function as is */
 	#define _IMPL_SECURE_ZERO_MEMSET crypto_wipe	
 #endif
 
@@ -57,8 +57,8 @@
 		}
 
 		/* 
-		 * Guard conversion from 32bit int to size_t incase 
-		 * incase the platform integer size is too small
+		 * Guard conversion from 32bit int to size_t in case
+		 * the platform integer size is too small
 		 */
 #if SIZE_MAX < UINT32_MAX
 		if (spanGetSizeC(input) > SIZE_MAX)
@@ -93,4 +93,4 @@
 
 #endif
 
-#endif /* !NC_ENABLE_MONOCYPHER */
+#endif /* NC_ENABLE_MONOCYPHER */

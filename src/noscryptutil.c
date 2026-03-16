@@ -86,7 +86,7 @@
 
 #elif defined(__has_builtin)
 	/* 
-	* Only avaialable with builtins 
+	* Only available with builtins 
 	* 
 	* GCC/clang does not expose log2 so we can use the __builtin_clz
 	* to find leading zeros of an integer and subtract that from 31 
@@ -101,7 +101,7 @@
 		return 31 - __builtin_clz(val);
 	}
 #else 
-	#error "Utilities library is not supported on this platform. Must support GCC/Glang builtin functions"
+	#error "Utilities library is not supported on this platform. Must support GCC/Clang builtin functions"
 #endif
 
 /* Currently were on nip44 version 2 */
@@ -211,7 +211,7 @@ static _nc_fn_inline uint32_t _calcNip44PtPadding(uint32_t plaintextSize)
 	* Taken from https://github.com/nostr-protocol/nips/blob/master/44.md
 	*
 	* I believe the idea is to add consistent padding for some better 
-	* disgusing of the plainText data.
+	* disguising of the plainText data.
 	*/
 
 	if (plaintextSize <= MIN_PADDING_SIZE)
@@ -384,9 +384,9 @@ static NCResult _nip44VerifyMac(
 }
 
 /*
-* I want the encryption/decyption functions to be indempodent
+* I want the encryption/decryption functions to be idempotent
 * meaning all mutations that happen can be repeated without
-* side effects. IE no perminent state changes that can't be
+* side effects. IE no permanent state changes that can't be
 * undone.
 */
 
@@ -464,7 +464,7 @@ static NCResult _nip44EncryptCompleteCore(
 	DEBUG_ASSERT(result == NC_SUCCESS);
 
 	/*
-	* So this is the tricky part. The encryption operation appens directly
+	* So this is the tricky part. The encryption operation appends directly
 	* on the ciphertext segment
 	*
 	* All current implementations allow overlapping input and output buffers
@@ -558,10 +558,10 @@ static NCResult _nip44EncryptCompleteCore(
 
 /*
 * TODO:
-* when mac and decryption happen, the converstation 
+* when mac and decryption happen, the conversation 
 * key is generated twice, which is expensive. Noscrypt already 
-* has public extended apis for using the converstation key
-* directly, so switching to generating the converstation key
+* has public extended apis for using the conversation key
+* directly, so switching to generating the conversation key
 * ahead of time would be helpful for performance.
 * 
 * The reason it's not done yet, is because well, it's a secret
@@ -866,7 +866,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	DEBUG_ASSERT(outputSize > 0 && outputSize >= inputSize);
 
 	/*
-	* If the buffer was previously allocated, the reuseable flag
+	* If the buffer was previously allocated, the reusable flag
 	* must be set to allow the buffer to be re-used for another
 	* operation.
 	*/
@@ -1001,7 +1001,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(
 		return E_INVALID_CONTEXT;
 	}
 
-	/* Reset output data pointer incase it has been moved */
+	/* Reset output data pointer in case it has been moved */
 	_cipherPublishOutput(cipher, 0, 0);
 
 	switch (cipher->encArgs.version)

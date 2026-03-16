@@ -1,5 +1,5 @@
-﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+/*
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.c
@@ -32,7 +32,7 @@
 * CLARIFICATION:
 * Nip44 requires a "nonce" this is different from 
 * the chacha20 nonce parameter. The nip44 nonce can 
-* be accuratly described as an initialization vector.
+* be accurately described as an initialization vector.
 * So we will be using the term IV to describe the nip44
 * public facing "nonce" parameter.
 * 
@@ -66,9 +66,9 @@
 #define CHECK_CONTEXT_STATE(ctx, argPos) CHECK_INVALID_ARG(ctx->secpCtx, argPos)
 
 /*
-* Actual, private defintion of the NCContext structure 
+* Actual, private definition of the NCContext structure 
 * to allow for future development and ABI backwards 
-* compatability.
+* compatibility.
 */
 struct nc_ctx_struct {
 
@@ -115,7 +115,7 @@ STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expe
 
 /*
 * Check that the fallback hkdf extract internal buffer is large enough
-* for full converstation key buffers 
+* for full conversation key buffers 
 */
 STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for safe HKDF operations")
 
@@ -203,8 +203,8 @@ static int _edhHashFuncInternal(
 	((void)y32);	/* unused for nostr */
 	((void)data);
 
-	DEBUG_ASSERT2(output != NULL, "Expected valid output buffer")
-	DEBUG_ASSERT2(x32 != NULL, "Expected a valid public 32byte x-coodinate buffer")
+	DEBUG_ASSERT2(output != NULL, "Expected valid output buffer");
+	DEBUG_ASSERT2(x32 != NULL, "Expected a valid public 32byte x-coordinate buffer");
 
 	/* Copy the x coordinate of the shared point into the output buffer */
 	spanInit(&outputSpan, output, 32);
@@ -497,11 +497,11 @@ NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPositi
 {
 	NCResult asPositive, argPos;
 
-	/* Negate error code so it can be masked off*/
+	/* Negate error code so it can be masked off */
 	asPositive = -err;
 	asPositive = asPositive & NC_ERROR_CODE_MASK;
 
-	/* Cast, and mask off and shift the argument psotion to the upper 8 bits */
+	/* Cast, and mask off and shift the argument position to the upper 8 bits */
 	argPos = (NCResult)(argPosition) & 0xFF;
 	argPos <<= NC_ARG_POSITION_OFFSET;
 
@@ -870,7 +870,7 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	CHECK_NULL_ARG(conversationKey, 1)
 	CHECK_NULL_ARG(args, 2)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
 	CHECK_INVALID_ARG(args->ivData, 2)
@@ -939,7 +939,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 				goto Cleanup;
 			}
 
-			/* Compute the conversation key from secret and pubkic keys */
+			/* Compute the conversation key from secret and public keys */
 			if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
 			{
 				goto Cleanup;
@@ -979,7 +979,7 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	CHECK_NULL_ARG(conversationKey, 1)
 	CHECK_NULL_ARG(args, 2)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
 	CHECK_INVALID_ARG(args->ivData, 2)
@@ -1016,7 +1016,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	CHECK_NULL_ARG(pk, 2)
 	CHECK_NULL_ARG(args, 3)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->ivData, 3)
@@ -1224,7 +1224,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 
 		/*
 		* During encryption the key data buffer is used
-		* to write the hmac hey used for MAC computation
+		* to write the hmac key used for MAC computation
 		* operations.
 		*/
 		args->keyData = value;

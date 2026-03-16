@@ -77,7 +77,7 @@
 		spanInit(&digestSpan, digestOut32, sizeof(sha256_t));
 
 		/*
-		* Allocate and initalize the context
+		* Allocate and initialize the context
 		*/
 		if (!_osslEvpInit(&evpState, EvpStateTypeDigest, OSSL_SHA256))
 		{
@@ -122,7 +122,7 @@
 		spanInit(&digestSpan, hmacOut32, sizeof(sha256_t));
 
 		/*
-		* Allocate and initalize the context
+		* Allocate and initialize the context
 		*/
 		if (!_osslEvpInit(&evpState, EvpStateTypeMac, OSSL_HMAC))
 		{
@@ -210,7 +210,7 @@
 		}
 
 		/* 
-		* Context must be re-initalized after finalize
+		* Context must be re-initialized after finalize
 		* See lifecycle https://docs.openssl.org/3.0/man7/life_cycle-mac/#copyright
 		*/
 
@@ -363,4 +363,4 @@
 
 #endif
 
-#endif	/*!OPENSSL_CRYPTO_LIB */
+#endif	/* OPENSSL_CRYPTO_LIB */

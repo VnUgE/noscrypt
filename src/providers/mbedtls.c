@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/mbedtls.c
@@ -20,7 +20,7 @@
 
 
 /*
-* This file contains implemntation functions for the required 
+* This file contains implementation functions for the required 
 * cryptography primitives of noscrypt. This file stubs functionality
 * using the Mbed-TLS library, if the builder desires to link against
 * it. 
@@ -28,7 +28,7 @@
 
 #ifdef MBEDTLS_CRYPTO_LIB
 
-/* Inline errors on linux in header files on linux */
+/* Inline errors on Linux in header files */
 #ifndef inline
 	#define inline __inline
 	#include <mbedtls/md.h>
@@ -52,7 +52,7 @@
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
 	const mbedtls_md_info_t* info; 
-	/* Get sha256 md info for hdkf operations */
+	/* Get sha256 md info for hkdf operations */
 	info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 	DEBUG_ASSERT2(info != NULL, "Expected SHA256 md info pointer to be valid")
 	return info;
@@ -192,4 +192,4 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 	}
 #endif
 
-#endif
+#endif /* MBEDTLS_CRYPTO_LIB */
