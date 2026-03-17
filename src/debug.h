@@ -38,7 +38,7 @@
 	* 
 	* Static assertions are only used for testing such as 
 	* sanity checks and this library targets the c89 standard
-	* so static_assret very likely will not be available. 
+	* so static_assert very likely will not be available. 
 	*/
 	#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 		#define STATIC_ASSERT(x, m) static_assert(x, m);

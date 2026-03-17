@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2025 Vaughn Nugent
+﻿# Copyright (c) 2026 Vaughn Nugent
 # See the LICENSE in this directory for terms of use
 #
 # This file configures noscrypt with best defaults as possible while offering 
