@@ -59,10 +59,6 @@
 
 
 /*
-	TYPES
-*/
-
-/*
 * A non-owning mutable view over a writable byte buffer.
 * Initialize with spanInit(). Do not modify fields directly.
 */
@@ -81,11 +77,6 @@ typedef struct read_only_memory_span_struct
 	const uint8_t* data;
 	uint32_t size;
 } cspan_t;
-
-
-/*
-	CONSTRUCTION
-*/
 
 /*
 * Initializes a mutable span from a raw pointer and byte count.
@@ -126,11 +117,6 @@ static _nc_fn_inline cspan_t spanToC(span_t span)
 	spanInitC(&cs, span.data, span.size);
 	return cs;
 }
-
-
-/*
-	PREDICATES
-*/
 
 /*
 * Test's the internal data pointer for nullness. 
@@ -175,8 +161,10 @@ static _nc_fn_inline int spanIsEmptyC(cspan_t span)
 
 /*
 * Returns non-zero if the sub-range [offset, offset+size) lies entirely
-within the span. An empty sub-range (size == 0) at offset 0 is
-considered valid for any valid span.
+* within the span. An empty sub-range (size == 0) at offset 0 is
+* considered valid for any span. This function checks arithmetic bounds
+* only — it does not validate the span's data pointer. Callers are
+* responsible for ensuring the span is non-null before operating on it.
 * @param span The span to test against
 * @param offset The start of the sub-range in bytes
 * @param size The length of the sub-range in bytes
@@ -198,11 +186,6 @@ static _nc_fn_inline int spanIsValidRangeC(cspan_t span, uint32_t offset, uint32
 {
 	return offset <= span.size && size <= span.size - offset;
 }
-
-
-/*
-	ACCESSORS
-*/
 
 /*
 * Returns the number of bytes in the span, or 0 if the span is invalid.
@@ -226,9 +209,10 @@ static _nc_fn_inline uint32_t spanGetSizeC(cspan_t span)
 
 /*
 * Returns a const pointer to the byte at the given offset within the span.
-Returns NULL when the span is empty and offset is 0, so callers may
-safely pass an empty span without risking a null dereference. The offset
-must be strictly less than span.size for any non-empty span.
+* Returns NULL when the span is empty and offset is 0, so callers may
+* safely pass an empty span without risking a null dereference. For all
+* non-empty spans the data pointer must be non-null and offset must be
+* strictly less than span.size.
 * @param span The span to index into
 * @param offset The byte offset from the start of the span
 * @return A pointer to span.data + offset, or NULL for an empty span at offset 0
@@ -240,6 +224,9 @@ static _nc_fn_inline const uint8_t* spanGetOffsetC(cspan_t span, uint32_t offset
 	{
 		return NULL;
 	}
+
+	DEBUG_ASSERT2(span.data != NULL, "spanGetOffsetC: data pointer is NULL on a non-empty span");
+	DEBUG_ASSERT2(offset < span.size, "spanGetOffsetC: offset is out of range");
 
 	return span.data + offset;
 }
@@ -255,10 +242,6 @@ static _nc_fn_inline uint8_t* spanGetOffset(span_t span, uint32_t offset)
 	return (uint8_t*)spanGetOffsetC(spanToC(span), offset);
 }
 
-
-/*
-	SLICING
-*/
 
 /*
 * Returns a mutable sub-span covering [offset, offset+size) of the source
@@ -308,11 +291,6 @@ static _nc_fn_inline cspan_t spanSliceC(cspan_t span, uint32_t offset, uint32_t 
 	return slice;
 }
 
-
-/*
-	DATA TRANSFER
-*/
-
 /*
 * Copies src.size bytes from src into dest starting at dest.data.
 src.size must be <= dest.size. A zero-size copy is a no-op.
@@ -334,7 +312,7 @@ static _nc_fn_inline void spanCopyC(cspan_t src, span_t dest)
 
 	/*
 	* Use memmove_s on Windows, forwarding dest.size as the destination
-	* buffer capacity for runtime overrun detection.
+	* buffer capacity for extra runtime overrun detection.
 	*/
 	memmove_s(dest.data, dest.size, src.data, src.size);
 
@@ -424,6 +402,8 @@ by size, providing a simple cursor pattern for building payloads in-place.
 */
 static _nc_fn_inline void spanAppend(span_t span, uint32_t* offset, const uint8_t* data, uint32_t size)
 {
+	DEBUG_ASSERT2(offset != NULL, "spanAppend: offset pointer is NULL");
+	
 	spanWrite(span, *offset, data, size);
 	*offset += size;
 }
