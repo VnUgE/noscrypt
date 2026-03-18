@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hkdf.h
@@ -23,7 +23,7 @@
 #ifndef _NC_HKDF_H
 #define _NC_HKDF_H
 
-#include "nc-util.h"
+#include "span.h"
 #include "nc-crypto.h"
 
 /*

@@ -1,5 +1,5 @@
 ﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.h
@@ -153,15 +153,15 @@ extern "C" {
 * 
 *   I'd like to support 64bit stuff, but really the underlying systems don't 
 *   need to support that size buffer, nor do I expect platforms to have more than
-*   4GB sized buffers (int32_t), it's just not practial and most work is on 
+*   4GB sized buffers (int32_t), it's just not practical and most work is on 
 *   digests anyway. 
 * 
 * - Decisions on unsigned vs signed
 *   Yeah, I know this is a popular squabble in C land, but implementation details
 *   should not trouble the user. If I expect an unsigned int, then it should be 
-*   explicit, negative number guards are cumbersom to handle return codes with
+*   explicit, negative number guards are cumbersome to handle return codes with
 *   that IMO most engineers don't bother doing anyway or doing well at the very
-*   least, so I'm using unsgined integers. Sorry, not sorry.
+*   least, so I'm using unsigned integers. Sorry, not sorry.
 */
 
 /* A compressed result/return value, negative values 
@@ -284,7 +284,7 @@ NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void);
 /*
 * Obtains a pointer to the process-wide shared structure to be 
 * used in single-threaded, resource constrained systems. NOTE:
-* this structure is not initalized and still requires calling
+* this structure is not initialized and still requires calling
 * NCInitContext() before use.
 * @return The address of the process-wide, shared structure.
 */

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/bcrypt.c
@@ -20,9 +20,9 @@
 
 
 /*
-*	This file provides as many fallback implementations on Windows plaforms
+*	This file provides as many fallback implementations on Windows platforms
 *	as possible using the bcrypt library. This file should be included behind
-*	other libarry implementations, as it is a fallback.
+*	other library implementations, as it is a fallback.
 */
 
 #ifdef _NC_IS_WINDOWS
@@ -46,8 +46,8 @@ struct _bcrypt_ctx
 	* as platform zeroing function.
 	*
 	* NOTE:
-	* SecureZeroMemory2 uses volitle function argument
-	* pointers, which is a contested mehtod of compiler
+	* SecureZeroMemory2 uses volatile function argument
+	* pointers, which is a contested method of compiler
 	* optimization prevention. GNU seems to oppose this method
 	*
 	* https://learn.microsoft.com/en-us/windows/win32/memory/winbase-securezeromemory2
@@ -95,8 +95,8 @@ _IMPLSTB NTSTATUS _bcCreateHmac(struct _bcrypt_ctx* ctx, cspan_t key)
 		&ctx->hHash, 
 		NULL, 
 		0, 
-		(uint8_t*)ncSpanGetOffsetC(key, 0), 
-		ncSpanGetSizeC(key),
+		(uint8_t*)spanGetOffsetC(key, 0), 
+		spanGetSizeC(key),
 		BCRYPT_HASH_REUSABLE_FLAG	/* Enable reusable for expand function */
 	);
 }
@@ -115,8 +115,8 @@ _IMPLSTB NTSTATUS _bcHashData(const struct _bcrypt_ctx* ctx, cspan_t data)
 {
 	return BCryptHashData(
 		ctx->hHash, 
-		(uint8_t*)ncSpanGetOffsetC(data, 0),
-		ncSpanGetSizeC(data),
+		(uint8_t*)spanGetOffsetC(data, 0),
+		spanGetSizeC(data),
 		0
 	);
 }
@@ -144,7 +144,7 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 
 #ifndef _IMPL_CRYPTO_SHA256_DIGEST
 	
-	/* Export function fallack */
+	/* Export function fallback */
 	#define _IMPL_CRYPTO_SHA256_DIGEST			_bcrypt_sha256_digest	
 
 	_IMPLSTB cstatus_t _bcrypt_sha256_digest(cspan_t data, sha256_t digestOut32)

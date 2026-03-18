@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2025 Vaughn Nugent
+﻿# Copyright (c) 2026 Vaughn Nugent
 # See the LICENSE in this directory for terms of use
 #
 # This file configures noscrypt with best defaults as possible while offering 
@@ -95,9 +95,10 @@ set(NOSCRYPT_SRCS
 set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
-	"src/nc-util.h"
 	"src/hkdf.h"
 	"src/nc-crypto.h"
+	"src/debug.h"
+	"src/span.h"
 )
 
 #if utils are enabled, add the source files

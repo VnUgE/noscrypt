@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hex.h
@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <nc-util.h>
+#include <span.h>
 
 /* Deferred list of span_t to be freed on exit */
 static span_t _hdeferList[20];
@@ -68,7 +68,7 @@ static span_t _fromHexString(const char* hexLiteral, uint32_t strLen)
 
 	if(!hexLiteral)
 	{
-		ncSpanInit(&hexBytes, NULL, 0);
+		spanInit(&hexBytes, NULL, 0);
 		return hexBytes;
 	}
 
@@ -126,7 +126,7 @@ static void PrintHexRaw(void* bytes, size_t len)
 */
 static void PrintHexBytes(span_t hexBytes)
 {
-	if (ncSpanIsValid(hexBytes))
+	if (!spanIsNull(hexBytes) && !spanIsEmpty(hexBytes))
 	{
 		PrintHexRaw(hexBytes.data, hexBytes.size);
 	}

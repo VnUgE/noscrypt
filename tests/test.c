@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: test.c
@@ -662,7 +662,7 @@ static int TestUtilNip44Encryption(
     
     ENSURE(ctx != NULL);
 
-    TEST(ncSpanGetSize(nonce), (uint32_t)NCUtilCipherGetIvSize(ctx));
+    TEST(spanGetSize(nonce), (uint32_t)NCUtilCipherGetIvSize(ctx));
 
     TEST(NCUtilCipherInit(ctx, plainText.data, plainText.size), NC_SUCCESS);
 
