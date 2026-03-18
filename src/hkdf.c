@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hkdf.c
@@ -62,12 +62,12 @@ cstatus_t hkdfExpandProcess(
 	result = CSTATUS_FAIL;	/* Start in fail state */
 
 	/* span over counter value that points to the counter buffer */
-	ncSpanInitC(&counterSpan, counter, sizeof(counter));
+	spanInitC(&counterSpan, counter, sizeof(counter));
 
 	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
 	while (okmOffset < okm.size)
 	{
-		ncSpanInitC(&tSpan, t, tLen);
+		spanInitC(&tSpan, t, tLen);
 
 		if (handler->update(ctx, tSpan) != CSTATUS_OK)
 		{
@@ -95,12 +95,12 @@ cstatus_t hkdfExpandProcess(
 		}
 
 		/* tlen becomes the hash size or remaining okm size */
-		tLen = HKDF_MIN(ncSpanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
+		tLen = HKDF_MIN(spanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
 
 		DEBUG_ASSERT(tLen <= sizeof(t));
 
 		/* write the T buffer back to okm and advance okmOffset by tLen */
-		ncSpanAppend(okm, &okmOffset, t, tLen);
+		spanAppend(okm, &okmOffset, t, tLen);
 
 		/* increment counter */
 		(*counter)++;

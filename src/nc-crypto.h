@@ -1,6 +1,6 @@
 
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: nc-crypto.h
@@ -25,6 +25,7 @@
 #define _NC_CRYPTO_H
 
 #include <stdint.h>
+#include "span.h"
 
 #define NC_CRYPTO_CHACHA_NONCE_SIZE		0x0cu		/* Size of 12 is set by the cipher spec */
 #define NC_CRYPTO_CHACHA_KEY_SIZE		0x20u		/* Size of 32 is set by the cipher spec */

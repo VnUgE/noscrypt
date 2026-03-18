@@ -1,5 +1,5 @@
-﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+/*
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.c
@@ -20,7 +20,8 @@
 
 #include "noscrypt.h"
 
-#include "nc-util.h"
+#include "debug.h"
+#include "span.h"
 #include "hkdf.h"
 #include "nc-crypto.h"
 
@@ -31,7 +32,7 @@
 * CLARIFICATION:
 * Nip44 requires a "nonce" this is different from 
 * the chacha20 nonce parameter. The nip44 nonce can 
-* be accuratly described as an initialization vector.
+* be accurately described as an initialization vector.
 * So we will be using the term IV to describe the nip44
 * public facing "nonce" parameter.
 * 
@@ -65,9 +66,9 @@
 #define CHECK_CONTEXT_STATE(ctx, argPos) CHECK_INVALID_ARG(ctx->secpCtx, argPos)
 
 /*
-* Actual, private defintion of the NCContext structure 
+* Actual, private definition of the NCContext structure 
 * to allow for future development and ABI backwards 
-* compatability.
+* compatibility.
 */
 struct nc_ctx_struct {
 
@@ -114,7 +115,7 @@ STATIC_ASSERT(sizeof(struct nc_expand_keys) == sizeof(struct message_key), "Expe
 
 /*
 * Check that the fallback hkdf extract internal buffer is large enough
-* for full converstation key buffers 
+* for full conversation key buffers 
 */
 STATIC_ASSERT(HKDF_IN_BUF_SIZE >= NC_CONV_KEY_SIZE + 8, "HKDF Buffer size is too small for safe HKDF operations")
 
@@ -139,19 +140,27 @@ static _nc_fn_inline int _convertToXonly(
 static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedPubKey, secp256k1_pubkey* pubKey)
 {
 	int result;
+	span_t compressedSpan;
 	uint8_t compressed[sizeof(NCPublicKey) + 1];
 
-	DEBUG_ASSERT2(ctx != NULL, "Expected valid context")
-	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure")
-	DEBUG_ASSERT2(pubKey != NULL, "Expected valid secp256k1 public key structure")
+	DEBUG_ASSERT2(ctx != NULL, "Expected valid context");
+	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure");
+	DEBUG_ASSERT2(pubKey != NULL, "Expected valid secp256k1 public key structure");	
 
 	/* Set the first byte to 0x02 to indicate a compressed public key */
 	compressed[0] = BIP340_PUBKEY_HEADER_BYTE;
 
 	/* Copy the compressed public key data into a new buffer (offset by 1 to store the header byte) */
-	MEMMOV((compressed + 1), compressedPubKey, sizeof(NCPublicKey));
+	spanInit(&compressedSpan, compressed, sizeof(compressed));
+	spanWrite(compressedSpan, 1, (const uint8_t*)compressedPubKey, sizeof(NCPublicKey));
 
-	result = secp256k1_ec_pubkey_parse(ctx->secpCtx, pubKey, compressed, sizeof(compressed));
+	/* Parse the compressed public key data into the secp256k1_pubkey structure */
+	result = secp256k1_ec_pubkey_parse(
+		ctx->secpCtx, 
+		pubKey, 
+		spanGetOffset(compressedSpan, 0),
+		spanGetSize(compressedSpan)
+	);
 	
 	ZERO_FILL(compressed, sizeof(compressed));
 
@@ -189,14 +198,17 @@ static int _edhHashFuncInternal(
 	void* data
 )
 {
+	span_t outputSpan;
+
 	((void)y32);	/* unused for nostr */
 	((void)data);
 
-	DEBUG_ASSERT2(output != NULL, "Expected valid output buffer")
-	DEBUG_ASSERT2(x32 != NULL, "Expected a valid public 32byte x-coodinate buffer")
+	DEBUG_ASSERT2(output != NULL, "Expected valid output buffer");
+	DEBUG_ASSERT2(x32 != NULL, "Expected a valid public 32byte x-coordinate buffer");
 
 	/* Copy the x coordinate of the shared point into the output buffer */
-	MEMMOV(output, x32, 32);
+	spanInit(&outputSpan, output, 32);
+	spanWrite(outputSpan, 0, x32, 32);
 
 	return 32;	/* Return the number of bytes written to the output buffer */
 }
@@ -256,8 +268,8 @@ static _nc_fn_inline NCResult _computeConversationKey(
 	DEBUG_ASSERT2(sharedSecret != NULL, "Expected a valid shared-point")
 	DEBUG_ASSERT2(ck != NULL, "Expected a valid conversation key")
 
-	ncSpanInitC(&saltSpan, Nip44ConstantSalt, sizeof(Nip44ConstantSalt));
-	ncSpanInitC(&ikmSpan, sharedSecret->value, NC_SHARED_SEC_SIZE);
+	spanInitC(&saltSpan, Nip44ConstantSalt, sizeof(Nip44ConstantSalt));
+	spanInitC(&ikmSpan, sharedSecret->value, NC_SHARED_SEC_SIZE);
 	
 	return ncCryptoSha256HkdfExtract(saltSpan, ikmSpan, ck->value) == CSTATUS_OK 
 		? NC_SUCCESS 
@@ -281,10 +293,10 @@ static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, const NCEncr
 	DEBUG_ASSERT2(keys != NULL, "Expected valid keys");
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
 
-	ncSpanInit(&outputSpan, args->outputData, args->dataSize);
-	ncSpanInitC(&inputSpan, args->inputData, args->dataSize);
-	ncSpanInitC(&keySpan, keys->chacha_key, NC_CRYPTO_CHACHA_KEY_SIZE);
-	ncSpanInitC(&nonceSpan, keys->chacha_nonce, NC_CRYPTO_CHACHA_NONCE_SIZE);
+	spanInit(&outputSpan, args->outputData, args->dataSize);
+	spanInitC(&inputSpan, args->inputData, args->dataSize);
+	spanInitC(&keySpan, keys->chacha_key, NC_CRYPTO_CHACHA_KEY_SIZE);
+	spanInitC(&nonceSpan, keys->chacha_nonce, NC_CRYPTO_CHACHA_NONCE_SIZE);
 
 	return ncCryptoChacha20(keySpan, nonceSpan, inputSpan, outputSpan);
 }
@@ -301,8 +313,8 @@ static _nc_fn_inline cstatus_t _getMessageKey(
 	DEBUG_ASSERT2(converstationKey != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(messageKey != NULL, "Expected valid message key buffer")
 
-	ncSpanInitC(&prkSpan, converstationKey->value, sizeof(struct conversation_key));	/* Conversation key is the input key */
-	ncSpanInit(&okmSpan, messageKey->value, sizeof(struct message_key));				/* Output produces a message key (write it directly to struct memory) */
+	spanInitC(&prkSpan, converstationKey->value, sizeof(struct conversation_key));	/* Conversation key is the input key */
+	spanInit(&okmSpan, messageKey->value, sizeof(struct message_key));				/* Output produces a message key (write it directly to struct memory) */
 	
 	/* Nonce is the info */
 	return ncCryptoSha256HkdfExpand(prkSpan, nonce, okmSpan);
@@ -317,6 +329,7 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 {
 	NCResult result;
 	cspan_t nonceSpan;
+	span_t keyDataSpan;
 	struct message_key messageKey;
 	const struct nc_expand_keys* cipherKeys;
 
@@ -327,7 +340,7 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 
 	result = NC_SUCCESS;
 
-	ncSpanInitC(
+	spanInitC(
 		&nonceSpan, 
 		args->ivData,
 		NCEncryptionGetIvSize(args->version)
@@ -337,9 +350,9 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	 * Since were on nip-44 branch, the nonce field should always 
 	 * be equal to the nip44 "nonce" parameter
 	 */
-	DEBUG_ASSERT2(ncSpanGetSizeC(nonceSpan) == NIP44_IV_SIZE, "Expected valid nip44 nonce size");
+	DEBUG_ASSERT2(spanGetSizeC(nonceSpan) == NIP44_IV_SIZE, "Expected valid nip44 nonce size");
 	
-	/* Message key will be derrived on every encryption call */
+	/* Message key will be derived on every encryption call */
 	if (_getMessageKey(ck, nonceSpan, &messageKey) != CSTATUS_OK)
 	{
 		result = E_OPERATION_FAILED;
@@ -356,8 +369,10 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	if (encrypt)
 	{
 		DEBUG_ASSERT2(args->keyData != NULL, "Expected valid hmac key buffer");
+		DEBUG_ASSERT2(cipherKeys->hmac_key != NULL, "Expected valid hmac key from expanded keys");
 
-		MEMMOV(args->keyData, cipherKeys->hmac_key, NC_HMAC_KEY_SIZE);
+		spanInit(&keyDataSpan, args->keyData, NC_HMAC_KEY_SIZE);
+		spanWrite(keyDataSpan, 0, cipherKeys->hmac_key, NC_HMAC_KEY_SIZE);		
 	}
 
 	/* CHACHA20 (the result will be 0 on success) */
@@ -387,16 +402,16 @@ static _nc_fn_inline NCResult _nip04CipherUpdate(
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
 	DEBUG_ASSERT2(args->version == NC_ENC_VERSION_NIP04, "Expected NIP04 encryption version");	
 
-	ncSpanInitC(&ivSpan, args->ivData, NCEncryptionGetIvSize(args->version));
-	ncSpanInitC(&keySpan, args->keyData, NC_CRYPTO_AES_KEY_SIZE);
-	ncSpanInitC(&inputSpan, args->inputData, args->dataSize);
-	ncSpanInit(&outputSpan, args->outputData, args->dataSize);
+	spanInitC(&ivSpan, args->ivData, NCEncryptionGetIvSize(args->version));
+	spanInitC(&keySpan, args->keyData, NC_CRYPTO_AES_KEY_SIZE);
+	spanInitC(&inputSpan, args->inputData, args->dataSize);
+	spanInit(&outputSpan, args->outputData, args->dataSize);
 
 	/*
 	 * Since were on nip-04 branch, the nonce field should always
 	 * be equal to the nip04 aes iv parameter
 	 */
-	DEBUG_ASSERT2(ncSpanGetSizeC(ivSpan) == NIP04_IV_SIZE, "Expected valid nip04 (aes) iv size");
+	DEBUG_ASSERT2(spanGetSizeC(ivSpan) == NIP04_IV_SIZE, "Expected valid nip04 (aes) iv size");
 
 	/* For now just the encryption flag must be set if encryption is enabled */
 	encFlags = encrypt ? NC_CRYPTO_AES_MODE_ENCRYPT : NC_CRYPTO_AES_MODE_DECRYPT;
@@ -413,7 +428,7 @@ static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE],
 	DEBUG_ASSERT2(key != NULL,		"Expected valid hmac key")
 	DEBUG_ASSERT2(hmacOut != NULL,	"Expected valid hmac output buffer")
 
-	ncSpanInitC(&keySpan, key, NC_HMAC_KEY_SIZE);
+	spanInitC(&keySpan, key, NC_HMAC_KEY_SIZE);
 
 	return ncCryptoHmacSha256(keySpan, payload, hmacOut);
 }
@@ -438,8 +453,8 @@ static NCResult _verifyMacEx(
 	* The nip44 nonce that was used for encryption must be passed to this
 	* function, so it should be the same size as the nip44 iv.
 	*/
-	ncSpanInitC(&nonceSpan, args->nonce32, NIP44_IV_SIZE);
-	ncSpanInitC(&payloadSpan, args->payload, args->payloadSize);
+	spanInitC(&nonceSpan, args->nonce32, NIP44_IV_SIZE);
+	spanInitC(&payloadSpan, args->payload, args->payloadSize);
 
 	/*
 	* Message key is again required for the hmac verification
@@ -482,11 +497,11 @@ NC_EXPORT NCResult NC_CC NCResultWithArgPosition(NCResult err, uint8_t argPositi
 {
 	NCResult asPositive, argPos;
 
-	/* Negate error code so it can be masked off*/
+	/* Negate error code so it can be masked off */
 	asPositive = -err;
 	asPositive = asPositive & NC_ERROR_CODE_MASK;
 
-	/* Cast, and mask off and shift the argument psotion to the upper 8 bits */
+	/* Cast, and mask off and shift the argument position to the upper 8 bits */
 	argPos = (NCResult)(argPosition) & 0xFF;
 	argPos <<= NC_ARG_POSITION_OFFSET;
 
@@ -606,7 +621,7 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 
 	/* Generate the x-only public key, docs say this should always return 1 */
 	result = secp256k1_keypair_xonly_pub(ctx->secpCtx, &xonly, NULL, &keyPair);
-	DEBUG_ASSERT2(result == 1, "Expected x-only kepair to ALWAYS return 1")
+	DEBUG_ASSERT2(result == 1, "Expected x-only keypair to ALWAYS return 1")
 
 	/* Convert to compressed pubkey */
 	result = _convertFromXonly(ctx, &xonly, pk);
@@ -699,7 +714,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	CHECK_ARG_RANGE(dataSize, 1, UINT32_MAX, 4)
 	CHECK_NULL_ARG(sig64, 5)
 
-	ncSpanInitC(&dataSpan, data, dataSize);
+	spanInitC(&dataSpan, data, dataSize);
 
 	/* Compute sha256 of the data before signing */
 	if(ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
@@ -758,7 +773,7 @@ NC_EXPORT NCResult NC_CC NCVerifyData(
 
 	ZERO_FILL(digest, sizeof(digest));
 
-	ncSpanInitC(&dataSpan, data, dataSize);
+	spanInitC(&dataSpan, data, dataSize);
 
 	/* Compute sha256 of the data before verifying */
 	if (ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
@@ -855,7 +870,7 @@ NC_EXPORT NCResult NC_CC NCEncryptEx(
 	CHECK_NULL_ARG(conversationKey, 1)
 	CHECK_NULL_ARG(args, 2)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
 	CHECK_INVALID_ARG(args->ivData, 2)
@@ -924,7 +939,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 				goto Cleanup;
 			}
 
-			/* Compute the conversation key from secret and pubkic keys */
+			/* Compute the conversation key from secret and public keys */
 			if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
 			{
 				goto Cleanup;
@@ -964,7 +979,7 @@ NC_EXPORT NCResult NC_CC NCDecryptEx(
 	CHECK_NULL_ARG(conversationKey, 1)
 	CHECK_NULL_ARG(args, 2)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 2)
 	CHECK_INVALID_ARG(args->outputData, 2)
 	CHECK_INVALID_ARG(args->ivData, 2)
@@ -1001,7 +1016,7 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	CHECK_NULL_ARG(pk, 2)
 	CHECK_NULL_ARG(args, 3)
 
-	/* Validte ciphertext/plaintext */
+	/* Validate ciphertext/plaintext */
 	CHECK_INVALID_ARG(args->inputData, 3)
 	CHECK_INVALID_ARG(args->outputData, 3)
 	CHECK_INVALID_ARG(args->ivData, 3)
@@ -1066,7 +1081,7 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 	CHECK_ARG_RANGE(payloadSize, 1, UINT32_MAX, 3)
 	CHECK_NULL_ARG(hmacOut, 4)
 	
-	ncSpanInitC(&payloadSpan, payload, payloadSize);
+	spanInitC(&payloadSpan, payload, payloadSize);
 
 	/*
 	* Compute the hmac of the data using the supplied hmac key
@@ -1122,7 +1137,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
 	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
-	/* Computed the shared point so we can get the converstation key */
+	/* Computed the shared point so we can get the conversation key */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 	{
 		goto Cleanup;
@@ -1187,7 +1202,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 		
 		ivSize = NCEncryptionGetIvSize(args->version);
 
-		/* Gaurd invalid version */
+		/* Guard invalid version */
 		if (ivSize == 0)
 		{
 			return E_VERSION_NOT_SUPPORTED;
@@ -1209,7 +1224,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 
 		/*
 		* During encryption the key data buffer is used
-		* to write the hmac hey used for MAC computation
+		* to write the hmac key used for MAC computation
 		* operations.
 		*/
 		args->keyData = value;

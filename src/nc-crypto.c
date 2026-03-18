@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: nc-crypto.c
@@ -18,7 +18,8 @@
 * along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
-#include "nc-util.h"
+#include "debug.h"
+#include "span.h"
 #include "nc-crypto.h"
 #include "hkdf.h"
 
@@ -74,7 +75,7 @@
 * memset 0 functions for each platform.
 */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
-   /* only incude bzero if libc version greater than 2.25 */
+   /* only include bzero if libc version greater than 2.25 */
 	#if defined(__GLIBC__) && defined(__GLIBC_MINOR__) && __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 25
 		/*
 		*	When using libc, we can use explicit_bzero
@@ -88,12 +89,12 @@
 #endif
 
 /*
-* Finally fall back to monocipher to handle some
+* Finally fall back to monocypher to handle some primitives
 * that are not provided by other libraries.
 *
-* Platform specific opimizations are considered
+* Platform specific optimizations are considered
 * "better" than monocypher options, so this is
-* added as a last resort. Momocypher is "correct"
+* added as a last resort. Monocypher is "correct"
 * and portable, but not optimized for any specific
 * platform.
 */
@@ -222,7 +223,7 @@ uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size
 cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(data),	"Expected data to be non-null")
 	DEBUG_ASSERT2(digestOut32 != NULL,	"Expected digestOut32 to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_DIGEST
@@ -235,8 +236,8 @@ cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
 cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(ncSpanIsValidC(key),	"Expected key to be non-null")
-	DEBUG_ASSERT2(ncSpanIsValidC(data),	"Expected data to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(key),	"Expected key to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(data),	"Expected data to be non-null")
 	DEBUG_ASSERT2(hmacOut32 != NULL,	"Expected hmacOut32 to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_HMAC
@@ -249,9 +250,9 @@ cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
 cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(ncSpanIsValidC(prk),	"Expected prk to be non-null")
-	DEBUG_ASSERT2(ncSpanIsValidC(info),	"Expected info to be non-null")
-	DEBUG_ASSERT2(ncSpanIsValid(okm),	"Expected okm to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(prk),	"Expected prk to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(info),	"Expected info to be non-null")
+	DEBUG_ASSERT2(!spanIsNull(okm),		"Expected okm to be non-null")
 
 	/*
 	* RFC 5869: 2.3
@@ -275,8 +276,8 @@ cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
 {
 	/* Debug arg validate */
-	DEBUG_ASSERT2(ncSpanIsValidC(salt), "Expected salt to be non-null")
-	DEBUG_ASSERT2(ncSpanIsValidC(ikm),	"Expected ikm to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(salt),	"Expected salt to be non-null")
+	DEBUG_ASSERT2(!spanIsNullC(ikm),	"Expected ikm to be non-null")
 	DEBUG_ASSERT2(prk != NULL,			"Expected prk to be non-null")
 
 #ifndef _IMPL_CRYPTO_SHA256_HKDF_EXTRACT
@@ -293,8 +294,8 @@ cstatus_t ncCryptoChacha20(
 	span_t output
 )
 {
-	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
-	DEBUG_ASSERT2(ncSpanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
+	DEBUG_ASSERT2(spanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
+	DEBUG_ASSERT2(spanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
 
 #ifndef _IMPL_CHACHA20_CRYPT
 	#error "No chacha20 implementation defined"
@@ -311,8 +312,8 @@ cstatus_t ncCryptoAes256CBCUpdate(
 	int flags
 )
 {
-	DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
-	DEBUG_ASSERT2(ncSpanGetSizeC(iv) == NC_CRYPTO_AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
+	DEBUG_ASSERT2(spanGetSizeC(key) == NC_CRYPTO_AES_KEY_SIZE, "Expected AES key size to be 32 bytes");
+	DEBUG_ASSERT2(spanGetSizeC(iv) == NC_CRYPTO_AES_IV_SIZE, "Expected AES IV size to be 16 bytes");
 
 #ifndef _IMPL_AES256_CBC_CRYPT
 	#error "No AES256 CBC encrypt implementation defined"

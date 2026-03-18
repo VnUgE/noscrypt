@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hex.h
@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <nc-util.h>
+#include <span.h>
 
 /* 
 	Allocates a span_t and decodes the hexadecimal string into its binary
