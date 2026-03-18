@@ -372,27 +372,27 @@ if(NC_BUILD_TESTS)
 	add_executable(nctest tests/test-base.c tests/test.c)
 	target_link_libraries(nctest ${_NC_PROJ_NAME})	
 
-	add_executable(ncinternaltest tests/test-base.c tests/internal-test.c)
-	target_link_libraries(ncinternaltest ${_NC_PROJ_NAME})
+	add_executable(ncspanstest tests/test-base.c tests/spans-test.c)
+	target_link_libraries(ncspanstest ${_NC_PROJ_NAME})
 
 	if(MSVC)
 		#link bcrypt to test application for Windows platforms
 		target_link_libraries(nctest "bcrypt.lib")
-		target_link_libraries(ncinternaltest "bcrypt.lib")
+		target_link_libraries(ncspanstest "bcrypt.lib")
 	endif()
 
-	target_include_directories(nctest PRIVATE include)
-	target_include_directories(nctest PRIVATE src)	#allow access to internal headers	
+	#allow access to internal headers	
+	target_include_directories(nctest PRIVATE include PRIVATE src)
 
-	target_include_directories(ncinternaltest PRIVATE include)
-	target_include_directories(ncinternaltest PRIVATE src)	#allow access to internal headers
+	#allow access to internal headers
+	target_include_directories(ncspanstest PRIVATE include PRIVATE src)	
 
-	#enable c11 for testing
+	#enable c11 for testing and pass matching project definitions
 	target_compile_features(nctest PRIVATE c_std_11)
 	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})	
 
-	target_compile_features(ncinternaltest PRIVATE c_std_11)
-	target_compile_definitions(ncinternaltest PRIVATE ${NC_PROJ_DEFINITIONS})
+	target_compile_features(ncspanstest PRIVATE c_std_11)
+	target_compile_definitions(ncspanstest PRIVATE ${NC_PROJ_DEFINITIONS})
 
 	add_test(
 		NAME nctest 
@@ -401,11 +401,10 @@ if(NC_BUILD_TESTS)
 	)
 
 	add_test(
-		NAME ncinternaltest 
-		COMMAND ncinternaltest
+		NAME ncspanstest 
+		COMMAND ncspanstest
 		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
 	)
-
 	
 	if(NC_ENABLE_UTILS)
 
