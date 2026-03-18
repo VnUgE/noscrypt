@@ -317,9 +317,7 @@ static _nc_fn_inline void spanCopyC(cspan_t src, span_t dest)
 	memmove_s(dest.data, dest.size, src.data, src.size);
 
 #elif defined(SPAN_NO_MEMMOVE)
-	/*
-	* Portable byte-by-byte fallback — no <string.h> dependency.
-	*/
+	/* Portable fallback */
 	{
 		uint32_t i;
 		for (i = 0; i < src.size; i++)

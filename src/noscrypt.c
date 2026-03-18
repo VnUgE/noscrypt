@@ -152,7 +152,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 
 	/* Copy the compressed public key data into a new buffer (offset by 1 to store the header byte) */
 	spanInit(&compressedSpan, compressed, sizeof(compressed));
-	spanWrite(compressedSpan, 1, compressedPubKey->key, sizeof(NCPublicKey));	
+	spanWrite(compressedSpan, 1, (const uint8_t*)compressedPubKey, sizeof(NCPublicKey));
 
 	/* Parse the compressed public key data into the secp256k1_pubkey structure */
 	result = secp256k1_ec_pubkey_parse(
@@ -621,7 +621,7 @@ NC_EXPORT NCResult NC_CC NCGetPublicKey(
 
 	/* Generate the x-only public key, docs say this should always return 1 */
 	result = secp256k1_keypair_xonly_pub(ctx->secpCtx, &xonly, NULL, &keyPair);
-	DEBUG_ASSERT2(result == 1, "Expected x-only kepair to ALWAYS return 1")
+	DEBUG_ASSERT2(result == 1, "Expected x-only keypair to ALWAYS return 1")
 
 	/* Convert to compressed pubkey */
 	result = _convertFromXonly(ctx, &xonly, pk);
@@ -1137,7 +1137,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
 	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
-	/* Computed the shared point so we can get the converstation key */
+	/* Computed the shared point so we can get the conversation key */
 	if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 	{
 		goto Cleanup;
@@ -1202,7 +1202,7 @@ NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 		
 		ivSize = NCEncryptionGetIvSize(args->version);
 
-		/* Gaurd invalid version */
+		/* Guard invalid version */
 		if (ivSize == 0)
 		{
 			return E_VERSION_NOT_SUPPORTED;
