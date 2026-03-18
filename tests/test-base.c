@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: test-base.c
@@ -94,14 +94,15 @@ span_t __allocHexBytes(size_t length)
 
 	length /= 2;
 
-	hexBytes.data = malloc(length);
+	hexBytes.data = (uint8_t*)malloc(length);
 
 	if (!hexBytes.data)
 	{
+		spanInit(&hexBytes, NULL, 0);
 		return hexBytes;
 	}
 
-	hexBytes.size = length;
+	hexBytes.size = (uint32_t)length;
 	/* add new value to deferred cleanup list */
 	_hdeferList[_hdeferListIndex++] = hexBytes;
 	return hexBytes;
@@ -114,12 +115,17 @@ span_t _fromHexString(const char* hexLiteral, uint32_t strLen)
 
 	if (!hexLiteral)
 	{
-		ncSpanInit(&hexBytes, NULL, 0);
+		spanInit(&hexBytes, NULL, 0);
 		return hexBytes;
 	}
 
 	/* alloc the raw bytes */
 	hexBytes = __allocHexBytes(strLen);
+
+	if (spanIsNull(hexBytes))
+	{
+		return hexBytes;
+	}
 
 	/* read every 2 chars into  */
 	for (i = 0; i < strLen; i += 2)
@@ -158,7 +164,7 @@ void PrintHexRaw(void* bytes, size_t len)
 
 void PrintHexBytes(span_t hexBytes)
 {
-	if (ncSpanIsValid(hexBytes))
+	if (!spanIsNull(hexBytes) && !spanIsEmpty(hexBytes))
 	{
 		PrintHexRaw(hexBytes.data, hexBytes.size);
 	}
