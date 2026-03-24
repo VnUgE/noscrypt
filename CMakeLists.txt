@@ -248,6 +248,10 @@ endif()
 
 set(_NC_COMPILE_OPTS)
 
+
+# enable -Werror for all platforms in debug mode
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+
 #setup flags for windows compilation
 if(MSVC)
 
@@ -282,7 +286,6 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	list(APPEND _NC_COMPILE_OPTS 
 		-Wextra 
 		-fstack-protector
-		-Werror				# warnings as errors
 	)
 
 	#if debug build enable additional debug flags
