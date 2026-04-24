@@ -20,7 +20,8 @@ my @mbedtls_directories = qw(include/mbedtls library doxygen/input);
 my @tf_psa_crypto_directories = qw(include/psa include/tf-psa-crypto
                                    include/mbedtls
                                    drivers/builtin/include/mbedtls
-                                   drivers/builtin/src core doxygen/input);
+                                   drivers/builtin/src core dispatch
+                                   doxygen/input extras platform utilities);
 
 # very naive pattern to find directives:
 # everything with a backslach except '\0' and backslash at EOL

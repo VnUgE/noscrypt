@@ -110,6 +110,17 @@ class Base:
 
             ''')
 
+        if not header:
+            # On Mingw-w64, force the use of a C99-compliant printf() and friends.
+            # This is necessary on older versions of Mingw and/or Windows runtimes
+            # where snprintf does not always zero-terminate the buffer, and does
+            # not support formats such as "%zu" for size_t and "%lld" for long long.
+            prologue += strip_indentation(f'''
+                #if !defined(__USE_MINGW_ANSI_STDIO)
+                #define __USE_MINGW_ANSI_STDIO 1
+                #endif
+            ''')
+
         for include in self._INCLUDES:
             prologue += "#include {}\n".format(include)
 
@@ -359,7 +370,7 @@ class Base:
         """Preprocessor symbol used as a guard against multiple inclusion."""
         # Heuristic to strip irrelevant leading directories
         filename = re.sub(r'.*include[\\/]', r'', filename)
-        return re.sub(r'[^0-9A-Za-z]', r'_', filename, re.A).upper()
+        return re.sub(r'[^0-9A-Za-z]', r'_', filename, flags=re.A).upper()
 
     def write_h_file(self, filename: str) -> None:
         """Output a header file with function wrapper declarations and macro definitions."""
@@ -403,7 +414,6 @@ class Logging(Base):
 #if defined(MBEDTLS_FS_IO) && defined(MBEDTLS_TEST_HOOKS)
 #include <stdio.h>
 #include <inttypes.h>
-#include <mbedtls/debug.h> // for MBEDTLS_PRINTF_SIZET
 #include <mbedtls/platform.h> // for mbedtls_fprintf
 #endif /* defined(MBEDTLS_FS_IO) && defined(MBEDTLS_TEST_HOOKS) */
 """)
@@ -412,7 +422,7 @@ class Logging(Base):
         'int': '%d',
         'long': '%ld',
         'long long': '%lld',
-        'size_t': '%"MBEDTLS_PRINTF_SIZET"',
+        'size_t': '%zu',
         'unsigned': '0x%08x',
         'unsigned int': '0x%08x',
         'unsigned long': '0x%08lx',

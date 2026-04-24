@@ -60,7 +60,8 @@ def main():
     args = parser.parse_args()
 
     if args.list_dependencies:
-        files_list = [arg[2] for arg in INPUT_ARGS]
+        files_list = [arg[2] for arg in INPUT_ARGS
+                      if arg[0] != "password"]
         print(" ".join(files_list))
         return
 

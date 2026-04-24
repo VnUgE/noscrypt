@@ -130,6 +130,12 @@ def guess_tf_psa_crypto_root(root: Optional[str] = None) -> str:
     else:
         raise Exception('TF-PSA-Crypto source tree not found')
 
+def framework_root(root: Optional[str] = None) -> str:
+    """Return the path to the framework directory for this project."""
+    if root is None:
+        root = guess_project_root()
+    return os.path.join(root, 'framework')
+
 def is_mbedtls_3_6() -> bool:
     """Whether the working tree is an Mbed TLS 3.6 one or not
 

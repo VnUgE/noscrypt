@@ -762,7 +762,7 @@ def escaped_split(inp_str, split_char):
         raise ValueError('Expected split character. Found string!')
     out = re.sub(r'(\\.)|' + split_char,
                  lambda m: m.group(1) or '\n', inp_str,
-                 len(inp_str)).split('\n')
+                 count=len(inp_str)).split('\n')
     out = [x for x in out if x]
     return out
 

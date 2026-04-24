@@ -55,14 +55,41 @@ elif [ "$1" = "--can-mypy" ]; then
 fi
 
 echo 'Running pylint ...'
-$PYTHON -m pylint framework/scripts/*.py framework/scripts/mbedtls_framework/*.py scripts/*.py tests/scripts/*.py || {
+# When we move Python code between repositories, there is a transition
+# period during which code is duplicated between the old repository and
+# the new repository.
+# Pylint looks for duplicate code inside files that are mentioned in the
+# same invocation. When we move some code from A to B, we want to skip
+# duplicate-code checks between A and B. So we arrange for two separate
+# runs of pylint: one for the A files, and one for the others.
+# Remove exceptions below once the A file (or the moved code in the A file)
+# has been removed from all consuming branches.
+find framework/scripts scripts tests/scripts -name '*.py' \( \
+     ! -path scripts/abi_check.py \
+     ! -path scripts/code_size_compare.py \
+     ! -path scripts/ecp_comb_table.py \
+     ! -path tests/scripts/audit-validity-dates.py \
+     ! -path tests/scripts/generate_server9_bad_saltlen.py \
+     ! -path tests/scripts/psa_collect_statuses.py \
+     ! -path tests/scripts/run_demos.py \
+     ! -path tests/scripts/test_config_script.py \
+     ! -path framework/scripts/make_generated_files.py \
+        -exec $PYTHON -m pylint {} + \
+     -o -exec $PYTHON -m pylint {} + \) || {
     echo >&2 "pylint reported errors"
     ret=1
 }
 
 echo
 echo 'Running mypy ...'
-$PYTHON -m mypy framework/scripts/*.py framework/scripts/mbedtls_framework/*.py scripts/*.py tests/scripts/*.py ||
-  ret=1
+$PYTHON -m mypy framework/scripts || {
+    echo >&2 "mypy reported errors in the framework"
+    ret=1
+}
+
+$PYTHON -m mypy scripts tests/scripts || {
+    echo >&2 "mypy reported errors in the parent repository"
+    ret=1
+}
 
 exit $ret

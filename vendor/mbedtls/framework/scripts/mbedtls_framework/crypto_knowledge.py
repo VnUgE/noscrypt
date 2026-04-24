@@ -128,6 +128,7 @@ class KeyType:
         return self.name.endswith('_PUBLIC_KEY')
 
     DH_KEY_SIZES = {
+        'PSA_DH_FAMILY_RFC3526': (1536, 2048, 3072, 4096, 6144, 8192),
         'PSA_DH_FAMILY_RFC7919': (2048, 3072, 4096, 6144, 8192),
     } # type: Dict[str, Tuple[int, ...]]
     ECC_KEY_SIZES = {
@@ -138,12 +139,15 @@ class KeyType:
         'PSA_ECC_FAMILY_SECT_R1': (163, 233, 283, 409, 571),
         'PSA_ECC_FAMILY_SECT_R2': (163,),
         'PSA_ECC_FAMILY_BRAINPOOL_P_R1': (160, 192, 224, 256, 320, 384, 512),
+        'PSA_ECC_FAMILY_FRP': (256,),
         'PSA_ECC_FAMILY_MONTGOMERY': (255, 448),
         'PSA_ECC_FAMILY_TWISTED_EDWARDS': (255, 448),
     } # type: Dict[str, Tuple[int, ...]]
     KEY_TYPE_SIZES = {
         'PSA_KEY_TYPE_AES': (128, 192, 256), # exhaustive
+        'PSA_KEY_TYPE_ARC4': (8, 128, 2048), # extremes + sensible
         'PSA_KEY_TYPE_ARIA': (128, 192, 256), # exhaustive
+        'PSA_KEY_TYPE_ASCON': (128, 256), # exhaustive
         'PSA_KEY_TYPE_CAMELLIA': (128, 192, 256), # exhaustive
         'PSA_KEY_TYPE_CHACHA20': (256,), # exhaustive
         'PSA_KEY_TYPE_DERIVE': (120, 128), # sample
@@ -154,6 +158,8 @@ class KeyType:
         'PSA_KEY_TYPE_PEPPER': (128, 256), # sample
         'PSA_KEY_TYPE_RAW_DATA': (8, 40, 128), # sample
         'PSA_KEY_TYPE_RSA_KEY_PAIR': (1024, 1536), # small sample
+        'PSA_KEY_TYPE_SM4': (128,), # exhaustive
+        'PSA_KEY_TYPE_XCHACHA20': (256,), # exhaustive
     } # type: Dict[str, Tuple[int, ...]]
     def sizes_to_test(self) -> Tuple[int, ...]:
         """Return a tuple of key sizes to test.
@@ -226,6 +232,8 @@ class KeyType:
             if alg.head in ['CMAC', 'OFB'] and \
                self.head in ['ARIA', 'CAMELLIA']:
                 return False # not implemented in Mbed TLS
+            if alg.head == 'XTS' and self.head != 'AES':
+                return False # not implemented in Mbed TLS
             return True
         if self.head == 'CHACHA20' and alg.head == 'CHACHA20_POLY1305':
             return True
@@ -264,7 +272,7 @@ class KeyType:
 class AlgorithmCategory(enum.Enum):
     """PSA algorithm categories."""
     # The numbers are aligned with the category bits in numerical values of
-    # algorithms.
+    # algorithms. The names match the `PSA_ALG_IS_xxx` macros.
     HASH = 2
     MAC = 3
     CIPHER = 4
@@ -274,17 +282,25 @@ class AlgorithmCategory(enum.Enum):
     KEY_DERIVATION = 8
     KEY_AGREEMENT = 9
     PAKE = 10
+    KEY_WRAP = 11
+    KEY_ENCAPSULATION = 12
+    XOF = 13
 
     def requires_key(self) -> bool:
         """Whether operations in this category are set up with a key."""
-        return self not in {self.HASH, self.KEY_DERIVATION}
+        return self not in {
+            self.HASH,
+            self.XOF,
+            self.KEY_DERIVATION, # key passed separately from setup
+        }
 
     def is_asymmetric(self) -> bool:
         """Whether operations in this category involve asymmetric keys."""
         return self in {
             self.SIGN,
             self.ASYMMETRIC_ENCRYPTION,
-            self.KEY_AGREEMENT
+            self.KEY_AGREEMENT,
+            self.KEY_ENCAPSULATION,
         }
 
 
@@ -335,32 +351,54 @@ class Algorithm:
         return head
 
     CATEGORY_FROM_HEAD = {
+        'AES_MMO_ZIGBEE': AlgorithmCategory.HASH,
+        'ASCON_HASH': AlgorithmCategory.HASH,
         'SHA': AlgorithmCategory.HASH,
         'SHAKE256_512': AlgorithmCategory.HASH,
         'MD': AlgorithmCategory.HASH,
         'RIPEMD': AlgorithmCategory.HASH,
+        'SM3': AlgorithmCategory.HASH,
         'ANY_HASH': AlgorithmCategory.HASH,
         'HMAC': AlgorithmCategory.MAC,
         'STREAM_CIPHER': AlgorithmCategory.CIPHER,
+        'ASCON_AEAD': AlgorithmCategory.AEAD,
         'CHACHA20_POLY1305': AlgorithmCategory.AEAD,
+        'XCHACHA20_POLY1305': AlgorithmCategory.AEAD,
         'DSA': AlgorithmCategory.SIGN,
         'ECDSA': AlgorithmCategory.SIGN,
         'EDDSA': AlgorithmCategory.SIGN,
+        'HASH_ML_DSA': AlgorithmCategory.SIGN,
+        'HASH_SLH_DSA': AlgorithmCategory.SIGN,
+        'HSS': AlgorithmCategory.SIGN,
+        'LMS': AlgorithmCategory.SIGN,
+        'ML_DSA': AlgorithmCategory.SIGN,
         'PURE_EDDSA': AlgorithmCategory.SIGN,
+        'SLH_DSA': AlgorithmCategory.SIGN,
         'RSA_PSS': AlgorithmCategory.SIGN,
         'RSA_PKCS1V15_SIGN': AlgorithmCategory.SIGN,
+        'XMMS': AlgorithmCategory.SIGN,
+        'XMMS_MT': AlgorithmCategory.SIGN,
         'RSA_PKCS1V15_CRYPT': AlgorithmCategory.ASYMMETRIC_ENCRYPTION,
         'RSA_OAEP': AlgorithmCategory.ASYMMETRIC_ENCRYPTION,
         'HKDF': AlgorithmCategory.KEY_DERIVATION,
         'TLS12_PRF': AlgorithmCategory.KEY_DERIVATION,
         'TLS12_PSK_TO_MS': AlgorithmCategory.KEY_DERIVATION,
         'TLS12_ECJPAKE_TO_PMS': AlgorithmCategory.KEY_DERIVATION,
+        'SP800_108': AlgorithmCategory.KEY_DERIVATION,
         'PBKDF': AlgorithmCategory.KEY_DERIVATION,
         'ECDH': AlgorithmCategory.KEY_AGREEMENT,
         'FFDH': AlgorithmCategory.KEY_AGREEMENT,
         # KEY_AGREEMENT(...) is a key derivation with a key agreement component
         'KEY_AGREEMENT': AlgorithmCategory.KEY_DERIVATION,
         'JPAKE': AlgorithmCategory.PAKE,
+        'SPAKE2P': AlgorithmCategory.PAKE,
+        'KW': AlgorithmCategory.KEY_WRAP,
+        'KWP': AlgorithmCategory.KEY_WRAP,
+        'ECIES_SEC1': AlgorithmCategory.KEY_ENCAPSULATION,
+        'ML_KEM': AlgorithmCategory.KEY_ENCAPSULATION,
+        'ASCON_CXOF': AlgorithmCategory.XOF,
+        'ASCON_XOF': AlgorithmCategory.XOF,
+        'SHAKE': AlgorithmCategory.XOF,
     }
     for x in BLOCK_MAC_MODES:
         CATEGORY_FROM_HEAD[x] = AlgorithmCategory.MAC
@@ -451,16 +489,20 @@ class Algorithm:
         """
         return short_expression(self.expression, level=level)
 
-    HASH_LENGTH = {
+    HASH_LENGTH_BYTES = {
+        'PSA_ALG_AES_MMO_ZIGBEE': 16,
+        'PSA_ALG_MD2': 16,
+        'PSA_ALG_MD4': 16,
         'PSA_ALG_MD5': 16,
         'PSA_ALG_SHA_1': 20,
+        'PSA_ALG_SM3': 32,
     }
     HASH_LENGTH_BITS_RE = re.compile(r'([0-9]+)\Z')
     @classmethod
     def hash_length(cls, alg: str) -> int:
         """The length of the given hash algorithm, in bytes."""
-        if alg in cls.HASH_LENGTH:
-            return cls.HASH_LENGTH[alg]
+        if alg in cls.HASH_LENGTH_BYTES:
+            return cls.HASH_LENGTH_BYTES[alg]
         m = cls.HASH_LENGTH_BITS_RE.search(alg)
         if m:
             return int(m.group(1)) // 8

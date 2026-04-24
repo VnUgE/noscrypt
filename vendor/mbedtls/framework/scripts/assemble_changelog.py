@@ -94,11 +94,6 @@ class ChangelogFormat:
         raise NotImplementedError
 
     @classmethod
-    def version_title_text(cls, version_title):
-        """Return the text of a formatted version section title."""
-        raise NotImplementedError
-
-    @classmethod
     def split_categories(cls, version_body):
         """Split a changelog version section body into categories.
 
@@ -140,10 +135,6 @@ class TextChangelogFormat(ChangelogFormat):
         return (changelog_file_content[:top_version_start],
                 top_version_title, top_version_body,
                 changelog_file_content[top_version_end:])
-
-    @classmethod
-    def version_title_text(cls, version_title):
-        return re.sub(r'\n.*', version_title, re.DOTALL)
 
     _category_title_re = re.compile(r'(^\w.*)\n+', re.MULTILINE)
     @classmethod

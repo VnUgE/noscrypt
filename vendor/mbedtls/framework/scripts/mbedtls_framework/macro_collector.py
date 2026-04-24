@@ -89,8 +89,8 @@ class PSAMacroEnumerator:
         self.key_usage_flags = set() #type: Set[str]
         self.hash_algorithms = set() #type: Set[str]
         self.mac_algorithms = set() #type: Set[str]
-        self.ka_algorithms = set() #type: Set[str]
-        self.kdf_algorithms = set() #type: Set[str]
+        self.key_agreement_algorithms = set() #type: Set[str]
+        self.key_derivation_algorithms = set() #type: Set[str]
         self.pake_algorithms = set() #type: Set[str]
         self.aead_algorithms = set() #type: Set[str]
         self.sign_algorithms = set() #type: Set[str]
@@ -108,6 +108,8 @@ class PSAMacroEnumerator:
         # type. See `is_internal_name`.
         # Always false in this class, may be set to true in derived classes.
         self.include_intermediate = False
+        # Deprecated backward compatibility alias for generate_psa_constants.py.
+        self.ka_algorithms = self.key_agreement_algorithms
 
     def is_internal_name(self, name: str) -> bool:
         """Whether this is an internal macro. Internal macros will be skipped."""
@@ -125,8 +127,8 @@ class PSAMacroEnumerator:
         """
         self.arguments_for['hash_alg'] = sorted(self.hash_algorithms)
         self.arguments_for['mac_alg'] = sorted(self.mac_algorithms)
-        self.arguments_for['ka_alg'] = sorted(self.ka_algorithms)
-        self.arguments_for['kdf_alg'] = sorted(self.kdf_algorithms)
+        self.arguments_for['ka_alg'] = sorted(self.key_agreement_algorithms)
+        self.arguments_for['kdf_alg'] = sorted(self.key_derivation_algorithms)
         self.arguments_for['aead_alg'] = sorted(self.aead_algorithms)
         self.arguments_for['sign_alg'] = sorted(self.sign_algorithms)
         self.arguments_for['curve'] = sorted(self.ecc_curves)
@@ -258,7 +260,7 @@ class PSAMacroCollector(PSAMacroEnumerator):
         if re.match(r'MAC(?:_|\Z)', name):
             self.mac_algorithms.add(name)
         elif re.match(r'KDF(?:_|\Z)', name):
-            self.kdf_algorithms.add(name)
+            self.key_derivation_algorithms.add(name)
         elif re.search(r'0x020000[0-9A-Fa-f]{2}', expansion):
             self.hash_algorithms.add(name)
         elif re.search(r'0x03[0-9A-Fa-f]{6}', expansion):
@@ -266,9 +268,9 @@ class PSAMacroCollector(PSAMacroEnumerator):
         elif re.search(r'0x05[0-9A-Fa-f]{6}', expansion):
             self.aead_algorithms.add(name)
         elif re.search(r'0x09[0-9A-Fa-f]{2}0000', expansion):
-            self.ka_algorithms.add(name)
+            self.key_agreement_algorithms.add(name)
         elif re.search(r'0x08[0-9A-Fa-f]{6}', expansion):
-            self.kdf_algorithms.add(name)
+            self.key_derivation_algorithms.add(name)
 
     # "#define" followed by a macro name with either no parameters
     # or a single parameter and a non-empty expansion.
@@ -279,12 +281,31 @@ class PSAMacroCollector(PSAMacroEnumerator):
                                       r'(.+)')
     _deprecated_definition_re = re.compile(r'\s*MBEDTLS_DEPRECATED')
 
+    # Macro that is a destructor, not a constructor (i.e. takes a thing as
+    # an argument and analyzes it, rather than constructing a thing).
+    _destructor_name_re = re.compile('|'.join([
+        r'.*(?:_GET_|_HAS_|_IS_)',
+        r'.*_LENGTH\Z',
+        r'PSA_ALG_SIGN_SUPPORTS_CONTEXT\Z',
+    ]))
+
+    # Macro that converts between things, rather than building a thing from
+    # scratch.
+    _conversion_macro_names = frozenset([
+        'PSA_KEY_TYPE_KEY_PAIR_OF_PUBLIC_KEY',
+        'PSA_KEY_TYPE_PUBLIC_KEY_OF_KEY_PAIR',
+        'PSA_ALG_FULL_LENGTH_MAC',
+        'PSA_ALG_AEAD_WITH_DEFAULT_LENGTH_TAG',
+        'PSA_JPAKE_EXPECTED_INPUTS',
+        'PSA_JPAKE_EXPECTED_OUTPUTS',
+    ])
+
     def read_line(self, line):
         """Parse a C header line and record the PSA identifier it defines if any.
         This function analyzes lines that start with "#define PSA_"
         (up to non-significant whitespace) and skips all non-matching lines.
         """
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches,too-many-return-statements
         m = re.match(self._define_directive_re, line)
         if not m:
             return
@@ -296,6 +317,12 @@ class PSAMacroCollector(PSAMacroEnumerator):
             # Skip deprecated values, which are assumed to be
             # backward compatibility aliases that share
             # numerical values with non-deprecated values.
+            return
+        if re.match(self._destructor_name_re, name):
+            # Not a constructor
+            return
+        if name in self._conversion_macro_names:
+            # Not a constructor
             return
         if self.is_internal_name(name):
             # Macro only to build actual values
@@ -324,9 +351,13 @@ class PSAMacroCollector(PSAMacroEnumerator):
             self.algorithms_from_hash[name] = self.algorithm_tester(name)
         elif name.startswith('PSA_KEY_USAGE_') and not parameter:
             self.key_usage_flags.add(name)
-        else:
-            # Other macro without parameter
+        elif parameter is None:
+            # Macro with no parameter, whose name does not start with one
+            # of the prefixes we look for. Just ignore it.
             return
+        else:
+            raise Exception("Unsupported macro and parameter name: {}({})"
+                            .format(name, parameter))
 
     _nonascii_re = re.compile(rb'[^\x00-\x7f]+')
     _continued_line_re = re.compile(rb'\\\r?\n\Z')
@@ -380,12 +411,15 @@ enumerate
             'cipher_algorithm': [],
             'hmac_algorithm': [self.mac_algorithms, self.sign_algorithms],
             'aead_algorithm': [self.aead_algorithms],
-            'key_derivation_algorithm': [self.kdf_algorithms],
-            'key_agreement_algorithm': [self.ka_algorithms],
+            'key_derivation_algorithm': [self.key_derivation_algorithms],
+            'key_agreement_algorithm': [self.key_agreement_algorithms],
             'asymmetric_signature_algorithm': [self.sign_algorithms],
             'asymmetric_signature_wildcard': [self.algorithms],
             'asymmetric_encryption_algorithm': [],
             'pake_algorithm': [self.pake_algorithms],
+            'key_wrap_algorithm': [],
+            'key_encapsulation_algorithm': [],
+            'xof_algorithm': [],
             'other_algorithm': [],
             'lifetime': [self.lifetimes],
         } #type: Dict[str, List[Set[str]]]
@@ -426,8 +460,8 @@ enumerate
         # not likely to be assigned in the near future.
         self.hash_algorithms.add('0x020000fe') # 0x020000ff is PSA_ALG_ANY_HASH
         self.mac_algorithms.add('0x03007fff')
-        self.ka_algorithms.add('0x09fc0000')
-        self.kdf_algorithms.add('0x080000ff')
+        self.key_agreement_algorithms.add('0x09fc0000')
+        self.key_derivation_algorithms.add('0x080000ff')
         self.pake_algorithms.add('0x0a0000ff')
         # For AEAD algorithms, the only variability is over the tag length,
         # and this only applies to known algorithms, so don't test an
@@ -451,7 +485,7 @@ enumerate
                    r'(PSA_((?:(?:DH|ECC|KEY)_)?[A-Z]+)_\w+)' +
                    r'(?:\(([^\n()]*)\))?')
     # Regex of macro names to exclude.
-    _excluded_name_re = re.compile(r'_(?:GET|IS|OF)_|_(?:BASE|FLAG|MASK)\Z')
+    _excluded_name_re = re.compile(r'_(?:GET|HAS|IS|OF)_|_(?:BASE|FLAG|MASK)\Z')
     # Additional excluded macros.
     _excluded_names = set([
         # Macros that provide an alternative way to build the same

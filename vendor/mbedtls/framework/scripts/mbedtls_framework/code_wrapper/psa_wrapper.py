@@ -4,10 +4,9 @@
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-import argparse
 import itertools
 import os
-from typing import Any, Iterator, List, Dict, Collection, Optional, Tuple
+from typing import Iterable, Iterator, List, Optional, Tuple
 
 from .. import build_tree
 from .. import c_parsing_helper
@@ -18,9 +17,14 @@ from .psa_buffer import BufferParameter
 
 class PSAWrapperConfiguration:
     """Configuration data class for PSA Wrapper."""
+    #pylint: disable=too-few-public-methods
 
     def __init__(self) -> None:
-        self.cpp_guards = ["MBEDTLS_PSA_CRYPTO_C", "MBEDTLS_TEST_HOOKS", "!RECORD_PSA_STATUS_COVERAGE_LOG"]
+        self.cpp_guards = [
+            "MBEDTLS_PSA_CRYPTO_C",
+            "MBEDTLS_TEST_HOOKS",
+            "!RECORD_PSA_STATUS_COVERAGE_LOG",
+        ]
 
         self.skipped_functions = frozenset([
             'mbedtls_psa_external_get_random', # not a library function
@@ -98,24 +102,18 @@ class PSAWrapper(c_wrapper_generator.Base):
             header_path = self.rel_path(header_name)
             c_parsing_helper.read_function_declarations(self.functions, header_path)
 
-    def rel_path(self, filename: str, path_list: List[str] = ['include', 'psa']) -> str:
+    def rel_path(self, filename: str, path_list: Optional[List[str]] = None) -> str:
         """Return the estimated path in relationship to the project_root.
 
            The method allows overriding the targetted sub-directory.
            Currently the default is set to project_root/include/psa."""
-        # Temporary, while Mbed TLS does not just rely on the TF-PSA-Crypto
-        # build system to build its crypto library. When it does, the first
-        # case can just be removed.
-        if build_tree.looks_like_mbedtls_root(self.project_root) and \
-           not build_tree.is_mbedtls_3_6():
-            path_list = ['tf-psa-crypto' ] + path_list
-            return os.path.join(self.project_root, *path_list, filename)
-
+        if path_list is None:
+            path_list = ['include', 'psa']
         return os.path.join(self.project_root, *path_list, filename)
 
     # Utility Methods
     @staticmethod
-    def parse_def_guards(def_list: Collection[str])-> str:
+    def parse_def_guards(def_list: Iterable[str])-> str:
         """ Create define guards.
 
             Convert an input list of into a C preprocessor
@@ -123,8 +121,8 @@ class PSAWrapper(c_wrapper_generator.Base):
 
         output = ""
         dl = [("defined({})".format(n) if n[0] != "!" else
-                "!defined({})".format(n[1:]))
-               for n in def_list]
+               "!defined({})".format(n[1:]))
+              for n in def_list]
 
         # Split the list in chunks of 2 and add new lines
         for i in range(0, len(dl), 2):
@@ -161,31 +159,34 @@ class PSAWrapper(c_wrapper_generator.Base):
 
         return True
 
-    def _poison_wrap(self, param : BufferParameter, poison: bool, ident_lv = 1) -> str:
+    @staticmethod
+    def _poison_wrap(param: BufferParameter, poison: bool,
+                     ident_lv: int = 1) -> str:
         """Returns a call to MBEDTLS_TEST_MEMORY_[UN]POISON.
 
            The output is prefixed with MBEDTLS_TEST_MEMORY_ followed by POISON/UNPOISON
            and the input parameter arguments (name, length)
         """
-        return "{}MBEDTLS_TEST_MEMORY_{}({}, {});\n".format((ident_lv * 4) * ' ',
-                                                            'POISON' if poison else 'UNPOISON',
-                                                             param.buffer_name, param.size_name)
+        return "{}MBEDTLS_TEST_MEMORY_{}({}, {});\n".format(
+            (ident_lv * 4) * ' ',
+            'POISON' if poison else 'UNPOISON',
+            param.buffer_name, param.size_name)
 
     def _poison_multi_write(self,
                             out: typing_util.Writable,
                             buffer_parameters: List['BufferParameter'],
                             poison: bool) -> None:
-            """Write poisoning or unpoisoning code for the buffer parameters.
+        """Write poisoning or unpoisoning code for the buffer parameters.
 
-               Write poisoning code if poison is true, unpoisoning code otherwise.
-            """
+           Write poisoning code if poison is true, unpoisoning code otherwise.
+        """
 
-            if not buffer_parameters:
-                return
-            out.write('#if !defined(MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS)\n')
-            for param in buffer_parameters:
-                out.write(self._poison_wrap(param, poison))
-            out.write('#endif /* !defined(MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS) */\n')
+        if not buffer_parameters:
+            return
+        out.write('#if !defined(MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS)\n')
+        for param in buffer_parameters:
+            out.write(self._poison_wrap(param, poison))
+        out.write('#endif /* !defined(MBEDTLS_PSA_ASSUME_EXCLUSIVE_BUFFERS) */\n')
 
     # Override parent's methods
     def _write_function_call(self, out: typing_util.Writable,
@@ -243,7 +244,7 @@ class PSAWrapper(c_wrapper_generator.Base):
 class PSALoggingWrapper(PSAWrapper, c_wrapper_generator.Logging):
     """Generate a C source file containing wrapper functions that log PSA Crypto API calls."""
 
-    def __init__(self,
+    def __init__(self, #pylint: disable=too-many-arguments
                  stream: str,
                  out_h_f: str,
                  out_c_f: str,
@@ -284,4 +285,3 @@ class PSALoggingWrapper(PSAWrapper, c_wrapper_generator.Logging):
                     ['(unsigned) psa_get_key_{}({})'.format(field, var)
                      for field in ['id', 'lifetime', 'type', 'bits', 'algorithm', 'usage_flags']])
         return super()._printf_parameters(typ, var)
-

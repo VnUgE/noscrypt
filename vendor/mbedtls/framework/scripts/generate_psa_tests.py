@@ -253,6 +253,9 @@ class OpFail:
         arguments = [] # type: List[str]
         if kt:
             bits = kt.sizes_to_test()[0]
+            if pretty_alg == "XTS" and kt.can_do(alg):
+                # XTS mode uses double-size keys for the underlying block cipher
+                bits = bits * 2
             tc.set_key_bits(bits)
             tc.set_key_pair_usage(['IMPORT'])
             key_material = kt.key_material(bits)
@@ -338,23 +341,31 @@ class OpFail:
     def test_cases_for_algorithm(
             self,
             alg: crypto_knowledge.Algorithm,
+            categories: Iterable[crypto_knowledge.AlgorithmCategory]
     ) -> Iterator[test_case.TestCase]:
         """Generate operation failure test cases for the specified algorithm."""
-        for category in crypto_knowledge.AlgorithmCategory:
-            if category == crypto_knowledge.AlgorithmCategory.PAKE:
-                # PAKE operations are not implemented yet
-                pass
-            elif category.requires_key():
+        for category in categories:
+            if category.requires_key():
                 yield from self.one_key_test_cases(alg, category)
             else:
                 yield from self.no_key_test_cases(alg, category)
 
     def all_test_cases(self) -> Iterator[test_case.TestCase]:
         """Generate all test cases for operations that must fail."""
-        algorithms = sorted(self.constructors.algorithms)
-        for expr in self.constructors.generate_expressions(algorithms):
-            alg = crypto_knowledge.Algorithm(expr)
-            yield from self.test_cases_for_algorithm(alg)
+        algorithm_constructors = sorted(self.constructors.algorithms)
+        algorithms = [crypto_knowledge.Algorithm(alg)
+                      for alg in self.constructors.generate_expressions(
+                          algorithm_constructors)]
+        supported_categories = set()
+        for alg in algorithms:
+            supported_categories.add(alg.category)
+        # We don't have a pake_fail test function yet.
+        # https://github.com/Mbed-TLS/mbedtls-framework/issues/263
+        supported_categories.remove(crypto_knowledge.AlgorithmCategory.PAKE)
+        categories = sorted(supported_categories, key=lambda cat: cat.value)
+        assert categories # sanity check: at least one category detected
+        for alg in algorithms:
+            yield from self.test_cases_for_algorithm(alg, categories)
 
 
 class StorageKey(psa_storage.Key):
@@ -561,19 +572,34 @@ class StorageFormat:
             key1.description += short
         return key1
 
+    USAGE_FLAGS_NOT_VALID_IN_POLICIES = frozenset([
+        # Only for psa_check_key_usage() (upcoming) and
+        # mbedtls_pk_can_do_psa() (since TF-PSA-Crypto 1.0),
+        # not allowed in key policies as of TF-PSA-Crypto 1.0.
+        # Note that this may become dependent on the TF-PSA-Crypto version
+        # in the future; if so this code will require some refactoring.
+        'PSA_KEY_USAGE_DERIVE_PUBLIC',
+    ])
+
+    def all_policy_flags(self) -> List[str]:
+        """Return the list of all usage flags that are valid in key policies."""
+        known_flags = frozenset(self.constructors.key_usage_flags)
+        policy_flags = known_flags - self.USAGE_FLAGS_NOT_VALID_IN_POLICIES
+        return sorted(policy_flags)
+
     def generate_keys_for_usage_flags(self, **kwargs) -> Iterator[StorageTestData]:
         """Generate test keys covering usage flags."""
-        known_flags = sorted(self.constructors.key_usage_flags)
+        policy_flags = self.all_policy_flags()
         yield self.key_for_usage_flags(['0'], **kwargs)
-        for usage_flag in known_flags:
+        for usage_flag in policy_flags:
             yield self.key_for_usage_flags([usage_flag], **kwargs)
-        for flag1, flag2 in zip(known_flags,
-                                known_flags[1:] + [known_flags[0]]):
+        for flag1, flag2 in zip(policy_flags,
+                                policy_flags[1:] + [policy_flags[0]]):
             yield self.key_for_usage_flags([flag1, flag2], **kwargs)
 
     def generate_key_for_all_usage_flags(self) -> Iterator[StorageTestData]:
-        known_flags = sorted(self.constructors.key_usage_flags)
-        yield self.key_for_usage_flags(known_flags, short='all known')
+        policy_flags = self.all_policy_flags()
+        yield self.key_for_usage_flags(policy_flags, short='all valid')
 
     def all_keys_for_usage_flags(self) -> Iterator[StorageTestData]:
         yield from self.generate_keys_for_usage_flags()
@@ -623,6 +649,13 @@ class StorageFormat:
             compatible_algorithms = [alg for alg in all_algorithms
                                      if kt.can_do(alg)]
             for alg in compatible_algorithms:
+                if alg.expression == 'PSA_ALG_XTS':
+                    # XTS mode uses double-size keys for the underlying block cipher
+                    # XTS does not use 192-bit keys
+                    if bits != 192:
+                        bits = bits * 2
+                    else:
+                        continue
                 yield self.key_for_type_and_alg(kt, bits, alg)
 
     def all_keys_for_types(self) -> Iterator[StorageTestData]:

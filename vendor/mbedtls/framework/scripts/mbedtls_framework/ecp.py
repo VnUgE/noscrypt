@@ -7,6 +7,7 @@ from typing import List
 
 from . import test_data_generation
 from . import bignum_common
+from . import build_tree
 
 
 class EcpTarget(test_data_generation.BaseTarget):
@@ -85,7 +86,9 @@ class EcpP192R1Raw(bignum_common.ModOperationCommon,
 
     @property
     def is_valid(self) -> bool:
-        return True
+        # secp192r1 support has been removed from development, but it's stil
+        # available in 3.6 branch.
+        return build_tree.is_mbedtls_3_6()
 
     def arguments(self)-> List[str]:
         args = super().arguments()
@@ -164,7 +167,9 @@ class EcpP224R1Raw(bignum_common.ModOperationCommon,
 
     @property
     def is_valid(self) -> bool:
-        return True
+        # secp224r1 support has been removed from development, but it's stil
+        # available in 3.6 branch.
+        return build_tree.is_mbedtls_3_6()
 
     def arguments(self)-> List[str]:
         args = super().arguments()
@@ -550,7 +555,9 @@ class EcpP192K1Raw(bignum_common.ModOperationCommon,
 
     @property
     def is_valid(self) -> bool:
-        return True
+        # secp192k1 support has been removed from development, but it's stil
+        # available in 3.6 branch.
+        return build_tree.is_mbedtls_3_6()
 
     def arguments(self):
         args = super().arguments()
@@ -624,7 +631,9 @@ class EcpP224K1Raw(bignum_common.ModOperationCommon,
 
     @property
     def is_valid(self) -> bool:
-        return True
+        # secp224k1 support has been removed from development, but it's stil
+        # available in 3.6 branch.
+        return build_tree.is_mbedtls_3_6()
 
     def arguments(self):
         args = super().arguments()

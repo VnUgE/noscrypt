@@ -56,7 +56,7 @@ typedef enum {
     MBEDTLS_MD_SHA3_224=0x10,  /**< The SHA3-224 message digest. */
     MBEDTLS_MD_SHA3_256=0x11,  /**< The SHA3-256 message digest. */
     MBEDTLS_MD_SHA3_384=0x12,  /**< The SHA3-384 message digest. */
-    MBEDTLS_MD_SHA3_512=0x13  /**< The SHA3-512 message digest. */
+    MBEDTLS_MD_SHA3_512=0x13,  /**< The SHA3-512 message digest. */
 } mbedtls_md_type_t;
 
 /* Note: this should always be >= PSA_HASH_MAX_SIZE

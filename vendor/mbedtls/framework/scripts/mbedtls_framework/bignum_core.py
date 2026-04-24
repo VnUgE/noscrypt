@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 #
 
+import math
 import random
 
 from typing import Dict, Iterator, List, Tuple
@@ -10,7 +11,7 @@ from typing import Dict, Iterator, List, Tuple
 from . import test_case
 from . import test_data_generation
 from . import bignum_common
-from .bignum_data import ADD_SUB_DATA
+from . import bignum_data
 
 class BignumCoreTarget(test_data_generation.BaseTarget):
     #pylint: disable=abstract-method, too-few-public-methods
@@ -166,7 +167,7 @@ class BignumCoreAddAndAddIf(BignumCoreTarget, bignum_common.OperationCommon):
     test_function = "mpi_core_add_and_add_if"
     test_name = "mpi_core_add_and_add_if"
     input_style = "arch_split"
-    input_values = ADD_SUB_DATA
+    input_values = bignum_data.ADD_SUB_DATA
     unique_combinations_only = True
 
     def result(self) -> List[str]:
@@ -187,7 +188,7 @@ class BignumCoreSub(BignumCoreTarget, bignum_common.OperationCommon):
     symbol = "-"
     test_function = "mpi_core_sub"
     test_name = "mbedtls_mpi_core_sub"
-    input_values = ADD_SUB_DATA
+    input_values = bignum_data.ADD_SUB_DATA
 
     def result(self) -> List[str]:
         if self.int_a >= self.int_b:
@@ -894,3 +895,78 @@ class BignumCoreZeroCheckCT(BignumCoreTarget, bignum_common.OperationCommon):
     def result(self) -> List[str]:
         result = 1 if self.int_a == 0 else 0
         return [str(result)]
+
+class BignumCoreGcdModinvOdd(BignumCoreTarget, test_data_generation.BaseTest):
+    """Test cases for bignum core GCD+modinv (odd modulus)"""
+
+    test_function = "mpi_core_gcd_modinv_odd"
+    test_name = "mpi_core_gcd_modinv_odd"
+
+    # - All small integers because that naturally covers a lot of cases.
+    # - (Close to) powers of 2 because that looks like interesting values.
+    #   Also covers the cases where N, N+1 or N-1 is a multiple of A (with
+    #   multiple limbs).
+    # - X * 2, X * 3 is so that we get GCD(X*2, X*3) = X where the GCD has a
+    #   the same order of magnitude as the inputs.
+    # - Random values of cryptographic size for good measure.
+    DATA = (
+        ("0", 0),
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("2^64 - 1", 2**64 - 1),
+        ("2^64", 2**64),
+        ("2^64 + 1", 2**64 + 1),
+        ("2^128 - 1", 2**128 - 1),
+        ("2^128", 2**128),
+        ("2^128 + 1", 2**128 + 1),
+        ("prime192[1]", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16)),
+        ("prime192[1] * 2", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16) * 2),
+        ("prime192[1] * 3", int(bignum_data.SAFE_PRIME_192_BIT_SEED_1, 16) * 3),
+        ("rand192[2.1]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO1, 16)),
+        ("rand192[2.2]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO2, 16)),
+        ("rand192[2.3]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO3, 16)),
+        ("rand192[2.4]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO4, 16)),
+        ("rand192[2.9]", int(bignum_data.RANDOM_192_BIT_SEED_2_NO9, 16)),
+        ("prime1024[3]", int(bignum_data.SAFE_PRIME_1024_BIT_SEED_3, 16)),
+        ("rand1024[4.1]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO1, 16)),
+        ("rand1024[4.2]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO2, 16)),
+        ("rand1024[4.3]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO3, 16)),
+        ("rand1024[4.4]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO4, 16)),
+        ("rand1024[4.5]", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16)),
+        ("rand1024[4.5] * 2", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16) * 2),
+        ("rand1024[4.5] * 3", int(bignum_data.RANDOM_1024_BIT_SEED_4_NO5, 16) * 3),
+    )
+
+    def __init__(self, a: int, a_desc: str, n: int, n_desc: str) -> None:
+        self.a_val = a
+        self.a_desc = a_desc
+        self.n_val = n
+        self.n_desc = n_desc
+        self.g_val = math.gcd(a, n)
+        test_i = self.g_val == 1 and self.n_val != 1
+        self.i_val = bignum_common.invmod_positive(a, n) if test_i else None
+
+    def arguments(self) -> List[str]:
+        a_str = f"{self.a_val:x}"
+        n_str = f"{self.n_val:x}"
+        g_str = f"{self.g_val:x}"
+        i_str = f"{self.i_val:x}" if self.i_val is not None else ""
+        return [bignum_common.quote_str(s) for s in (a_str, n_str, g_str, i_str)]
+
+    def description(self) -> str:
+        return f"GCD-modinv, A = {self.a_desc}, N = {self.n_desc}"
+
+    @classmethod
+    def generate_function_tests(cls) -> Iterator[test_case.TestCase]:
+        for n_desc, n in cls.DATA:
+            if n % 2 == 0:
+                continue
+            for a_desc, a in cls.DATA:
+                if a > n:
+                    continue
+                yield cls(a, a_desc, n, n_desc).create_test_case()

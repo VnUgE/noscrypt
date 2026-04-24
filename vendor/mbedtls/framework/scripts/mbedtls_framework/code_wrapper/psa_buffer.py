@@ -4,9 +4,6 @@
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-from typing import List
-from .. import typing_util
-
 class BufferParameter:
     """Description of an input or output buffer parameter sequence to a PSA function."""
     #pylint: disable=too-few-public-methods
@@ -26,4 +23,3 @@ class BufferParameter:
         self.buffer_name = buffer_name
         self.size_name = size_name
         self.is_output = is_output
-

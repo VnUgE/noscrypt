@@ -10,12 +10,13 @@ from typing import Iterator, List, Tuple
 import re
 import argparse
 from mbedtls_framework.asymmetric_key_data import ASYMMETRIC_KEY_DATA
-from mbedtls_framework.build_tree import guess_project_root
+from mbedtls_framework import build_tree
 
 BYTES_PER_LINE = 16
 
 def c_byte_array_literal_content(array_name: str, key_data: bytes) -> Iterator[str]:
-    yield 'const unsigned char '
+    """Return C code that defines array_name as a byte array with the given content."""
+    yield 'static const unsigned char '
     yield array_name
     yield '[] = {'
     for index in range(0, len(key_data), BYTES_PER_LINE):
@@ -27,16 +28,23 @@ def c_byte_array_literal_content(array_name: str, key_data: bytes) -> Iterator[s
 def convert_der_to_c(array_name: str, key_data: bytes) -> str:
     return ''.join(c_byte_array_literal_content(array_name, key_data))
 
-def get_key_type(key: str) -> str:
-    if re.match('PSA_KEY_TYPE_RSA_.*', key):
-        return "rsa"
-    elif re.match('PSA_KEY_TYPE_ECC_.*', key):
+def get_key_type(key_type: str) -> str:
+    """Short name for a PSA key type."""
+    if key_type.startswith('PSA_KEY_TYPE_ECC_'):
         return "ec"
+    elif key_type.startswith('PSA_KEY_TYPE_ML_DSA_'):
+        return "mldsa"
+    elif key_type.startswith('PSA_KEY_TYPE_ML_KEM_'):
+        return "mlkem"
+    elif key_type.startswith('PSA_KEY_TYPE_RSA_'):
+        return "rsa"
+    elif key_type.startswith('PSA_KEY_TYPE_SLH_DSA_'):
+        return "slhdsa"
     else:
-        print("Unhandled key type {}".format(key))
-        return "unknown"
+        raise Exception(f"Unhandled key type {key_type}")
 
 def get_ec_key_family(key: str) -> str:
+    """Extract "PSA_ECC_xxx" from "PSA_KEY_TYPE_ECC_ttt(PSA_ECC_xxx)"."""
     match = re.search(r'.*\((.*)\)', key)
     if match is None:
         raise Exception("Unable to get EC family from {}".format(key))
@@ -49,7 +57,6 @@ def get_ec_key_family(key: str) -> str:
 EC_NAME_CONVERSION = {
     'PSA_ECC_FAMILY_SECP_K1': {
         192: ('secp', 'k1'),
-        224: ('secp', 'k1'),
         256: ('secp', 'k1')
     },
     'PSA_ECC_FAMILY_SECP_R1': {
@@ -71,6 +78,7 @@ EC_NAME_CONVERSION = {
 }
 
 def get_ec_curve_name(priv_key: str, bits: int) -> str:
+    """Short name for an elliptic curve key type."""
     ec_family = get_ec_key_family(priv_key)
     try:
         prefix = EC_NAME_CONVERSION[ec_family][bits][0]
@@ -79,8 +87,15 @@ def get_ec_curve_name(priv_key: str, bits: int) -> str:
         return ""
     return prefix + str(bits) + suffix
 
+def get_slh_dsa_family(key_type: str) -> str:
+    """Short name from an SLH-DSA family."""
+    m = re.search(r'PSA_SLH_FAMILY_(\w+)', key_type)
+    assert m
+    return m.group(1).replace('_', '').lower()
+
 def get_look_up_table_entry(key_type: str, group_id_or_keybits: str,
                             priv_array_name: str, pub_array_name: str) -> Iterator[str]:
+    """Yield C code lines for the definition of a key pair and its matching public key."""
     if key_type == "ec":
         yield "    {{ {}, 0,\n".format(group_id_or_keybits)
     else:
@@ -90,12 +105,25 @@ def get_look_up_table_entry(key_type: str, group_id_or_keybits: str,
 
 
 def write_output_file(output_file_name: str, arrays: str, look_up_table: str):
+    """Write generated content to the output file"""
     with open(output_file_name, 'wt') as output:
         output.write("""\
 /*********************************************************************************
  * This file was automatically generated from framework/scripts/generate_test_keys.py.
  * Please do not edit it manually.
  *********************************************************************************/
+
+#ifndef TEST_TEST_KEYS_H
+#define TEST_TEST_KEYS_H
+
+#if TF_PSA_CRYPTO_VERSION_MAJOR >= 1
+#include <tf_psa_crypto_common.h>
+#include <mbedtls/private/ecp.h>
+#else
+#include <common.h>
+#include <mbedtls/ecp.h>
+#endif
+
 """)
         output.write(arrays)
         output.write("""
@@ -108,9 +136,11 @@ struct predefined_key_element {{
     size_t pub_key_len;
 }};
 
-struct predefined_key_element predefined_keys[] = {{
+MBEDTLS_MAYBE_UNUSED static struct predefined_key_element predefined_keys[] = {{
 {}
 }};
+
+#endif /* TEST_TEST_KEYS_H */
 
 /* End of generated file */
 """.format(look_up_table))
@@ -133,10 +163,6 @@ def collect_keys() -> Tuple[str, str]:
 
     for priv_key in priv_keys:
         key_type = get_key_type(priv_key)
-        # Ignore keys which are not EC or RSA
-        if key_type == "unknown":
-            continue
-
         pub_key = re.sub('_KEY_PAIR', '_PUBLIC_KEY', priv_key)
 
         for bits in ASYMMETRIC_KEY_DATA[priv_key]:
@@ -146,10 +172,13 @@ def collect_keys() -> Tuple[str, str]:
                 if curve == "":
                     continue
             # Create output array name
-            if key_type == "rsa":
-                array_name_base = "_".join(["test", key_type, str(bits)])
-            else:
+            if key_type == "ec":
                 array_name_base = "_".join(["test", key_type, curve])
+            elif key_type == "slhdsa":
+                family = get_slh_dsa_family(priv_key)
+                array_name_base = "_".join(["test", key_type, family, str(bits)])
+            else:
+                array_name_base = "_".join(["test", key_type, str(bits)])
             array_name_priv = array_name_base + "_priv"
             array_name_pub = array_name_base + "_pub"
             # Convert bytearray to C array
@@ -168,13 +197,21 @@ def collect_keys() -> Tuple[str, str]:
     return ''.join(arrays), '\n'.join(look_up_table)
 
 def main() -> None:
-    default_output_path = guess_project_root() + "/tests/include/test/test_keys.h"
+    """Command line entry point."""
+    default_output_path = build_tree.guess_project_root() + "/tests/include/test/test_keys.h"
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--output", help="Output file", default=default_output_path)
     args = argparser.parse_args()
 
     output_file = args.output
+
+    # Support for 224 bit EC curves (secp224r1 and secp224k1) was removed from
+    # tf-psa-crypto. It only remains available for 3.6 LTS branch.
+    if not build_tree.is_mbedtls_3_6():
+        del EC_NAME_CONVERSION['PSA_ECC_FAMILY_SECP_R1'][224]
+        del EC_NAME_CONVERSION['PSA_ECC_FAMILY_SECP_R1'][192]
+        del EC_NAME_CONVERSION['PSA_ECC_FAMILY_SECP_K1'][192]
 
     arrays, look_up_table = collect_keys()
 

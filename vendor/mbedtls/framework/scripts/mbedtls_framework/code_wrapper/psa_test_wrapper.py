@@ -4,18 +4,9 @@
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-import argparse
-import itertools
-import os
-from typing import Iterator, List, Collection, Optional, Tuple
+from typing import List, Optional
 
-from .. import build_tree
-from .. import c_parsing_helper
-from .. import c_wrapper_generator
-from .. import typing_util
-
-from .psa_buffer import BufferParameter
-from .psa_wrapper import PSAWrapper, PSALoggingWrapper, PSAWrapperConfiguration
+from .psa_wrapper import PSAWrapper, PSALoggingWrapper
 
 class PSATestWrapper(PSAWrapper):
     """Generate a C source file containing wrapper functions for PSA Crypto API calls."""
@@ -31,9 +22,6 @@ class PSATestWrapper(PSAWrapper):
 class PSALoggingTestWrapper(PSATestWrapper, PSALoggingWrapper):
     """Generate a C source file containing wrapper functions that log PSA Crypto API calls."""
 
-    def __init__(self, out_h_f: str,
-                       out_c_f: str,
-                       stream: str,
-                       in_headers: Optional[List[str]] = None) -> None:
+    def __init__(self, out_h_f: str, out_c_f: str, stream: str,
+                 in_headers: Optional[List[str]] = None) -> None:
         super().__init__(out_h_f, out_c_f, stream, in_headers)
-

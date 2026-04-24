@@ -11,6 +11,7 @@ These are used both by generate_psa_tests.py and generate_bignum_tests.py.
 #
 
 import argparse
+import io
 import os
 import posixpath
 import re
@@ -139,6 +140,11 @@ class BaseTarget:
 
 class TestGenerator:
     """Generate test cases and write to data files."""
+
+    # Note that targets whose names contain 'test_format' have their content
+    # validated by `abi_check.py`.
+    targets = {} # type: Dict[str, Callable[..., Iterable[test_case.TestCase]]]
+
     def __init__(self, options) -> None:
         self.test_suite_directory = options.directory
         # Update `targets` with an entry for each child class of BaseTarget.
@@ -163,10 +169,6 @@ class TestGenerator:
         filename = self.filename_for(basename)
         test_case.write_data_file(filename, test_cases)
 
-    # Note that targets whose names contain 'test_format' have their content
-    # validated by `abi_check.py`.
-    targets = {} # type: Dict[str, Callable[..., Iterable[test_case.TestCase]]]
-
     def generate_target(self, name: str, *target_args) -> None:
         """Generate cases and write to data file for a target.
 
@@ -176,6 +178,22 @@ class TestGenerator:
         test_cases = self.targets[name](*target_args)
         self.write_test_data_file(name, test_cases)
 
+    def is_up_to_date(self, target) -> bool:
+        """Check if the given target already has the expected content."""
+        filename = self.filename_for(target)
+        if not os.path.exists(filename):
+            return False
+        test_cases = self.targets[target]()
+        out = io.StringIO()
+        test_case.write_data_stream(out, test_cases)
+        out.seek(0)
+        new_content = out.read()
+        out.close()
+        with open(filename) as current_file:
+            old_content = current_file.read()
+        return new_content == old_content
+
+
 def main(args, description: str, generator_class: Type[TestGenerator] = TestGenerator):
     """Command line entry point."""
     parser = argparse.ArgumentParser(description=description)
@@ -183,6 +201,9 @@ def main(args, description: str, generator_class: Type[TestGenerator] = TestGene
                         help='List available targets and exit')
     parser.add_argument('--list-for-cmake', action='store_true',
                         help='Print \';\'-separated list of available targets and exit')
+    parser.add_argument('--list-outdated', action='store_true',
+                        help=('List outdated targets and exit '
+                              '(succeeds even if there are outdated or missing targets)'))
     # If specified explicitly, this option may be a path relative to the
     # current directory when the script is invoked. The default value
     # is relative to the mbedtls root, which we don't know yet. So we
@@ -221,4 +242,8 @@ def main(args, description: str, generator_class: Type[TestGenerator] = TestGene
     else:
         options.targets = sorted(generator.targets)
     for target in options.targets:
-        generator.generate_target(target)
+        if options.list_outdated:
+            if not generator.is_up_to_date(target):
+                print(generator.filename_for(target))
+        else:
+            generator.generate_target(target)

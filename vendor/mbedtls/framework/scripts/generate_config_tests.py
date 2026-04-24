@@ -68,6 +68,13 @@ SIMPLE_DEPENDENCIES = {
 if build_tree.is_mbedtls_3_6():
     SIMPLE_DEPENDENCIES['MBEDTLS_NO_PLATFORM_ENTROPY'] = 'MBEDTLS_ENTROPY_C'
 
+BUILTIN_MODULE_ENABLEMENT_MACROS = [
+    'MBEDTLS_AES_C', 'MBEDTLS_CAMELLIA_C', 'MBEDTLS_GCM_C',
+    'MBEDTLS_ECP_C',
+    'MBEDTLS_RSA_C',
+    'MBEDTLS_SHA256_C', 'MBEDTLS_SHA512_C',
+]
+
 def dependencies_of_setting(cfg: config_common.Config,
                             setting: config_common.Setting) -> Optional[str]:
     """Return dependencies without which a setting is not meaningful.
@@ -109,9 +116,21 @@ def dependencies_of_setting(cfg: config_common.Config,
             return 'MBEDTLS_SSL_CLI_C:MBEDTLS_SSL_SRV_C:MBEDTLS_SSL_PROTO_DTLS'
         if name.startswith('MBEDTLS_SSL_'):
             return 'MBEDTLS_SSL_CLI_C:MBEDTLS_SSL_SRV_C'
+        if name == 'MBEDTLS_ECDH_VARIANT_EVEREST_ENABLED' and \
+           not build_tree.is_mbedtls_3_6():
+            # In 1.x the module ecdh.c is removed. This option remains, with its
+            # historical name for compatibility. It is still only relevant when
+            # the built-in implementation of ECDH is enabled, but this condition
+            # is no longer expressed as MBEDTLS_ECDH_C.
+            return 'MBEDTLS_PSA_BUILTIN_ALG_ECDH'
         for pos in re.finditer(r'_', name):
             super_name = name[:pos.start()] + '_C'
             if cfg.known(super_name):
+                return super_name
+            # If super_name refers to a macro that still enables a
+            # cryptographic module, but is no longer exposed as a configuration
+            # option in 4.0/1.0, return it as a dependency.
+            if super_name in BUILTIN_MODULE_ENABLEMENT_MACROS:
                 return super_name
     if name.startswith('PSA_WANT_'):
         deps = 'MBEDTLS_PSA_CRYPTO_CLIENT'

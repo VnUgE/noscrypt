@@ -47,10 +47,15 @@ def find_dependencies_not_implemented(dependencies: List[str]) -> List[str]:
 
         acc = set() #type: Set[str]
         for filename in [
-                os.path.join(include_dir, 'psa/crypto_config.h'),
-                os.path.join(include_dir, 'psa/crypto_adjust_config_synonyms.h'),
+                'psa/crypto_config.h',
+                'psa/crypto_adjust_config_synonyms.h',
+                'tf-psa-crypto/private/crypto_adjust_config_synonyms.h',
         ]:
-            read_implemented_dependencies(acc, filename)
+            path = os.path.join(build_tree.guess_project_root(),
+                                include_dir,
+                                filename)
+            if os.path.exists(path):
+                read_implemented_dependencies(acc, path)
         _implemented_dependencies = frozenset(acc)
     return [dep
             for dep in dependencies

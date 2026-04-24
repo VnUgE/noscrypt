@@ -16,8 +16,7 @@ class CompileError(Exception):
 
     def __init__(self, message):
         """Save the error massage"""
-
-        super().__init__()
+        super().__init__(message)
         self.message = message
 
 def remove_file_if_exists(filename):

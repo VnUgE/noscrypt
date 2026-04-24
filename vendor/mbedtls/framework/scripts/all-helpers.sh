@@ -122,7 +122,7 @@ helper_libtestdriver1_make_main() {
     # we need flags both with and without the LIBTESTDRIVER1_ prefix
     loc_accel_flags=$( echo "$loc_accel_list" | sed 's/[^ ]* */-DLIBTESTDRIVER1_MBEDTLS_PSA_ACCEL_&/g' )
     loc_accel_flags="$loc_accel_flags $( echo "$loc_accel_list" | sed 's/[^ ]* */-DMBEDTLS_PSA_ACCEL_&/g' )"
-    make CC=$ASAN_CC CFLAGS="$ASAN_CFLAGS -I../tests/include -I../framework/tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" "$@"
+    $MAKE_COMMAND CC=$ASAN_CC CFLAGS="$ASAN_CFLAGS -I../tests/include -I../framework/tests/include -I../tests -I../../tests -DPSA_CRYPTO_DRIVER_TEST -DMBEDTLS_TEST_LIBTESTDRIVER1 $loc_accel_flags" LDFLAGS="-ltestdriver1 $ASAN_CFLAGS" "$@"
 }
 
 ################################################################
@@ -139,6 +139,8 @@ helper_psasim_config() {
         scripts/config.py full
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_C
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_STORAGE_C
+        scripts/config.py unset MBEDTLS_ENTROPY_NV_SEED
+        scripts/config.py unset MBEDTLS_PLATFORM_NV_SEED_ALT
         if in_mbedtls_repo && in_3_6_branch; then
             # Dynamic secure element support is a deprecated feature and it is not
             # available when CRYPTO_C and PSA_CRYPTO_STORAGE_C are disabled.
@@ -147,9 +149,13 @@ helper_psasim_config() {
         # Disable potentially problematic features
         scripts/config.py unset MBEDTLS_X509_RSASSA_PSS_SUPPORT
         scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
-        scripts/config.py unset MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
         scripts/config.py unset MBEDTLS_ECP_RESTARTABLE
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER
+        scripts/config.py unset MBEDTLS_PK_PARSE_EC_EXTENDED
+        scripts/config.py unset MBEDTLS_PK_PARSE_EC_COMPRESSED
+
+        scripts/config.py unset-all MBEDTLS_SHA256_USE_.*_CRYPTO_
+        scripts/config.py unset-all MBEDTLS_SHA512_USE_.*_CRYPTO_
     else
         scripts/config.py crypto_full
         scripts/config.py unset MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS
@@ -259,9 +265,9 @@ helper_armc6_build_test()
 
     msg "build: ARM Compiler 6 ($FLAGS)"
 
-    make clean
+    $MAKE_COMMAND clean
     ARM_TOOL_VARIANT="ult" CC="$ARMC6_CC" AR="$ARMC6_AR" CFLAGS="$FLAGS" \
-                        WARNING_CFLAGS='-Werror -xc -std=c99' make lib
+                        WARNING_CFLAGS='-Werror -xc -std=c99' $MAKE_COMMAND lib
 
     msg "size: ARM Compiler 6 ($FLAGS)"
     "$ARMC6_FROMELF" -z library/*.o

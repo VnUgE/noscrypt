@@ -175,6 +175,7 @@ def main():
                                                       'tf-psa-crypto/drivers/everest/include',
                                                       'tf-psa-crypto/drivers/everest/include/' +
                                                       'tf-psa-crypto/private',
+                                                      'tf-psa-crypto/drivers/pqcp/include',
                                                       'include'],
                             help='Directory for header files')
     parser.add_argument('--keep-c',
