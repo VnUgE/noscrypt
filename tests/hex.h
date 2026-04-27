@@ -18,6 +18,9 @@
 * along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
+/*
+* The helper utility functions in this header are implemented in test-base.c
+*/
 
 #ifndef HEX_HELPERS_H
 #define HEX_HELPERS_H
