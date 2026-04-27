@@ -91,7 +91,7 @@ struct HexBytes {
 };
 
 /* Deferred list of span_t to be freed on exit */
-static struct HexBytes* _hexBytesHead;
+static struct HexBytes* _hexBytesHead = NULL;
 
 static struct HexBytes* __allocHexBytes(size_t length)
 {
