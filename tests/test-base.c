@@ -41,7 +41,7 @@ int main(void)
 {
     uint8_t ctxRandom[32];
 
-    PRINTL("Begining test routines");
+    PRINTL("Beginning test routines");
 
     FillRandomData(ctxRandom, 32);
 
@@ -84,92 +84,113 @@ void FillRandomData(void* pbBuffer, size_t length)
 #endif
 }
 
+struct HexBytes {
+    struct HexBytes* next;
+    uint8_t* data;
+    size_t size;
+};
+
 /* Deferred list of span_t to be freed on exit */
-static span_t _hdeferList[32];
-static size_t _hdeferListIndex = 0;
+static struct HexBytes* _hexBytesHead = NULL;
 
-span_t __allocHexBytes(size_t length)
+static struct HexBytes* __allocHexBytes(size_t length)
 {
-	span_t hexBytes;
+    struct HexBytes* ptr;
 
-	length /= 2;
-
-	hexBytes.data = (uint8_t*)malloc(length);
-
-	if (!hexBytes.data)
-	{
-		spanInit(&hexBytes, NULL, 0);
-		return hexBytes;
+    /* defend against invalid length */
+    if (length == 0 || length % 2 != 0)
+    {
+        return NULL;
 	}
 
-	hexBytes.size = (uint32_t)length;
-	/* add new value to deferred cleanup list */
-	_hdeferList[_hdeferListIndex++] = hexBytes;
-	return hexBytes;
+    length /= 2;
+
+    ptr = (struct HexBytes*)malloc(sizeof(struct HexBytes) + length);
+
+    if (!ptr)
+    {
+        return NULL;
+    }
+
+    /* set data to point at the memory immediately following the HexBytes structure */
+    ptr->data = (uint8_t*)(ptr + 1);
+    ptr->size = length;
+
+    return ptr;
 }
 
 span_t _fromHexString(const char* hexLiteral, uint32_t strLen)
 {
-	span_t hexBytes;
-	size_t i;
+    size_t i;
+    span_t result;
+    struct HexBytes* hexBytes;
 
-	if (!hexLiteral)
-	{
-		spanInit(&hexBytes, NULL, 0);
-		return hexBytes;
-	}
+    spanInit(&result, NULL, 0);
 
-	/* alloc the raw bytes */
-	hexBytes = __allocHexBytes(strLen);
+    if (!hexLiteral)
+    {		
+		return result;
+    }
 
-	if (spanIsNull(hexBytes))
-	{
-		return hexBytes;
-	}
+    /* alloc the raw bytes */
+    hexBytes = __allocHexBytes(strLen);
+    if (!hexBytes)
+    {
+		return result;
+    }
+    
+    /* add to the defer linked list */
+    hexBytes->next = _hexBytesHead;
+    _hexBytesHead = hexBytes;
 
-	/* read every 2 chars into  */
-	for (i = 0; i < strLen; i += 2)
-	{
-		/* slice string into smaller 2 char strings then parse */
-		char byteString[3] = { '\0' };
+    /* read every 2 chars into  */
+    for (i = 0; i < strLen; i += 2)
+    {
+        /* slice string into smaller 2 char strings then parse */
+        char byteString[3] = { '\0' };
 
-		byteString[0] = hexLiteral[i];
-		byteString[1] = hexLiteral[i + 1];
+        byteString[0] = hexLiteral[i];
+        byteString[1] = hexLiteral[i + 1];
 
-		hexBytes.data[i / 2] = (uint8_t)strtol(byteString, NULL, 16);
-	}
+        hexBytes->data[i / 2] = (uint8_t)strtol(byteString, NULL, 16);
+    }
 
-	return hexBytes;
+    spanInit(&result, hexBytes->data, (uint32_t)hexBytes->size);
+
+    return result;
 }
 
 void FreeHexBytes(void)
 {
-	while (_hdeferListIndex > 0)
-	{
-		free(_hdeferList[--_hdeferListIndex].data);
-		memset(&_hdeferList[_hdeferListIndex], 0, sizeof(span_t));
-	}
+    struct HexBytes* temp;
+
+    while (_hexBytesHead)
+    {
+        temp = _hexBytesHead;
+        _hexBytesHead = _hexBytesHead->next;
+        free(temp);
+    }
 }
 
 void PrintHexRaw(void* bytes, size_t len)
 {
-	size_t i;
-	for (i = 0; i < len; i++)
-	{
-		printf("%02x", ((uint8_t*)bytes)[i]);
-	}
+    size_t i;
+    for (i = 0; i < len; i++)
+    {
+        printf("%02x", ((uint8_t*)bytes)[i]);
+    }
 
-	puts("\n");
+    puts("\n");
 }
 
 void PrintHexBytes(span_t hexBytes)
 {
-	if (!spanIsNull(hexBytes) && !spanIsEmpty(hexBytes))
-	{
-		PrintHexRaw(hexBytes.data, hexBytes.size);
-	}
-	else
-	{
-		puts("NULL");
-	}
+    if (!spanIsNull(hexBytes) && !spanIsEmpty(hexBytes))
+    {
+        PrintHexRaw(hexBytes.data, hexBytes.size);
+    }
+    else
+    {
+        puts("NULL");
+    }
 }
