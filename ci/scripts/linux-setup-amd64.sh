@@ -16,19 +16,19 @@ export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
 # ============================================================================
 
 # GoTask installation
-GOTASK_TAR_URL="https://github.com/go-task/task/releases/download/v3.48.0/task_linux_amd64.tar.gz"
-GOTASK_CHECKSUM="f4bfc4eef1b2557b262f3cc0a79976a421885cb7b9e71cfe75568a2ebe4d7ae5"
+GOTASK_TAR_URL="https://github.com/go-task/task/releases/download/v3.50.0/task_linux_amd64.tar.gz"
+GOTASK_CHECKSUM="d449ba85ab85a0769989d78f8b9872938e4ba9347f7f4f925f73d98272a0a655"
 
 # vnbuild installation
 VNBUILD_URL="https://www.vaughnnugent.com/public/resources/software/builds/vnbuild/155b0ee7fedbcc56bcce0193ee18a1ef12712f57/vnbuild/linux-x64.tgz"
 VNBUILD_CHECKSUM="f0149ac812c3d991d2cbde5d4f68cab34c43d4aa1910902e8cd891676ee1cabf"
 
 # install cmake from a tarball (avoid old versions in apt/dnf)
-CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v4.2.3/cmake-4.2.3-linux-x86_64.tar.gz"
-CMAKE_CHECKSUM="5bb505d5e0cca0480a330f7f27ccf52c2b8b5214c5bba97df08899f5ef650c23"
+CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v4.3.2/cmake-4.3.2-linux-x86_64.tar.gz"
+CMAKE_CHECKSUM="791ae3604841ca03cb3889a3ad89165346e4b180ae3448efd4b0caa9ef46d245"
 
-DOTNET_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.418/dotnet-sdk-8.0.418-linux-x64.tar.gz"
-DOTNET_CHECKSUM="fbd9fc9f0bca73f771e79c12d721a18da97ba23c43794b941b110ccaac0fcd16156c996a5b9cfc0650120601791f2909e93ecb268f687c7b82889934c766c2b9"
+DOTNET_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.420/dotnet-sdk-8.0.420-linux-x64.tar.gz"
+DOTNET_CHECKSUM="36c68c1be9d5c6f24cd8e6bd4b6d36bfd7ab724ac7e3499fb13e42e70a9003310e5ee5759ed19ced1f0ecd3d26a55f135c7e72d6f788e7d44f5f0eaa72ad9a07"
 
 # GitVersion tool
 GITVERSION_VERSION="6.3.0"
@@ -235,7 +235,7 @@ install_deps() {
     # Install latest CMake
     install_cmake
 
-    # Install .NET SDK if not present
+     # Install .NET SDK if not present
     install_dotnet_sdk
     
     # Install GitVersion
