@@ -8,10 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Changed
+- Removed 116 unused header files from `vendor/openssl` to reduce the repository size. (May be breaking for projects that rely on these headers directly.)
+- Added `vendor/openssl/VERSION` to track the exact version and commit of the vendored OpenSSL headers.
 - Removed more unused components from libsecp256k1 vendor copy. Ecmult module, `__musig.h`, `_elswift.h`, `_recovery.h` headers from include/
 - Force disable musig module with cmake `SECP256K1_ENABLE_MODULE_MUSIG=OFF` when building vendored copy libsecp256k1
 
 ### Updated
+- Updated `openssl` headers to version `3.6.2`
 - Updated `libsecp256k1` to version `0.7.1`
 
 ## [0.1.13]
