@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
  
 ### Changed
-- Removed 116 unused header files from `vendor/openssl` to reduce the repository size 
+- Removed 116 unused header files from `vendor/openssl` to reduce the repository size. (May be breaking for projects that rely on these headers directly.)
 - Added `vendor/openssl/VERSION` to track the exact version and commit of the vendored OpenSSL headers.
  
 ### Updated
