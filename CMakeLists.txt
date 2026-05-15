@@ -64,9 +64,8 @@ if(NOT secp256k1)
 	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON CACHE BOOL "Enable the schnorr signature module (required for noscrypt)" FORCE)
 	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON CACHE BOOL "Enable the extra keys module (required for noscrypt)" FORCE)
 	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF CACHE BOOL "Disable the Elliptic Swift module" FORCE)
-	set(SECP256K1_ENABLE_MODULE_MUSIG OFF CACHE BOOL "Disable music module" FORCE)
+	set(SECP256K1_ENABLE_MODULE_MUSIG OFF CACHE BOOL "Disable musig module" FORCE)
 	set(SECP256K1_INSTALL OFF CACHE BOOL "Disable installation of secp256k1 library" FORCE)
-	set(SECP256K1_DISABLE_SHARED ON CACHE BOOL "Disable shared library build, we're linking statically" FORCE)
 	#new in 0.7.0
 	set(SECP256K1_ENABLE_API_VISIBILITY_ATTRIBUTES OFF CACHE BOOL "Disable API visibility attributes" FORCE)
 
