@@ -27,8 +27,6 @@
 * 
 */
 
-#ifdef NC_ENABLE_MONOCYPHER
-
 #include <monocypher/monocypher.h>
 
 /* Export secure zero memset */
@@ -92,5 +90,3 @@
 	}
 
 #endif
-
-#endif /* NC_ENABLE_MONOCYPHER */

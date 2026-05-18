@@ -19,9 +19,6 @@
 */
 
 
-/* Setup openssl */
-#ifdef OPENSSL_CRYPTO_LIB
-
 /*
 * Since openssl depends on the variable size 
 * size_t type but spans use fixed size uint32_t
@@ -362,5 +359,3 @@
 	}
 
 #endif
-
-#endif	/* OPENSSL_CRYPTO_LIB */
