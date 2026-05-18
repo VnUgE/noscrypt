@@ -10,7 +10,7 @@
 
 #NOTES: Since CI project is pulled from the module root, MODULE_DIR is used instead of PROJECT_DIR
 
-version: '3'
+version: '3.45'
 
 vars:
 
