@@ -10,7 +10,7 @@
 
 #NOTES: Since CI project is pulled from the module root, MODULE_DIR is used instead of PROJECT_DIR
 
-version: '3'
+version: '3.45'
 
 vars:
 
@@ -445,7 +445,7 @@ tasks:
   dev-update-secp256:
     requires: { SECP256_SRC_DIR }
     vars:
-      TAG: 'v0.7.0'
+      TAG: 'v0.7.1'
       TAR_URL: 'https://github.com/bitcoin-core/secp256k1/archive/refs/tags/{{ .TAG }}.tar.gz'
     cmds:
-     - cmd: curl {{ .TAR_URL }} -L | tar -xzf - -C '{{ .SECP256_SRC_DIR }}' --strip-components=1
+     - cmd: curl {{ .TAR_URL }} -L | tar{{ if eq OS "windows" }}.exe{{ end }} -xzf - -C '{{ .SECP256_SRC_DIR }}' --strip-components=1

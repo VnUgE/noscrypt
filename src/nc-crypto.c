@@ -56,19 +56,25 @@
 /*
 * Prioritize embedded builds with mbedtls
 */
-#include "providers/mbedtls.c"
+#ifdef MBEDTLS_CRYPTO_LIB
+	#include "providers/mbedtls.c"
+#endif
 
 /*
 * Include openssl as an alternative default 
 * implementation
 */
-#include "providers/openssl.c"
+#ifdef OPENSSL_CRYPTO_LIB
+	#include "providers/openssl.c"
+#endif
 
 /*
-* Include win32 platform specific fallback support 
-* using bcrypt.
+* Always include win32 bcrypt fallback on windows systems. Functions
+* may be overridden by other implementations. 
 */
-#include "providers/bcrypt.c"
+#ifdef _NC_IS_WINDOWS
+	#include "providers/bcrypt.c"
+#endif
 
 /*
 * Handle default implementations of secure 
@@ -98,7 +104,9 @@
 * and portable, but not optimized for any specific
 * platform.
 */
-#include "providers/monocypher.c"
+#ifdef NC_ENABLE_MONOCYPHER
+	#include "providers/monocypher.c"
+#endif
 
 #ifndef  _IMPL_AES256_CBC_CRYPT
 

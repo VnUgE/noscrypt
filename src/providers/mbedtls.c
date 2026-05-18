@@ -26,7 +26,6 @@
 * it. 
 */
 
-#ifdef MBEDTLS_CRYPTO_LIB
 
 /* Inline errors on Linux in header files */
 #ifndef inline
@@ -191,5 +190,3 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
 #endif
-
-#endif /* MBEDTLS_CRYPTO_LIB */

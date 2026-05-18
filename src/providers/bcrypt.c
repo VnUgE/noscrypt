@@ -25,7 +25,6 @@
 *	other library implementations, as it is a fallback.
 */
 
-#ifdef _NC_IS_WINDOWS
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -264,5 +263,3 @@ _IMPLSTB void _bcDestroyCtx(struct _bcrypt_ctx* ctx)
 	}
 
 #endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXPAND */
-
-#endif /* _NC_IS_WINDOWS */
