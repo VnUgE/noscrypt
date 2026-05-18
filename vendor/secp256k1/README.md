@@ -30,10 +30,9 @@ This is a fork of the original libsecp256k1 library found on [GitHub](https://gi
 **Modifications:**
 - Stripped all unnecessary files and directories
 - Removed tests, docs, and examples
-- Removed the source code for ecmult module
-- Removed the source code for ellegator swift module
-- Removed the source code key recovery module
-- Removed the source code for the new musig2 module
+- Removed the source code for the ElligatorSwift module
+- Removed the source code for the key recovery module
+- Removed the source code for the MuSig2 module
 
 Implementation details
 ----------------------
