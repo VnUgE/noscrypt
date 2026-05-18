@@ -29,10 +29,10 @@ This is a fork of the original libsecp256k1 library found on [GitHub](https://gi
 
 **Modifications:**
 - Stripped all unnecessary files and directories
-- Removes tests, docs, and examples
-- Removed the source code for ellegator swift module
-- Removed the source code key recovery module
-- Removed the source code for the new musig2 module
+- Removed tests, docs, and examples
+- Removed the source code for the ElligatorSwift module
+- Removed the source code for the key recovery module
+- Removed the source code for the MuSig2 module
 
 Implementation details
 ----------------------
@@ -146,13 +146,11 @@ To cross compile for Android with [NDK](https://developer.android.com/ndk/guides
 
 ### Building on Windows
 
-To build on Windows with Visual Studio, a proper [generator](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html#visual-studio-generators) must be specified for a new build tree.
-
-The following example assumes using of Visual Studio 2022 and CMake v3.21+.
+The following example assumes Visual Studio 2022. Using clang-cl is recommended.
 
 In "Developer Command Prompt for VS 2022":
 
-    >cmake -G "Visual Studio 17 2022" -A x64 -B build
+    >cmake -B build -T ClangCL
     >cmake --build build --config RelWithDebInfo
 
 Usage examples
