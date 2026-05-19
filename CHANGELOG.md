@@ -7,16 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+The public API and ABI are unmodified, this is a non-breaking change release.  
+
+> If you linked against noscrypt or it's internal libraries (libsecp256 or mbedTLS) and used non-public symbols, you may experience breakage.  
+
+### Added
+- Added `VERSION` files to all vendored dependencies to track exact versions, commits, and archive hashes
+
 ### Changed
-- Removed 116 unused header files from `vendor/openssl` to reduce the repository size. (May be breaking for projects that rely on these headers directly.)
-- Added `vendor/openssl/VERSION` to track the exact version and commit of the vendored OpenSSL headers.
-- Removed unused components from vendored libsecp256k1: musig module source, and `secp256k1_musig.h`, `secp256k1_ellswift.h`, `secp256k1_recovery.h` public headers
-- Force disable musig module with cmake `SECP256K1_ENABLE_MODULE_MUSIG=OFF` when building vendored libsecp256k1
+- Force disable musig module when building vendored libsecp256k1
 - Removed `SECP256K1_DISABLE_SHARED` cmake option (removed upstream in v0.7.1)
+- Removed mbedTLS test scripts and framework tooling to reduce repo size
+- Removed unused header files from `vendor/openssl` to reduce repo size. (May be breaking for projects that rely on these headers directly)
+- Removed unused components from vendored libsecp256k1: musig module source, and `secp256k1_musig.h`, `secp256k1_ellswift.h`, `secp256k1_recovery.h` public headers
+- Removed unused `MBEDTLS_ENTROPY_C` from the noscrypt mbedTLS configuration and corrected the config header description (May be breaking for projects that link against noscrypt's internal mbedTLS build)
+- `-Werror` is enabled on all builds, forcing warnings to be treated as errors by all supported compilers
+- Many typo fixes in public and internal documentation
+- Reorganized internal headers in `src/` including a new `span.h` header for more robust memory operations
+- Improved the C unit testing framework and internal utility test coverage
 
 ### Updated
 - Updated `openssl` headers to version `3.6.2`
 - Updated `libsecp256k1` to version `0.7.1`
+- Updated `mbedTLS` to version `3.6.6`
+
+Security advisories to mbedTLS were reviewed consistently between releases and no patches affected or currently affect noscrypt because of how it's used.
 
 ## [0.1.13]
 
