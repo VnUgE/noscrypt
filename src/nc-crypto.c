@@ -165,13 +165,28 @@
 	* This implementation is a slightly simplified version of 
 	* MBed TLS constant time memcmp function, known to be a 32bit 
 	* integer size
+	* 
+	* - using uint8_t O forces the compiler to use byte instructions 
+	* - using volatile A B reads attempts to force the compiler to read data from memory 
+	*    during every loop iteration
+	* - volatile result and O are stored on the stack and cannot be kept in a 
+	*    register across iterations, preventing the compiler from short-circuiting 
+	*    the OR of accumulated results
+	*
+	* MSVC x64 Release verification (v19.44 /O2 /Ob2):
+	* - O is spilled to [rsp+18h] and re-read each iteration via movzx
+	* - result is spilled to [rsp+8] and re-read each iteration via mov/or/mov
+	* - No early exit on comparison result; loop always runs (size) iterations
+	* - Input reads use byte-granular movzx, no word-level shortcuts
+	* - Pointer arithmetic is hoisted (r10=a-b base, r9 walks B) but memory 
+	*   reads are still performed each iteration as required by volatile
 	*/
 
 	static uint32_t _fallbackFixedTimeCompare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		size_t i;
-		uint32_t result;
-		uint8_t O;
+		uint32_t i;
+		volatile uint32_t result;
+		volatile uint8_t O;
 		volatile const uint8_t* A, * B;
 
 		result = 0;
