@@ -148,6 +148,7 @@ struct nc_util_nip44_message
 
 static _nc_fn_inline int _ncUtilAllocSpan(span_t* span, uint32_t count, size_t size)
 {
+	uint8_t* block;
 
 #if SIZE_MAX < UINT32_MAX
 
@@ -160,13 +161,22 @@ static _nc_fn_inline int _ncUtilAllocSpan(span_t* span, uint32_t count, size_t s
 
 #endif
 
-	spanInit(
-		span, 
-		_nc_mem_alloc((size_t)count, size),
-		(uint32_t)count
-	);
+	/* 
+	* Alloc block
+	* If allocation fails, safe - fallback to 0 size
+	*/
+	block = (uint8_t*)_nc_mem_alloc((size_t)count, size);
 
-	return !spanIsNull(*span);
+	if (block) 
+	{
+		spanInit(span, block, count);
+		return 1;
+	}
+	else
+	{
+		spanInit(span, NULL, 0);
+		return 0;
+	}
 }
 
 static _nc_fn_inline void _ncUtilZeroSpan(span_t span)
