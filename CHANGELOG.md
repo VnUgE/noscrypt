@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The public API and ABI are unmodified, this is a non-breaking change release.  
 
-> If you linked against noscrypt or it's internal libraries (libsecp256 or mbedTLS) and used non-public symbols, you may experience breakage.  
+> If you linked against noscrypt or its internal libraries (libsecp256 or mbedTLS) and used non-public symbols, you may experience breakage.  
 
 ### Added
 - Added `VERSION` files to all vendored dependencies to track exact versions, commits, and archive hashes

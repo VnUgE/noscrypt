@@ -70,7 +70,7 @@
 		* needed for noscrypt as encryptions are one-shot, and 
 		* require a new nonce for each encryption.
 		* 
-		* ITEF function uses a 12byte nonce and 32 byte key which 
+		* IETF function uses a 12byte nonce and 32 byte key which 
 		* is required for nip-44 compliant encryption. See monocypher.h
 		*/
 

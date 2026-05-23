@@ -308,7 +308,7 @@
 
 		/*
 		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
-		* counter value is preprended to the nonce to make up the 16 byte 
+		* counter value is prepended to the nonce to make up the 16 byte 
 		* size.
 		*
 		* The counter bytes are always set to 0 for the nonce.
