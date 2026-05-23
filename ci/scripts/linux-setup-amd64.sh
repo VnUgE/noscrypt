@@ -16,8 +16,8 @@ export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
 # ============================================================================
 
 # GoTask installation
-GOTASK_TAR_URL="https://github.com/go-task/task/releases/download/v3.50.0/task_linux_amd64.tar.gz"
-GOTASK_CHECKSUM="d449ba85ab85a0769989d78f8b9872938e4ba9347f7f4f925f73d98272a0a655"
+GOTASK_TAR_URL="https://github.com/go-task/task/releases/download/v3.51.1/task_linux_amd64.tar.gz"
+GOTASK_CHECKSUM="da7e92f0ff961ef2aae7cfecbad8d1fd2a08d7b09ba968673adf7ff389b243b5"
 
 # vnbuild installation
 VNBUILD_URL="https://www.vaughnnugent.com/public/resources/software/builds/vnbuild/155b0ee7fedbcc56bcce0193ee18a1ef12712f57/vnbuild/linux-x64.tgz"
@@ -27,8 +27,8 @@ VNBUILD_CHECKSUM="f0149ac812c3d991d2cbde5d4f68cab34c43d4aa1910902e8cd891676ee1ca
 CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v4.3.2/cmake-4.3.2-linux-x86_64.tar.gz"
 CMAKE_CHECKSUM="791ae3604841ca03cb3889a3ad89165346e4b180ae3448efd4b0caa9ef46d245"
 
-DOTNET_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.420/dotnet-sdk-8.0.420-linux-x64.tar.gz"
-DOTNET_CHECKSUM="36c68c1be9d5c6f24cd8e6bd4b6d36bfd7ab724ac7e3499fb13e42e70a9003310e5ee5759ed19ced1f0ecd3d26a55f135c7e72d6f788e7d44f5f0eaa72ad9a07"
+DOTNET_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.421/dotnet-sdk-8.0.421-linux-x64.tar.gz"
+DOTNET_CHECKSUM="3bee18a8706f169178a2609cce7d31a4ec3e21ae0758c2387b9a0756dbc267342b60cf00024c76fe91518e49617b241f8ebf1e52cb3fa5644da5966b76589b22"
 
 # GitVersion tool
 GITVERSION_VERSION="6.3.0"
