@@ -14,6 +14,9 @@ The public API and ABI are unmodified, this is a non-breaking change release.
 ### Added
 - Added `VERSION` files to all vendored dependencies to track exact versions, commits, and archive hashes
 
+### Fixed
+- Latent bug in `noscrypt.c` that could cause invalid buffer sizes if a compiler adds padding to some internal structures
+
 ### Changed
 - Force disable musig module when building vendored libsecp256k1
 - Removed `SECP256K1_DISABLE_SHARED` cmake option (removed upstream in v0.7.1)
