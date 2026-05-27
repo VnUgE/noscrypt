@@ -25,6 +25,8 @@ The public API and ABI are unmodified, this is a non-breaking change release.
 - Many typo fixes in public and internal documentation
 - Reorganized internal headers in `src/` including a new `span.h` header for more robust memory operations
 - Improved the C unit testing framework and internal utility test coverage
+- Renamed macro `NC_UTIL_CIPHER_REUSEABLE` to `NC_UTIL_CIPHER_REUSABLE` in `noscryptutil.h` public api and added deprecation notice
+- Renamed macro `NC_PUBKEY_SIZE` to `NC_PUB_KEY_SIZE` in `noscrypt.h` for consistent naming
 
 ### Updated
 - Updated `openssl` headers to version `3.6.2`

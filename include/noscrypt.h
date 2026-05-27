@@ -69,7 +69,7 @@ extern "C" {
 #define BIP340_PUBKEY_HEADER_BYTE		0x02
 #define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 = 76 */
 #define NC_SEC_KEY_SIZE					0x20
-#define NC_PUBKEY_SIZE					0x20
+#define NC_PUB_KEY_SIZE					0x20
 #define NC_CONTEXT_ENTROPY_SIZE			0x20
 #define NC_SHARED_SEC_SIZE				0x20
 #define NC_CONV_KEY_SIZE				0x20
@@ -81,20 +81,25 @@ extern "C" {
 /*
 * DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead.
 * Will be removed in a future version.
+* 
+* DEPRECATED: NC_PUBKEY_SIZE Use NC_PUB_KEY_SIZE macro instead.
 */
 #if defined(__GNUC__)
 	#define NC_NIP04_AES_KEY_SIZE		__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) NC_NIP04_KEY_SIZE	/* AES 256 key size */
 	#define NC_NIP44_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead"))) 0x20	/* 32 bytes */
 	#define NC_NIP04_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) 0x10	/* 16 bytes */
+	#define NC_PUBKEY_SIZE				__attribute__((deprecated("Use NC_PUB_KEY_SIZE macro instead"))) NC_PUB_KEY_SIZE
 #elif defined(_NC_IS_WINDOWS)
 	#define NC_NIP04_AES_KEY_SIZE		__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) NC_NIP04_KEY_SIZE	/* AES 256 key size */
 	#define NC_NIP44_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead")) 0x20	/* 32 bytes */
 	#define NC_NIP04_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) 0x10	/* 16 bytes */
+    #define NC_PUBKEY_SIZE				__declspec(deprecated("Use NC_PUB_KEY_SIZE macro instead")) NC_PUB_KEY_SIZE
 #else
 	/* For compilers without deprecation support */
 	#define NC_NIP04_AES_KEY_SIZE		NC_NIP04_KEY_SIZE	/* AES 256 key size */
 	#define NC_NIP44_IV_SIZE			0x20	/* 32 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead */
 	#define NC_NIP04_IV_SIZE			0x10	/* 16 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead */
+	#define NC_PUBKEY_SIZE				NC_PUB_KEY_SIZE /* DEPRECATED: Use NC_PUB_KEY_SIZE macro instead */
 #endif
 
 /*
@@ -184,7 +189,7 @@ typedef struct nc_secret_key_struct {
 */
 typedef struct nc_xonly_pubkey_struct {
 
-	uint8_t key[NC_PUBKEY_SIZE];
+	uint8_t key[NC_PUB_KEY_SIZE];
 
 } NCPublicKey;
 

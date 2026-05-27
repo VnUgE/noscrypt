@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscryptutil.h
@@ -49,7 +49,24 @@ extern "C" {
 #define NC_UTIL_CIPHER_MODE_DECRYPT		0x01u
 #define NC_UTIL_CIPHER_ZERO_ON_FREE		0x02u
 #define NC_UTIL_CIPHER_MAC_NO_VERIFY	0x04u
-#define NC_UTIL_CIPHER_REUSEABLE		0x08u
+#define NC_UTIL_CIPHER_REUSABLE 		0x08u
+
+/*
+* typo correction: 
+* 
+* DEPRECATED: Use NC_UTIL_CIPHER_REUSABLE instead.
+* Will be removed in a future version.
+*/
+#if defined(__GNUC__)
+	#define NC_UTIL_CIPHER_REUSEABLE		__attribute__((deprecated("Use NC_UTIL_CIPHER_REUSABLE macro instead"))) NC_UTIL_CIPHER_REUSABLE
+#elif defined(_NC_IS_WINDOWS)
+	#define NC_UTIL_CIPHER_REUSEABLE		__declspec(deprecated("Use NC_UTIL_CIPHER_REUSABLE macro instead")) NC_UTIL_CIPHER_REUSABLE
+#else
+	#define NC_UTIL_CIPHER_REUSEABLE		NC_UTIL_CIPHER_REUSABLE /* DEPRECATED: Use NC_PUB_KEY_SIZE macro instead */
+#endif
+
+
+
 
 /*
 * The encryption context structure. This structure is used to store the state 

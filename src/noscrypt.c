@@ -141,7 +141,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 {
 	int result;
 	span_t compressedSpan;
-	uint8_t compressed[sizeof(NCPublicKey) + 1];
+	uint8_t compressed[NC_PUB_KEY_SIZE + 1];
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context");
 	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure");
@@ -152,7 +152,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 
 	/* Copy the compressed public key data into a new buffer (offset by 1 to store the header byte) */
 	spanInit(&compressedSpan, compressed, sizeof(compressed));
-	spanWrite(compressedSpan, 1, (const uint8_t*)compressedPubKey, sizeof(NCPublicKey));
+	spanWrite(compressedSpan, 1, compressedPubKey->key, NC_PUB_KEY_SIZE);
 
 	/* Parse the compressed public key data into the secp256k1_pubkey structure */
 	result = secp256k1_ec_pubkey_parse(
