@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2026 Vaughn Nugent
+# Copyright (c) 2026 Vaughn Nugent
 # See the LICENSE in this directory for terms of use
 #
 # This file configures noscrypt with best defaults as possible while offering 
@@ -450,7 +450,7 @@ else()
 	message("  secp256k1 library: ..... ${secp256k1}")
 endif()
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
-message(" Defintions: ${NC_PROJ_DEFINITIONS}")
+message(" Definitions: ${NC_PROJ_DEFINITIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")
 message("=====================================")
 

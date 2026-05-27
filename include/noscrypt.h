@@ -1,4 +1,4 @@
-﻿/*
+/*
 * Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
@@ -19,7 +19,7 @@
 */
 
 /*
-* noscrypt is a an open-source, strict C89 library that performs the basic 
+* noscrypt is an open-source, strict C89 library that performs the basic 
 * cryptographic operations found in the Nostr protocol. It is designed to be
 * portable and easy to use in any C89 compatible environment. It is also designed
 */
@@ -47,7 +47,7 @@ extern "C" {
 	#endif
 #endif /*  !NC_CC */
 
-#ifndef NC_EXPORT	/* Allow users to disable the export/impoty macro if using source code directly */
+#ifndef NC_EXPORT	/* Allow users to disable the export/import macro if using source code directly */
 	#ifdef NOSCRYPT_EXPORTING
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllexport)
@@ -131,7 +131,7 @@ extern "C" {
 
 
 /*
-* ENCRYPTION ALTERATION PROPERTEIS
+* ENCRYPTION ALTERATION PROPERTIES
 * 
 * Codes for assigning values to an NCEncryptionArgs 
 * structure.
@@ -375,7 +375,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 * @param sig64 The 64byte signature to verify
 * @param data A pointer to the raw data buffer to verify
 * @param dataSize The size of the raw data buffer
-* @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
+* @param pk A pointer to the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCVerifyData(
@@ -413,7 +413,7 @@ Equivalent to calling secp256k1_schnorrsig_verify.
 * @param ctx A pointer to the existing library context
 * @param sig64 A pointer to the 64-byte signature to verify
 * @param digest32 A pointer to a 32-byte message digest to verify
-* @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
+* @param pk A pointer to the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCVerifyDigest(
@@ -515,7 +515,7 @@ NC_EXPORT NCResult NC_CC NCGetSharedSecret(
 * Computes a NIP-44 conversation key from the local secret key and the remote 
 public key, and stores it in the conversationKey buffer.
 * @param ctx A pointer to the existing library context
-* @param sk A pointer to the the secret key
+* @param sk A pointer to the secret key
 * @param pk A pointer to the compressed public key (x-only serialized public key)
 * @param conversationKey The buffer to store write the conversation key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to

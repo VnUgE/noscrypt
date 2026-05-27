@@ -74,7 +74,7 @@ NC_EXPORT NCResult NC_CC NCUtilGetEncryptionPaddedSize(uint32_t encVersion, uint
 * @param plaintextSize The size of the plaintext buffer in bytes
 * @return The size of the payload buffer in bytes
 * @note The payload buffer is the final buffer to be sent to a nostr user. For nip04 this 
-* is a raw AES message, for nip44 this is a mucher lager buffer. See the nostr specifications
+* is a raw AES message, for nip44 this is a much larger buffer. See the nostr specifications
 * for more information.
 */
 NC_EXPORT NCResult NC_CC NCUtilGetEncryptionBufferSize(uint32_t encVersion, uint32_t plaintextSize);
@@ -103,7 +103,7 @@ NC_EXPORT NCUtilCipherContext* NC_CC NCUtilCipherAlloc(uint32_t encVersion, uint
 
 /*
 * Initializes the cipher context with the input data and size. This function will 
- internally allocate a the required output buffer for the cipher operation. You may only call
+ internally allocate the required output buffer for the cipher operation. You may only call
  this function once.
 * @param encCtx A valid pointer to an allocated encryption context
 * @param inputData A pointer to the input data for the Cipher
@@ -183,7 +183,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherGetFlags(const NCUtilCipherContext* ctx);
 * @param pk A valid pointer to the receivers public key
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * get the error code and positional argument that caused the error.
-* @note This function should only be called once. However it is indempotent and deterministic
+* @note This function should only be called once. However it is idempotent and deterministic
 * so the exact same operation should happen if called again.
 */
 NC_EXPORT NCResult NC_CC NCUtilCipherUpdate(

@@ -36,7 +36,7 @@ static _nc_fn_inline void debugValidateHandler(const struct nc_hkdf_fn_cb_struct
 * The following functions implements the HKDF expand function using an existing
 * HMAC function.
 *
-* This follows the guidence from RFC 5869: https://tools.ietf.org/html/rfc5869
+* This follows the guidance from RFC 5869: https://tools.ietf.org/html/rfc5869
 */
 
 cstatus_t hkdfExpandProcess(
