@@ -119,7 +119,7 @@ jobs:
   - type: CommandStep
     name: ubuntu x64 tests
     runInContainer: true
-    image: mcr.microsoft.com/dotnet/sdk:8.0.421-noble-amd64@@sha256:0c6975ee2d0cf5a3d5f6dd246bc8e859ed5c22b2b215cdf78527ada8b1d14685
+    image: mcr.microsoft.com/dotnet/sdk:8.0.421-noble-amd64@@sha256:1d44c5bac8bfc92acb27b53ec081cbed39f3739ecdcdb8a46b1e49cd7690c483
     interpreter:
       type: DefaultInterpreter
       commands: |
