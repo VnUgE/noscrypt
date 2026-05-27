@@ -141,7 +141,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 {
 	int result;
 	span_t compressedSpan;
-	uint8_t compressed[sizeof(NCPublicKey) + 1];
+	uint8_t compressed[NC_PUBKEY_SIZE + 1];
 
 	DEBUG_ASSERT2(ctx != NULL, "Expected valid context");
 	DEBUG_ASSERT2(compressedPubKey != NULL, "Expected a valid public 32byte key structure");
@@ -152,7 +152,7 @@ static int _convertToPubKey(const NCContext* ctx, const NCPublicKey* compressedP
 
 	/* Copy the compressed public key data into a new buffer (offset by 1 to store the header byte) */
 	spanInit(&compressedSpan, compressed, sizeof(compressed));
-	spanWrite(compressedSpan, 1, (const uint8_t*)compressedPubKey, sizeof(NCPublicKey));
+	spanWrite(compressedSpan, 1, compressedPubKey->key, NC_PUBKEY_SIZE);
 
 	/* Parse the compressed public key data into the secp256k1_pubkey structure */
 	result = secp256k1_ec_pubkey_parse(
@@ -302,7 +302,7 @@ static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, const NCEncr
 }
 
 static _nc_fn_inline cstatus_t _getMessageKey(
-	const struct conversation_key* converstationKey, 
+	const struct conversation_key* conversationKey, 
 	cspan_t nonce,
 	struct message_key* messageKey
 )
@@ -310,11 +310,11 @@ static _nc_fn_inline cstatus_t _getMessageKey(
 	cspan_t prkSpan;
 	span_t okmSpan;
 
-	DEBUG_ASSERT2(converstationKey != NULL, "Expected valid conversation key")
+	DEBUG_ASSERT2(conversationKey != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(messageKey != NULL, "Expected valid message key buffer")
 
-	spanInitC(&prkSpan, converstationKey->value, sizeof(struct conversation_key));	/* Conversation key is the input key */
-	spanInit(&okmSpan, messageKey->value, sizeof(struct message_key));				/* Output produces a message key (write it directly to struct memory) */
+	spanInitC(&prkSpan, conversationKey->value, NC_CONV_KEY_SIZE);		/* Conversation key is the input key */
+	spanInit(&okmSpan, messageKey->value, NC_MESSAGE_KEY_SIZE);			/* Output produces a message key (write it directly to struct memory) */
 	
 	/* Nonce is the info */
 	return ncCryptoSha256HkdfExpand(prkSpan, nonce, okmSpan);
