@@ -366,6 +366,59 @@ static int SpanCopyTest(void)
         EXPECT_EQ(memcmp(buf + 8, expected, 16), 0);
     }
 
+    /* spanCopyC: forward overlap (dst before src) — the case memcpy would corrupt */
+    {
+        uint8_t buf[32];
+
+        for (uint32_t i = 0; i < 32u; i++)
+        {
+            buf[i] = (uint8_t)i;
+        }
+
+        /* dst = buf[0..15], src = buf[8..23] — 8-byte forward overlap */
+        cspan_t src;
+        span_t dst;
+        spanInitC(&src, buf + 8, 16u);
+        spanInit(&dst,  buf,     16u);
+        spanCopyC(src, dst);
+
+        /* buf[0..15] should now contain original buf[8..23] = [8..23] */
+        uint8_t expected[16];
+
+        for (uint32_t i = 0; i < 16u; i++)
+        {
+            expected[i] = (uint8_t)(i + 8);
+        }
+
+        EXPECT_EQ(memcmp(buf, expected, 16), 0);
+    }
+
+    /* spanCopyC: partial copy (src.size < dest.size) leaves trailing bytes untouched */
+    {
+        uint8_t src_buf[8];
+        uint8_t dst_buf[16];
+
+        for (uint32_t i = 0; i < 8u; i++)
+        {
+            src_buf[i] = (uint8_t)(i + 0xA0);
+        }
+
+        memset(dst_buf, 0xEE, sizeof dst_buf);
+
+        cspan_t src;
+        span_t dst;
+        spanInitC(&src, src_buf, 8u);
+        spanInit(&dst, dst_buf, 16u);
+        spanCopyC(src, dst);
+
+        /* First 8 bytes must match source */
+        EXPECT_EQ(memcmp(dst_buf, src_buf, 8), 0);
+        /* Trailing 8 bytes must remain untouched */
+        uint8_t trailing[8];
+        memset(trailing, 0xEE, sizeof trailing);
+        EXPECT_EQ(memcmp(dst_buf + 8, trailing, 8), 0);
+    }
+
     return 0;
 }
 
@@ -572,6 +625,24 @@ static int UtilEmptySpanBehaviorTest(void)
         spanInit(&d, dst, (uint32_t)sizeof(dst));
         spanCopyC(empty, d);
 
+        EXPECT_EQ(memcmp(dst, expected, sizeof(dst)), 0);
+    }
+
+    /* Copying from a null-data zero-size span {NULL, 0} must be a no-op */
+    {
+        uint8_t dst[8];
+
+        memset(dst, 0xCC, sizeof dst);
+
+        cspan_t null_src;
+        spanInitC(&null_src, NULL, 0);
+
+        span_t d;
+        spanInit(&d, dst, (uint32_t)sizeof(dst));
+        spanCopyC(null_src, d);
+
+        uint8_t expected[8];
+        memset(expected, 0xCC, sizeof expected);
         EXPECT_EQ(memcmp(dst, expected, sizeof(dst)), 0);
     }
 
