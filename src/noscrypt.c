@@ -435,7 +435,7 @@ static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE],
 
 static NCResult _verifyMacEx(
 	const NCContext* ctx,
-	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	const struct conversation_key* conversationKey,
 	const NCMacVerifyArgs* args
 )
 {
@@ -460,7 +460,7 @@ static NCResult _verifyMacEx(
 	* Message key is again required for the hmac verification
 	*/
 
-	if (_getMessageKey((struct conversation_key*)conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
+	if (_getMessageKey(conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
@@ -1108,7 +1108,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	CHECK_INVALID_ARG(args->nonce32, 2)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
-	return _verifyMacEx(ctx, conversationKey, args);
+	return _verifyMacEx(ctx, (const struct conversation_key*)conversationKey, args);
 }
 
 NC_EXPORT NCResult NC_CC NCVerifyMac(
@@ -1148,7 +1148,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 		goto Cleanup;
 	}
 
-	result = _verifyMacEx(ctx, conversationKey.value, args);
+	result = _verifyMacEx(ctx, &conversationKey, args);
 
 Cleanup:
 	/* Clean up sensitive data */
