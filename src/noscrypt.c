@@ -302,7 +302,7 @@ static cstatus_t _chachaEncipher(const struct nc_expand_keys* keys, const NCEncr
 }
 
 static _nc_fn_inline cstatus_t _getMessageKey(
-	const struct conversation_key* converstationKey, 
+	const struct conversation_key* conversationKey, 
 	cspan_t nonce,
 	struct message_key* messageKey
 )
@@ -310,11 +310,11 @@ static _nc_fn_inline cstatus_t _getMessageKey(
 	cspan_t prkSpan;
 	span_t okmSpan;
 
-	DEBUG_ASSERT2(converstationKey != NULL, "Expected valid conversation key")
+	DEBUG_ASSERT2(conversationKey != NULL, "Expected valid conversation key")
 	DEBUG_ASSERT2(messageKey != NULL, "Expected valid message key buffer")
 
-	spanInitC(&prkSpan, converstationKey->value, sizeof(struct conversation_key));	/* Conversation key is the input key */
-	spanInit(&okmSpan, messageKey->value, sizeof(struct message_key));				/* Output produces a message key (write it directly to struct memory) */
+	spanInitC(&prkSpan, conversationKey->value, NC_CONV_KEY_SIZE);		/* Conversation key is the input key */
+	spanInit(&okmSpan, messageKey->value, NC_MESSAGE_KEY_SIZE);			/* Output produces a message key (write it directly to struct memory) */
 	
 	/* Nonce is the info */
 	return ncCryptoSha256HkdfExpand(prkSpan, nonce, okmSpan);
@@ -421,26 +421,14 @@ static _nc_fn_inline NCResult _nip04CipherUpdate(
 		: E_OPERATION_FAILED;
 }
 
-static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE], cspan_t payload, sha256_t hmacOut)
-{
-	cspan_t keySpan;
-
-	DEBUG_ASSERT2(key != NULL,		"Expected valid hmac key")
-	DEBUG_ASSERT2(hmacOut != NULL,	"Expected valid hmac output buffer")
-
-	spanInitC(&keySpan, key, NC_HMAC_KEY_SIZE);
-
-	return ncCryptoHmacSha256(keySpan, payload, hmacOut);
-}
-
 static NCResult _verifyMacEx(
 	const NCContext* ctx,
-	const uint8_t conversationKey[NC_CONV_KEY_SIZE],
+	const struct conversation_key* conversationKey,
 	const NCMacVerifyArgs* args
 )
 {
 	NCResult result;
-	cspan_t payloadSpan, nonceSpan;
+	cspan_t hmacKeySpan, payloadSpan, nonceSpan;
 	sha256_t hmacOut;
 	const struct nc_expand_keys* keys;
 	struct message_key messageKey;
@@ -460,7 +448,7 @@ static NCResult _verifyMacEx(
 	* Message key is again required for the hmac verification
 	*/
 
-	if (_getMessageKey((struct conversation_key*)conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
+	if (_getMessageKey(conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
@@ -469,10 +457,13 @@ static NCResult _verifyMacEx(
 	/* Expand keys to get the hmac-key */
 	keys = _expandKeysFromHkdf(&messageKey);
 
+	/* Assign hmac key to span */
+	spanInitC(&hmacKeySpan, keys->hmac_key, NC_HMAC_KEY_SIZE);
+
 	/*
 	* Compute the hmac of the data using the computed hmac key
 	*/
-	if (_computeHmac(keys->hmac_key, payloadSpan, hmacOut) != CSTATUS_OK)
+	if (ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) != CSTATUS_OK)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
@@ -1072,7 +1063,7 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 )
 {
-	cspan_t payloadSpan;
+	cspan_t hmacKeySpan, payloadSpan;
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
@@ -1080,13 +1071,14 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 	CHECK_NULL_ARG(payload, 2)
 	CHECK_ARG_RANGE(payloadSize, 1, UINT32_MAX, 3)
 	CHECK_NULL_ARG(hmacOut, 4)
-	
+
+	spanInitC(&hmacKeySpan, hmacKey, NC_HMAC_KEY_SIZE);
 	spanInitC(&payloadSpan, payload, payloadSize);
 
 	/*
 	* Compute the hmac of the data using the supplied hmac key
 	*/
-	return _computeHmac(hmacKey, payloadSpan, hmacOut) == CSTATUS_OK 
+	return ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) == CSTATUS_OK
 		? NC_SUCCESS 
 		: E_OPERATION_FAILED;
 }
@@ -1108,7 +1100,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 	CHECK_INVALID_ARG(args->nonce32, 2)
 	CHECK_ARG_RANGE(args->payloadSize, NIP44_MIN_ENC_MESSAGE_SIZE, NIP44_MAX_ENC_MESSAGE_SIZE, 2)	
 
-	return _verifyMacEx(ctx, conversationKey, args);
+	return _verifyMacEx(ctx, (const struct conversation_key*)conversationKey, args);
 }
 
 NC_EXPORT NCResult NC_CC NCVerifyMac(
@@ -1148,7 +1140,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMac(
 		goto Cleanup;
 	}
 
-	result = _verifyMacEx(ctx, conversationKey.value, args);
+	result = _verifyMacEx(ctx, &conversationKey, args);
 
 Cleanup:
 	/* Clean up sensitive data */
