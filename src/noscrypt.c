@@ -421,18 +421,6 @@ static _nc_fn_inline NCResult _nip04CipherUpdate(
 		: E_OPERATION_FAILED;
 }
 
-static _nc_fn_inline cstatus_t _computeHmac(const uint8_t key[NC_HMAC_KEY_SIZE], cspan_t payload, sha256_t hmacOut)
-{
-	cspan_t keySpan;
-
-	DEBUG_ASSERT2(key != NULL,		"Expected valid hmac key")
-	DEBUG_ASSERT2(hmacOut != NULL,	"Expected valid hmac output buffer")
-
-	spanInitC(&keySpan, key, NC_HMAC_KEY_SIZE);
-
-	return ncCryptoHmacSha256(keySpan, payload, hmacOut);
-}
-
 static NCResult _verifyMacEx(
 	const NCContext* ctx,
 	const struct conversation_key* conversationKey,
@@ -440,7 +428,7 @@ static NCResult _verifyMacEx(
 )
 {
 	NCResult result;
-	cspan_t payloadSpan, nonceSpan;
+	cspan_t hmacKeySpan, payloadSpan, nonceSpan;
 	sha256_t hmacOut;
 	const struct nc_expand_keys* keys;
 	struct message_key messageKey;
@@ -469,10 +457,13 @@ static NCResult _verifyMacEx(
 	/* Expand keys to get the hmac-key */
 	keys = _expandKeysFromHkdf(&messageKey);
 
+	/* Assign hmac key to span */
+	spanInitC(&hmacKeySpan, keys->hmac_key, NC_HMAC_KEY_SIZE);
+
 	/*
 	* Compute the hmac of the data using the computed hmac key
 	*/
-	if (_computeHmac(keys->hmac_key, payloadSpan, hmacOut) != CSTATUS_OK)
+	if (ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) != CSTATUS_OK)
 	{
 		result = E_OPERATION_FAILED;
 		goto Cleanup;
@@ -1072,7 +1063,7 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 	uint8_t hmacOut[NC_ENCRYPTION_MAC_SIZE]
 )
 {
-	cspan_t payloadSpan;
+	cspan_t hmacKeySpan, payloadSpan;
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
@@ -1080,13 +1071,14 @@ NC_EXPORT NCResult NC_CC NCComputeMac(
 	CHECK_NULL_ARG(payload, 2)
 	CHECK_ARG_RANGE(payloadSize, 1, UINT32_MAX, 3)
 	CHECK_NULL_ARG(hmacOut, 4)
-	
+
+	spanInitC(&hmacKeySpan, hmacKey, NC_HMAC_KEY_SIZE);
 	spanInitC(&payloadSpan, payload, payloadSize);
 
 	/*
 	* Compute the hmac of the data using the supplied hmac key
 	*/
-	return _computeHmac(hmacKey, payloadSpan, hmacOut) == CSTATUS_OK 
+	return ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) == CSTATUS_OK
 		? NC_SUCCESS 
 		: E_OPERATION_FAILED;
 }
