@@ -885,7 +885,7 @@ NC_EXPORT NCResult NC_CC NCUtilCipherInit(
 	{
 		DEBUG_ASSERT2(!spanIsEmpty(cipher->buffer.output), "Output buffer was improperly allocated to zero size, or cipher structure is corrupt");
 
-		CHECK_ARG_IS((cipher->_flags & NC_UTIL_CIPHER_REUSEABLE) > 0, 0);
+		CHECK_ARG_IS((cipher->_flags & NC_UTIL_CIPHER_REUSABLE) > 0, 0);
 
 		/*
 		* if the existing buffer is large enough to hold the new 
