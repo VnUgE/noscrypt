@@ -119,7 +119,7 @@ jobs:
   - type: CommandStep
     name: ubuntu x64 tests
     runInContainer: true
-    image: mcr.microsoft.com/dotnet/sdk:8.0.420-noble-amd64@@sha256:1aea676f769ae62f5588873f4ad9ab7d5ed04d859b6a7614599ccb54f5a8f89a
+    image: mcr.microsoft.com/dotnet/sdk:8.0.421-noble-amd64@@sha256:1d44c5bac8bfc92acb27b53ec081cbed39f3739ecdcdb8a46b1e49cd7690c483
     interpreter:
       type: DefaultInterpreter
       commands: |
@@ -156,9 +156,9 @@ jobs:
     condition: SUCCESSFUL
     optional: false
   - type: CommandStep
-    name: fedora-43 x64 tests
+    name: fedora-44 x64 tests
     runInContainer: true
-    image: docker.io/fedora:43@@sha256:2ad3073554aef41c15b2c52e968ec0540c931bc3dab8c599ca6eb6f32f3f2d14
+    image: docker.io/fedora:44@@sha256:498c452f32a739b61f0ef215bce9924ebc4866cbe44710f58157d77723b7a6d2
     interpreter:
       type: DefaultInterpreter
       commands: |
