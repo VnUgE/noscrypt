@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.1.14] - 05-29-26
 
 The public API and ABI are unmodified, this is a non-breaking change release.  
 
@@ -13,9 +13,10 @@ The public API and ABI are unmodified, this is a non-breaking change release.
 
 ### Added
 - Added `VERSION` files to all vendored dependencies to track exact versions, commits, and archive hashes
+- A new, internal `src/span.h` header (and unit tests) for safer memory interfacing
 
 ### Fixed
-- Latent bug in `noscrypt.c` that could cause invalid buffer sizes if a compiler adds padding to some internal structures
+- Latent bug in `noscrypt.c` that could cause incorrect buffer sizes if a compiler adds padding to some internal structures
 
 ### Changed
 - Force disable musig module when building vendored libsecp256k1
@@ -28,8 +29,8 @@ The public API and ABI are unmodified, this is a non-breaking change release.
 - Many typo fixes in public and internal documentation
 - Reorganized internal headers in `src/` including a new `span.h` header for more robust memory operations
 - Improved the C unit testing framework and internal utility test coverage
-- Renamed macro `NC_UTIL_CIPHER_REUSEABLE` to `NC_UTIL_CIPHER_REUSABLE` in `noscryptutil.h` public api and added deprecation notice
-- Renamed macro `NC_PUBKEY_SIZE` to `NC_PUB_KEY_SIZE` in `noscrypt.h` for consistent naming
+- Renamed and deprecated macro `NC_UTIL_CIPHER_REUSEABLE` to `NC_UTIL_CIPHER_REUSABLE` in `noscryptutil.h` public api and added deprecation notice
+- Renamed and deprecated macro `NC_PUBKEY_SIZE` to `NC_PUB_KEY_SIZE` in `noscrypt.h` for consistent naming
 
 ### Updated
 - Updated `openssl` headers to version `3.6.2`
@@ -225,17 +226,18 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://github.com/VnUgE/noscrypt/compare/v0.1.13...HEAD
-[0.1.13]: https://github.com/VnUgE/noscrypt/compare/v0.1.12...v0.1.13
-[0.1.12]: https://github.com/VnUgE/noscrypt/compare/v0.1.11...v0.1.12
-[0.1.11]: https://github.com/VnUgE/noscrypt/compare/v0.1.10...v0.1.11
-[0.1.10]: https://github.com/VnUgE/noscrypt/compare/v0.1.9...v0.1.10
-[0.1.9]: https://github.com/VnUgE/noscrypt/compare/v0.1.8...v0.1.9
-[0.1.8]: https://github.com/VnUgE/noscrypt/compare/v0.1.7...v0.1.8
-[0.1.7]: https://github.com/VnUgE/noscrypt/compare/v0.1.6...v0.1.7
-[0.1.6]: https://github.com/VnUgE/noscrypt/compare/v0.1.5...v0.1.6
-[0.1.5]: https://github.com/VnUgE/noscrypt/compare/v0.1.4...v0.1.5
-[0.1.4]: https://github.com/VnUgE/noscrypt/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/VnUgE/noscrypt/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/VnUgE/noscrypt/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/VnUgE/noscrypt/compare/v0.1.0...v0.1.1
+[unreleased]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.14&id2=v0.1.13
+[0.1.14]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.14&id2=v0.1.13
+[0.1.13]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.13&id2=v0.1.12
+[0.1.12]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.12&id2=v0.1.11
+[0.1.11]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.11&id2=v0.1.10
+[0.1.10]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.10&id2=v0.1.9
+[0.1.9]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.9&id2=v0.1.8
+[0.1.8]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.8&id2=v0.1.7
+[0.1.7]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.7&id2=v0.1.6
+[0.1.6]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.6&id2=v0.1.5
+[0.1.5]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.5&id2=v0.1.4
+[0.1.4]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.4&id2=v0.1.3
+[0.1.3]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.3&id2=v0.1.2
+[0.1.2]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.2&id2=v0.1.1
+[0.1.1]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.1&id2=v0.1.0
