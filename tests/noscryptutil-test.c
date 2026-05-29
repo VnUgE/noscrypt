@@ -23,6 +23,11 @@
 #define NC_TEST_NIP04_IV_SIZE	0x10   /* Spec defines nip04 nonce (iv) size must be 16 bytes */
 #define NC_TEST_NIP44_IV_SIZE	0x20   /* Spec defines nip44 nonce (iv) size must be 32 bytes */
 
+/*
+* NOTE: test functions may leak memory in the case of abort or test failure. If tests fail 
+* you will likely see memory leaks if using memory leak detector such as valgrind. This is considered
+* acceptable for now as process termination will occur quickly, and we require 100% test passing.
+*/
 
 #include "test.h"
 #include "hex.h"
