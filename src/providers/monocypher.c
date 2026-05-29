@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/monocypher.c
@@ -27,14 +27,12 @@
 * 
 */
 
-#ifdef NC_ENABLE_MONOCYPHER
-
 #include <monocypher/monocypher.h>
 
-/* Export secure memse0 */
+/* Export secure zero memset */
 #ifndef _IMPL_SECURE_ZERO_MEMSET
 
-	/* export cytpo wipe function as is */
+	/* export crypto wipe function as is */
 	#define _IMPL_SECURE_ZERO_MEMSET crypto_wipe	
 #endif
 
@@ -51,17 +49,17 @@
 	)
 	{
 		/* Ensure output is large enough to store input data */
-		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		if (spanGetSize(output) < spanGetSizeC(input))
 		{
 			return CSTATUS_FAIL;
 		}
 
 		/* 
-		 * Guard conversion from 32bit int to size_t incase 
-		 * incase the platform integer size is too small
+		 * Guard conversion from 32bit int to size_t in case
+		 * the platform integer size is too small
 		 */
 #if SIZE_MAX < UINT32_MAX
-		if (ncSpanGetSizeC(input) > SIZE_MAX)
+		if (spanGetSizeC(input) > SIZE_MAX)
 		{
 			return CSTATUS_FAIL;
 		}
@@ -72,19 +70,19 @@
 		* needed for noscrypt as encryptions are one-shot, and 
 		* require a new nonce for each encryption.
 		* 
-		* ITEF function uses a 12byte nonce and 32 byte key which 
+		* IETF function uses a 12byte nonce and 32 byte key which 
 		* is required for nip-44 compliant encryption. See monocypher.h
 		*/
 
-		DEBUG_ASSERT(ncSpanGetSizeC(key) == 0x20);
-		DEBUG_ASSERT(ncSpanGetSizeC(nonce) == 0x0c);
+		DEBUG_ASSERT(spanGetSizeC(key) == 0x20);
+		DEBUG_ASSERT(spanGetSizeC(nonce) == 0x0c);
 
 		crypto_chacha20_ietf(
-			ncSpanGetOffset(output, 0),
-			ncSpanGetOffsetC(input, 0),
-			ncSpanGetSizeC(input),
-			ncSpanGetOffsetC(key, 0),
-			ncSpanGetOffsetC(nonce, 0),
+			spanGetOffset(output, 0),
+			spanGetOffsetC(input, 0),
+			spanGetSizeC(input),
+			spanGetOffsetC(key, 0),
+			spanGetOffsetC(nonce, 0),
 			0x00			/* Counter always starts at 0 */
 		);
 
@@ -92,5 +90,3 @@
 	}
 
 #endif
-
-#endif /* !NC_ENABLE_MONOCYPHER */

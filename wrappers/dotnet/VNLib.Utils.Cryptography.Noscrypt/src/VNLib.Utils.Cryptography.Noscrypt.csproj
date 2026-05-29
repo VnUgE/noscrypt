@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -15,9 +15,9 @@
     <Company>Vaughn Nugent</Company>
     <Product>VNLib.Utils.Cryptography.Noscrypt</Product>
     <Description>Provides a C# managed library wrapper for the noscrypt native library</Description>
-    <Copyright>Copyright © 2025 Vaughn Nugent</Copyright>
+    <Copyright>Copyright © 2026 Vaughn Nugent</Copyright>
     <PackageProjectUrl>https://www.vaughnnugent.com/resources/software/modules/Noscrypt</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/VnUgE/noscrypt/tree/master/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
+    <RepositoryUrl>https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/tree/wrappers/dotnet/VNLib.Utils.Cryptography.Noscrypt</RepositoryUrl>
     <PackageTags>cryptography;nostr;encryption;signatures</PackageTags>
     <Artifacts>release.tgz,debug.tgz,src.tgz</Artifacts>
   </PropertyGroup>
@@ -35,8 +35,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.3" />
-    <PackageReference Include="VNLib.Utils" Version="0.1.3" />
+    <PackageReference Include="VNLib.Hashing.Portable" Version="0.1.5" />
+    <PackageReference Include="VNLib.Utils" Version="0.1.5" />
   </ItemGroup>
   
 </Project>

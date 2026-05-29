@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2024 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: hkdf.h
@@ -23,12 +23,12 @@
 #ifndef _NC_HKDF_H
 #define _NC_HKDF_H
 
-#include "nc-util.h"
+#include "span.h"
 #include "nc-crypto.h"
 
 /*
 * IMPORTANT:
-*	The HKDF_IN_BUF_SIZE defintion sets the internal stack buffer size to use
+*	The HKDF_IN_BUF_SIZE definition sets the internal stack buffer size to use
 *	during fallback HKDF_Expand operations.
 *
 *	128 bytes should be more than enough for most use cases, without going 
@@ -40,7 +40,7 @@
 #endif
 
 
-/* typedefs for hdkf callback functions */
+/* typedefs for hkdf callback functions */
 
 typedef cstatus_t (*hmac_hash_fn)(void* ctx, cspan_t data);
 typedef cstatus_t (*hmac_finish_fn)(void* ctx, sha256_t hmacOut32);

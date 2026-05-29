@@ -1,5 +1,5 @@
-﻿/*
-* Copyright (c) 2025 Vaughn Nugent
+/*
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: noscrypt.h
@@ -19,7 +19,7 @@
 */
 
 /*
-* noscrypt is a an open-source, strict C89 library that performs the basic 
+* noscrypt is an open-source, strict C89 library that performs the basic 
 * cryptographic operations found in the Nostr protocol. It is designed to be
 * portable and easy to use in any C89 compatible environment. It is also designed
 */
@@ -47,7 +47,7 @@ extern "C" {
 	#endif
 #endif /*  !NC_CC */
 
-#ifndef NC_EXPORT	/* Allow users to disable the export/impoty macro if using source code directly */
+#ifndef NC_EXPORT	/* Allow users to disable the export/import macro if using source code directly */
 	#ifdef NOSCRYPT_EXPORTING
 		#ifdef _NC_IS_WINDOWS
 			#define NC_EXPORT __declspec(dllexport)
@@ -69,7 +69,7 @@ extern "C" {
 #define BIP340_PUBKEY_HEADER_BYTE		0x02
 #define NIP44_MESSAGE_KEY_SIZE			0x4c	/*32 + 12 + 32 = 76 */
 #define NC_SEC_KEY_SIZE					0x20
-#define NC_PUBKEY_SIZE					0x20
+#define NC_PUB_KEY_SIZE					0x20
 #define NC_CONTEXT_ENTROPY_SIZE			0x20
 #define NC_SHARED_SEC_SIZE				0x20
 #define NC_CONV_KEY_SIZE				0x20
@@ -81,21 +81,13 @@ extern "C" {
 /*
 * DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead.
 * Will be removed in a future version.
+* 
+* DEPRECATED: NC_PUBKEY_SIZE Use NC_PUB_KEY_SIZE macro instead.
 */
-#if defined(__GNUC__)
-	#define NC_NIP04_AES_KEY_SIZE		__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) NC_NIP04_KEY_SIZE	/* AES 256 key size */
-	#define NC_NIP44_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead"))) 0x20	/* 32 bytes */
-	#define NC_NIP04_IV_SIZE			__attribute__((deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead"))) 0x10	/* 16 bytes */
-#elif defined(_NC_IS_WINDOWS)
-	#define NC_NIP04_AES_KEY_SIZE		__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) NC_NIP04_KEY_SIZE	/* AES 256 key size */
-	#define NC_NIP44_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead")) 0x20	/* 32 bytes */
-	#define NC_NIP04_IV_SIZE			__declspec(deprecated("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead")) 0x10	/* 16 bytes */
-#else
-	/* For compilers without deprecation support */
-	#define NC_NIP04_AES_KEY_SIZE		NC_NIP04_KEY_SIZE	/* AES 256 key size */
-	#define NC_NIP44_IV_SIZE			0x20	/* 32 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead */
-	#define NC_NIP04_IV_SIZE			0x10	/* 16 bytes - DEPRECATED: Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead */
-#endif
+#define NC_NIP04_AES_KEY_SIZE		_NC_DEPRECATED("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead") NC_NIP04_KEY_SIZE	/* AES 256 key size */
+#define NC_NIP44_IV_SIZE			_NC_DEPRECATED("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP44) instead") 0x20	/* 32 bytes */
+#define NC_NIP04_IV_SIZE			_NC_DEPRECATED("Use NCEncryptionGetIvSize(NC_ENC_VERSION_NIP04) instead") 0x10	/* 16 bytes */
+#define NC_PUBKEY_SIZE				_NC_DEPRECATED("Use NC_PUB_KEY_SIZE macro instead") NC_PUB_KEY_SIZE
 
 /*
 * From spec
@@ -131,7 +123,7 @@ extern "C" {
 
 
 /*
-* ENCRYPTION ALTERATION PROPERTEIS
+* ENCRYPTION ALTERATION PROPERTIES
 * 
 * Codes for assigning values to an NCEncryptionArgs 
 * structure.
@@ -153,15 +145,15 @@ extern "C" {
 * 
 *   I'd like to support 64bit stuff, but really the underlying systems don't 
 *   need to support that size buffer, nor do I expect platforms to have more than
-*   4GB sized buffers (int32_t), it's just not practial and most work is on 
+*   4GB sized buffers (int32_t), it's just not practical and most work is on 
 *   digests anyway. 
 * 
 * - Decisions on unsigned vs signed
 *   Yeah, I know this is a popular squabble in C land, but implementation details
 *   should not trouble the user. If I expect an unsigned int, then it should be 
-*   explicit, negative number guards are cumbersom to handle return codes with
+*   explicit, negative number guards are cumbersome to handle return codes with
 *   that IMO most engineers don't bother doing anyway or doing well at the very
-*   least, so I'm using unsgined integers. Sorry, not sorry.
+*   least, so I'm using unsigned integers. Sorry, not sorry.
 */
 
 /* A compressed result/return value, negative values 
@@ -184,7 +176,7 @@ typedef struct nc_secret_key_struct {
 */
 typedef struct nc_xonly_pubkey_struct {
 
-	uint8_t key[NC_PUBKEY_SIZE];
+	uint8_t key[NC_PUB_KEY_SIZE];
 
 } NCPublicKey;
 
@@ -284,7 +276,7 @@ NC_EXPORT uint32_t NC_CC NCGetContextStructSize(void);
 /*
 * Obtains a pointer to the process-wide shared structure to be 
 * used in single-threaded, resource constrained systems. NOTE:
-* this structure is not initalized and still requires calling
+* this structure is not initialized and still requires calling
 * NCInitContext() before use.
 * @return The address of the process-wide, shared structure.
 */
@@ -375,7 +367,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 * @param sig64 The 64byte signature to verify
 * @param data A pointer to the raw data buffer to verify
 * @param dataSize The size of the raw data buffer
-* @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
+* @param pk A pointer to the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCVerifyData(
@@ -413,7 +405,7 @@ Equivalent to calling secp256k1_schnorrsig_verify.
 * @param ctx A pointer to the existing library context
 * @param sig64 A pointer to the 64-byte signature to verify
 * @param digest32 A pointer to a 32-byte message digest to verify
-* @param pk A pointer to the the x-only compressed public key (x-only serialized public key)
+* @param pk A pointer to the x-only compressed public key (x-only serialized public key)
 * @return NC_SUCCESS if the signature could be verified, otherwise an error code
 */
 NC_EXPORT NCResult NC_CC NCVerifyDigest(
@@ -515,7 +507,7 @@ NC_EXPORT NCResult NC_CC NCGetSharedSecret(
 * Computes a NIP-44 conversation key from the local secret key and the remote 
 public key, and stores it in the conversationKey buffer.
 * @param ctx A pointer to the existing library context
-* @param sk A pointer to the the secret key
+* @param sk A pointer to the secret key
 * @param pk A pointer to the compressed public key (x-only serialized public key)
 * @param conversationKey The buffer to store write the conversation key to
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: platform.h
@@ -19,7 +19,7 @@
 */
 
 /*
-*	Contains platform specific defintions
+*	Contains platform specific definitions
 */
 
 #pragma once
@@ -36,7 +36,7 @@
 #endif
 
 /*
-* Define supported inline defintions for various compilers 
+* Define supported inline definitions for various compilers 
 * and C standards
 */
 
@@ -49,6 +49,17 @@
 #else
 	#define _nc_fn_inline
 	#pragma message("Warning: No inline keyword defined for this compiler")
+#endif
+
+/*
+* Platform independent deprecation warnings
+*/
+#if defined(__GNUC__)
+	#define _NC_DEPRECATED(message)		__attribute__((deprecated(message)))
+#elif defined(_NC_IS_WINDOWS)
+	#define _NC_DEPRECATED(message)		__declspec(deprecated(message))
+#else
+	#define _NC_DEPRECATED(message)
 #endif
 
 #endif /* !_NC_PLATFORM_H */

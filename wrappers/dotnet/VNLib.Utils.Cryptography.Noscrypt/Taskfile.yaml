@@ -1,6 +1,6 @@
-#Builds c# libraries for produc
+#Builds c# libraries for production
 
-version: '3'
+version: '3.45'
 
 vars:  
   BINARY_DIR: '{{ .BINARY_DIR | default "bin" }}'

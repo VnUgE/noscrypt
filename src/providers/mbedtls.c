@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/mbedtls.c
@@ -20,15 +20,14 @@
 
 
 /*
-* This file contains implemntation functions for the required 
+* This file contains implementation functions for the required 
 * cryptography primitives of noscrypt. This file stubs functionality
 * using the Mbed-TLS library, if the builder desires to link against
 * it. 
 */
 
-#ifdef MBEDTLS_CRYPTO_LIB
 
-/* Inline errors on linux in header files on linux */
+/* Inline errors on Linux in header files */
 #ifndef inline
 	#define inline __inline
 	#include <mbedtls/md.h>
@@ -52,7 +51,7 @@
 _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 {
 	const mbedtls_md_info_t* info; 
-	/* Get sha256 md info for hdkf operations */
+	/* Get sha256 md info for hkdf operations */
 	info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 	DEBUG_ASSERT2(info != NULL, "Expected SHA256 md info pointer to be valid")
 	return info;
@@ -90,19 +89,19 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		_ssize_guard_int(input.size);
 
 		/* Ensure output buffer is large enough to store input data */
-		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		if (spanGetSize(output) < spanGetSizeC(input))
 		{
 			return CSTATUS_FAIL;
 		}
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
-			ncSpanGetOffsetC(key, 0),
-			ncSpanGetOffsetC(nonce, 0),
+			spanGetOffsetC(key, 0),
+			spanGetOffsetC(nonce, 0),
 			0x00u,		/* nip-44 counter version */
-			ncSpanGetSizeC(input),
-			ncSpanGetOffsetC(input, 0), 
-			ncSpanGetOffset(output, 0)
+			spanGetSizeC(input),
+			spanGetOffsetC(input, 0), 
+			spanGetOffset(output, 0)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
@@ -118,8 +117,8 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		_ssize_guard_int(data.size)
 
 		return mbedtls_sha256(
-			ncSpanGetOffsetC(data, 0), 
-			ncSpanGetSizeC(data), 
+			spanGetOffsetC(data, 0), 
+			spanGetSizeC(data), 
 			digestOut32, 
 			0				/* Set 0 for sha256 mode */
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
@@ -138,10 +137,10 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		return mbedtls_md_hmac(
 			_mbed_sha256_alg(),
-			ncSpanGetOffsetC(key, 0), 
-			ncSpanGetSizeC(key),
-			ncSpanGetOffsetC(data, 0), 
-			ncSpanGetSizeC(data),
+			spanGetOffsetC(key, 0), 
+			spanGetSizeC(key),
+			spanGetOffsetC(data, 0), 
+			spanGetSizeC(data),
 			hmacOut32
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
@@ -160,12 +159,12 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		return mbedtls_hkdf_expand(
 			_mbed_sha256_alg(),
-			ncSpanGetOffsetC(prk, 0), 
-			ncSpanGetSizeC(prk),
-			ncSpanGetOffsetC(info, 0),
-			ncSpanGetSizeC(info),
-			ncSpanGetOffset(okm, 0),
-			ncSpanGetSize(okm)
+			spanGetOffsetC(prk, 0), 
+			spanGetSizeC(prk),
+			spanGetOffsetC(info, 0),
+			spanGetSizeC(info),
+			spanGetOffset(okm, 0),
+			spanGetSize(okm)
 		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
 	}
 
@@ -190,6 +189,4 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
-#endif
-
 #endif

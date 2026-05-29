@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2025 Vaughn Nugent
+# Copyright (c) 2026 Vaughn Nugent
 # See the LICENSE in this directory for terms of use
 #
 # This file configures noscrypt with best defaults as possible while offering 
@@ -64,8 +64,8 @@ if(NOT secp256k1)
 	set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON CACHE BOOL "Enable the schnorr signature module (required for noscrypt)" FORCE)
 	set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON CACHE BOOL "Enable the extra keys module (required for noscrypt)" FORCE)
 	set(SECP256K1_ENABLE_MODULE_ELLSWIFT OFF CACHE BOOL "Disable the Elliptic Swift module" FORCE)
+	set(SECP256K1_ENABLE_MODULE_MUSIG OFF CACHE BOOL "Disable musig module" FORCE)
 	set(SECP256K1_INSTALL OFF CACHE BOOL "Disable installation of secp256k1 library" FORCE)
-	set(SECP256K1_DISABLE_SHARED ON CACHE BOOL "Disable shared library build, we're linking statically" FORCE)
 	#new in 0.7.0
 	set(SECP256K1_ENABLE_API_VISIBILITY_ATTRIBUTES OFF CACHE BOOL "Disable API visibility attributes" FORCE)
 
@@ -95,9 +95,10 @@ set(NOSCRYPT_SRCS
 set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
-	"src/nc-util.h"
 	"src/hkdf.h"
 	"src/nc-crypto.h"
+	"src/debug.h"
+	"src/span.h"
 )
 
 #if utils are enabled, add the source files
@@ -247,6 +248,10 @@ endif()
 
 set(_NC_COMPILE_OPTS)
 
+
+# enable -Werror for all platforms in debug mode
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+
 #setup flags for windows compilation
 if(MSVC)
 
@@ -281,7 +286,6 @@ elseif(CMAKE_COMPILER_IS_GNUCC)
 	list(APPEND _NC_COMPILE_OPTS 
 		-Wextra 
 		-fstack-protector
-		-Werror				# warnings as errors
 	)
 
 	#if debug build enable additional debug flags
@@ -365,29 +369,70 @@ target_compile_definitions(${_NC_PROJ_NAME}_static PRIVATE ${NC_PROJ_DEFINITIONS
 ###########################
 if(NC_BUILD_TESTS)
 
+	enable_testing()
+
 	#add test executable and link to shared library for more realistic usage
-	add_executable(nctest tests/test.c)
-	target_link_libraries(nctest ${_NC_PROJ_NAME})
+	add_executable(nctest tests/test-base.c tests/test.c)
+	target_link_libraries(nctest ${_NC_PROJ_NAME})	
+
+	add_executable(ncspanstest tests/test-base.c tests/spans-test.c)
+	target_link_libraries(ncspanstest ${_NC_PROJ_NAME})
 
 	if(MSVC)
 		#link bcrypt to test application for Windows platforms
 		target_link_libraries(nctest "bcrypt.lib")
+		target_link_libraries(ncspanstest "bcrypt.lib")
 	endif()
 
-	target_include_directories(nctest PRIVATE include)
-	target_include_directories(nctest PRIVATE src)	#allow access to internal headers
+	#allow access to internal headers	
+	target_include_directories(nctest PRIVATE include PRIVATE src)
 
-	#enable c11 for testing
+	#allow access to internal headers
+	target_include_directories(ncspanstest PRIVATE include PRIVATE src)	
+
+	#enable c11 for testing and pass matching project definitions
 	target_compile_features(nctest PRIVATE c_std_11)
 	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})	
 
-	enable_testing()
+	target_compile_features(ncspanstest PRIVATE c_std_11)
+	target_compile_definitions(ncspanstest PRIVATE ${NC_PROJ_DEFINITIONS})
 
 	add_test(
 		NAME nctest 
 		COMMAND nctest
 		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
 	)
+
+	add_test(
+		NAME ncspanstest 
+		COMMAND ncspanstest
+		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+	)
+	
+	if(NC_ENABLE_UTILS)
+
+		# Add util tests project and link with noscrypt library
+		add_executable(ncutiltest tests/test-base.c tests/noscryptutil-test.c)
+		target_link_libraries(ncutiltest ${_NC_PROJ_NAME})
+
+		if(MSVC)
+			#link bcrypt to test application for Windows platforms
+			target_link_libraries(ncutiltest "bcrypt.lib")
+		endif()
+
+		target_include_directories(ncutiltest PRIVATE include)
+		target_include_directories(ncutiltest PRIVATE src)	#allow access to internal headers
+
+		target_compile_features(ncutiltest PRIVATE c_std_11)
+		target_compile_definitions(ncutiltest PRIVATE ${NC_PROJ_DEFINITIONS})
+
+		add_test(
+			NAME ncutiltest 
+			COMMAND ncutiltest
+			CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+		)
+
+	endif()
 
 endif()
 
@@ -405,7 +450,7 @@ else()
 	message("  secp256k1 library: ..... ${secp256k1}")
 endif()
 message("  Utilities enabled: ..... ${NC_ENABLE_UTILS}")
-message(" Defintions: ${NC_PROJ_DEFINITIONS}")
+message(" Definitions: ${NC_PROJ_DEFINITIONS}")
 message(" Compiler flags: ${_NC_COMPILE_OPTS}")
 message("=====================================")
 

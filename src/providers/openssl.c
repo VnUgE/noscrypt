@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/openssl.c
@@ -18,9 +18,6 @@
 * along with noscrypt. If not, see http://www.gnu.org/licenses/.
 */
 
-
-/* Setup openssl */
-#ifdef OPENSSL_CRYPTO_LIB
 
 /*
 * Since openssl depends on the variable size 
@@ -70,14 +67,14 @@
 		struct ossl_evp_state evpState;		
 
 		DEBUG_ASSERT(digestOut32 != NULL);
-		DEBUG_ASSERT(ncSpanIsValidC(data));
+		DEBUG_ASSERT(!spanIsNullC(data));
 
 		result = CSTATUS_FAIL;
 
-		ncSpanInit(&digestSpan, digestOut32, sizeof(sha256_t));
+		spanInit(&digestSpan, digestOut32, sizeof(sha256_t));
 
 		/*
-		* Allocate and initalize the context
+		* Allocate and initialize the context
 		*/
 		if (!_osslEvpInit(&evpState, EvpStateTypeDigest, OSSL_SHA256))
 		{
@@ -119,10 +116,10 @@
 
 		result = CSTATUS_FAIL;
 
-		ncSpanInit(&digestSpan, hmacOut32, sizeof(sha256_t));
+		spanInit(&digestSpan, hmacOut32, sizeof(sha256_t));
 
 		/*
-		* Allocate and initalize the context
+		* Allocate and initialize the context
 		*/
 		if (!_osslEvpInit(&evpState, EvpStateTypeMac, OSSL_HMAC))
 		{
@@ -202,7 +199,7 @@
 		DEBUG_ASSERT(hmacOut32 != NULL);
 
 		state = (const struct _hkdf_state*)ctx;
-		ncSpanInit(&hmacSpan, hmacOut32, sizeof(sha256_t));
+		spanInit(&hmacSpan, hmacOut32, sizeof(sha256_t));
 
 		if (!_osslEvpFinal(&state->evpState, hmacSpan))
 		{
@@ -210,7 +207,7 @@
 		}
 
 		/* 
-		* Context must be re-initalized after finalize
+		* Context must be re-initialized after finalize
 		* See lifecycle https://docs.openssl.org/3.0/man7/life_cycle-mac/#copyright
 		*/
 
@@ -290,10 +287,10 @@
 		result = CSTATUS_FAIL;
 		bytesWritten = 0;
 
-		ncSpanInitC(&nonceSpan, chaChaNonce, sizeof(chaChaNonce));
+		spanInitC(&nonceSpan, chaChaNonce, sizeof(chaChaNonce));
 
 		/* Ensure output buffer is at least large enough to store input data */
-		if (ncSpanGetSize(output) < ncSpanGetSizeC(input))
+		if (spanGetSize(output) < spanGetSizeC(input))
 		{
 			return CSTATUS_FAIL;
 		}
@@ -307,18 +304,18 @@
 			goto Cleanup;
 		}
 
-		DEBUG_ASSERT2(ncSpanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE, "ChaCha key buffer size is not correct");
+		DEBUG_ASSERT2(spanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE, "ChaCha key buffer size is not correct");
 
 		/*
 		* RFC 7539 ChaCha20 requires a 16 byte initialization vector. A 
-		* counter value is preprended to the nonce to make up the 16 byte 
+		* counter value is prepended to the nonce to make up the 16 byte 
 		* size.
 		*
 		* The counter bytes are always set to 0 for the nonce.
 		*/
 
 		ncCryptoSecureZero(chaChaNonce, sizeof(chaChaNonce));
-		ncSpanReadC(nonce, chaChaNonce + 4, NC_CRYPTO_CHACHA_NONCE_SIZE);
+		spanReadC(nonce, chaChaNonce + 4, NC_CRYPTO_CHACHA_NONCE_SIZE);
 
 		if (!_osslEvpCipherInit(&state, key, nonceSpan))
 		{
@@ -330,22 +327,21 @@
 			goto Cleanup;
 		}
 		
-		/*
-		* Possible static asser that int size must be 32bit or smaller
-		* so it can be cast safely to uint32
-		*/
-		if (bytesWritten < 0 || bytesWritten > INT32_MAX)
+		/* int must be 32-bit or smaller so bytesWritten casts safely to uint32 */
+		STATIC_ASSERT(sizeof(int) <= sizeof(int32_t), "int must be <= 32 bits for safe cast to uint32_t")
+
+		if (bytesWritten < 0)
 		{
 			goto Cleanup;
 		}
 
-		DEBUG_ASSERT((uint32_t)bytesWritten <= ncSpanGetSizeC(input))
+		DEBUG_ASSERT((uint32_t)bytesWritten <= spanGetSizeC(input))
 
 		/* shift output span by consumed data amount */
-		output = ncSpanSlice(
+		output = spanSlice(
 		    output,
 			(uint32_t)bytesWritten,
-			ncSpanGetSizeC(input) - (uint32_t)bytesWritten
+			spanGetSizeC(input) - (uint32_t)bytesWritten
 		);
 
 		if (!_osslEvpFinal(&state, output))
@@ -363,5 +359,3 @@
 	}
 
 #endif
-
-#endif	/*!OPENSSL_CRYPTO_LIB */

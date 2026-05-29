@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2025 Vaughn Nugent
+* Copyright (c) 2026 Vaughn Nugent
 *
 * Package: noscrypt
 * File: providers/openssl-helpers.c
@@ -101,16 +101,16 @@ _IMPLSTB cstatus_t _osslEvpUpdate(const struct ossl_evp_state* state, cspan_t da
 	case EvpStateTypeDigest:
 		result = EVP_DigestUpdate(
 			_osslEvpGetMdContext(state),
-			ncSpanGetOffsetC(data, 0),
-			ncSpanGetSizeC(data)
+			spanGetOffsetC(data, 0),
+			spanGetSizeC(data)
 		);
 		break;
 
 	case EvpStateTypeMac:
 		result = EVP_MAC_update(
 			_osslEvpGetMacContext(state),
-			ncSpanGetOffsetC(data, 0),
-			ncSpanGetSizeC(data)
+			spanGetOffsetC(data, 0),
+			spanGetSizeC(data)
 		);
 		break;
 		/* Cipher is not supported by this api */
@@ -137,10 +137,10 @@ _IMPLSTB cstatus_t _osslEvpCipherUpdate(
 
 	result = EVP_EncryptUpdate(
 		_osslEvpGetCipherContext(state),
-		ncSpanGetOffset(output, 0),
+		spanGetOffset(output, 0),
 		bytesConsumed,
-		ncSpanGetOffsetC(input, 0),
-		ncSpanGetSizeC(input)
+		spanGetOffsetC(input, 0),
+		spanGetSizeC(input)
 	);
 
 	return (cstatus_t)(result != 0);
@@ -154,7 +154,7 @@ _IMPLSTB cstatus_t __digestFinal(const struct ossl_evp_state* state, span_t out)
 	DEBUG_ASSERT(state != NULL);
 	DEBUG_ASSERT(state->type == EvpStateTypeDigest);
 
-	mdOut = ncSpanGetSize(out);
+	mdOut = spanGetSize(out);
 
 	/* If the output span is empty, nothing to do */
 	if (mdOut == 0)
@@ -164,11 +164,11 @@ _IMPLSTB cstatus_t __digestFinal(const struct ossl_evp_state* state, span_t out)
 
 	result = EVP_DigestFinal_ex(
 		_osslEvpGetMdContext(state),
-		ncSpanGetOffset(out, 0),
+		spanGetOffset(out, 0),
 		&mdOut
 	);
 
-	return (cstatus_t)(result != 0 && mdOut == ncSpanGetSize(out));
+	return (cstatus_t)(result != 0 && mdOut == spanGetSize(out));
 }
 
 _IMPLSTB cstatus_t __macFinal(const struct ossl_evp_state* state, span_t out)
@@ -179,7 +179,7 @@ _IMPLSTB cstatus_t __macFinal(const struct ossl_evp_state* state, span_t out)
 	DEBUG_ASSERT(state != NULL);
 	DEBUG_ASSERT(state->type == EvpStateTypeMac);
 
-	macOut = ncSpanGetSize(out);
+	macOut = spanGetSize(out);
 
 	/* If the output span is empty, nothing to do */
 	if (macOut == 0)
@@ -189,12 +189,12 @@ _IMPLSTB cstatus_t __macFinal(const struct ossl_evp_state* state, span_t out)
 
 	result = EVP_MAC_final(
 		_osslEvpGetMacContext(state),
-		ncSpanGetOffset(out, 0),
+		spanGetOffset(out, 0),
 		&macOut,
 		macOut
 	);
 
-	return (cstatus_t)(result != 0 && macOut == ncSpanGetSize(out));
+	return (cstatus_t)(result != 0 && macOut == spanGetSize(out));
 }
 
 _IMPLSTB cstatus_t __cipherFinal(const struct ossl_evp_state* state, span_t out)
@@ -205,12 +205,12 @@ _IMPLSTB cstatus_t __cipherFinal(const struct ossl_evp_state* state, span_t out)
 	DEBUG_ASSERT(state->type == EvpStateTypeCipher);
 	
 	/* guard small integer overflow */
-	if (ncSpanGetSize(out) > INT_MAX)
+	if (spanGetSize(out) > INT_MAX)
 	{
 		return CSTATUS_FAIL;
 	}
 
-	cipherOut = (int)ncSpanGetSize(out);
+	cipherOut = (int)spanGetSize(out);
 
 	/* If the output span is empty, nothing to do */
 	if (cipherOut == 0)
@@ -220,11 +220,11 @@ _IMPLSTB cstatus_t __cipherFinal(const struct ossl_evp_state* state, span_t out)
 
 	result = EVP_CipherFinal_ex(
 		_osslEvpGetCipherContext(state),
-		ncSpanGetOffset(out, 0),
+		spanGetOffset(out, 0),
 		&cipherOut
 	);
 
-	return (cstatus_t)(result != 0 && cipherOut >= 0 && (uint32_t)cipherOut == ncSpanGetSize(out));
+	return (cstatus_t)(result != 0 && cipherOut >= 0 && (uint32_t)cipherOut == spanGetSize(out));
 }
 
 static cstatus_t _osslEvpFinal(const struct ossl_evp_state* state, span_t out)
@@ -261,12 +261,12 @@ _IMPLSTB cstatus_t _osslEvpMacInit(const struct ossl_evp_state* state, const OSS
 
 	DEBUG_ASSERT(state != NULL);
 	DEBUG_ASSERT(state->type == EvpStateTypeMac);
-	DEBUG_ASSERT(ncSpanIsValidC(state->_prk));
+	DEBUG_ASSERT(!spanIsNullC(state->_prk));
 
 	result = EVP_MAC_init(
 		_osslEvpGetMacContext(state),
-		ncSpanGetOffsetC(state->_prk, 0),
-		ncSpanGetSizeC(state->_prk),
+		spanGetOffsetC(state->_prk, 0),
+		spanGetSizeC(state->_prk),
 		params
 	);
 
@@ -286,14 +286,14 @@ _IMPLSTB cstatus_t _osslEvpCipherInit(const struct ossl_evp_state* state, cspan_
 	* Sanity check on key and IV sizes for the created
 	* cipher
 	*/
-	DEBUG_ASSERT((uint32_t)EVP_CIPHER_get_key_length(cipher) == ncSpanGetSizeC(key));
-	DEBUG_ASSERT((uint32_t)EVP_CIPHER_iv_length(cipher) == ncSpanGetSizeC(iv));
+	DEBUG_ASSERT((uint32_t)EVP_CIPHER_get_key_length(cipher) == spanGetSizeC(key));
+	DEBUG_ASSERT((uint32_t)EVP_CIPHER_iv_length(cipher) == spanGetSizeC(iv));
 
 	osslResult = EVP_EncryptInit_ex2(
 		_osslEvpGetCipherContext(state),
 		cipher,
-		ncSpanGetOffsetC(key, 0),
-		ncSpanGetOffsetC(iv, 0),
+		spanGetOffsetC(key, 0),
+		spanGetOffsetC(iv, 0),
 		NULL
 	);
 

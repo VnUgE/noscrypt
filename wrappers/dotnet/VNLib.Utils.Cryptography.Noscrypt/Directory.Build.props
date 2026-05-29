@@ -15,8 +15,7 @@
       <WarningsAsErrors>CS0618;IDE0251;CS9113;</WarningsAsErrors>
       
       <!-- Ignore underscores in public constant fields -->
-      <NoWarn>CS1591</NoWarn>
-
+      <NoWarn>CS1591;MSTEST0001</NoWarn>
 
    </PropertyGroup>
 </Project>
