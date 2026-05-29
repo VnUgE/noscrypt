@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Vaughn Nugent
+// Copyright (C) 2026 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -87,6 +87,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         //Cipher flags
         public const uint NC_UTIL_CIPHER_MODE           = 0x01u;
 
+
+        [Obsolete("Use NC_PUB_KEY_SIZE instead.")]
+        public const int NC_PUBKEY_SIZE = NC_PUB_KEY_SIZE;
 
         private readonly FunctionTable _functions = FunctionTable.BuildFunctionTable(Library);
 
