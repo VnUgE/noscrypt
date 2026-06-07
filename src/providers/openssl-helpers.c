@@ -22,9 +22,6 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 
-#define OSSL_SHA256 "SHA2-256"
-#define OSSL_HMAC "hmac"
-#define OSSL_CHACHA20 "ChaCha20"
 
 
 typedef enum {

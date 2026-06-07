@@ -26,36 +26,20 @@
 * it. 
 */
 
-
 /* Inline errors on Linux in header files */
 #ifndef inline
 	#define inline __inline
 	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
 	#include <mbedtls/aes.h>
 	#include <mbedtls/chacha20.h>
 	#include <mbedtls/constant_time.h>
 	#undef inline
 #else
 	#include <mbedtls/md.h>
-	#include <mbedtls/hkdf.h>
-	#include <mbedtls/hmac_drbg.h>
-	#include <mbedtls/sha256.h>
 	#include <mbedtls/aes.h>
 	#include <mbedtls/chacha20.h>
 	#include <mbedtls/constant_time.h>
 #endif
-
-_IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
-{
-	const mbedtls_md_info_t* info; 
-	/* Get sha256 md info for hkdf operations */
-	info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-	DEBUG_ASSERT2(info != NULL, "Expected SHA256 md info pointer to be valid")
-	return info;
-}
 
 /*
 * Guard against size_t overflow for platforms with
@@ -107,69 +91,6 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 
 #endif
 
-/* Export sha256 if not already defined */
-#ifndef _IMPL_CRYPTO_SHA256_DIGEST	
-	
-	#define _IMPL_CRYPTO_SHA256_DIGEST			_mbed_sha256_digest	
-
-	_IMPLSTB cstatus_t _mbed_sha256_digest(cspan_t data, sha256_t digestOut32)
-	{
-		_ssize_guard_int(data.size)
-
-		return mbedtls_sha256(
-			spanGetOffsetC(data, 0), 
-			spanGetSizeC(data), 
-			digestOut32, 
-			0				/* Set 0 for sha256 mode */
-		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
-	}
-
-#endif
-
-/* Export Sha256 hmac if not already defined by other libs */
-#ifndef _IMPL_CRYPTO_SHA256_HMAC
-
-	#define _IMPL_CRYPTO_SHA256_HMAC			_mbed_sha256_hmac
-
-	_IMPLSTB cstatus_t _mbed_sha256_hmac(cspan_t key, cspan_t data, sha256_t hmacOut32)
-	{
-		_ssize_guard_int(data.size)
-
-		return mbedtls_md_hmac(
-			_mbed_sha256_alg(),
-			spanGetOffsetC(key, 0), 
-			spanGetSizeC(key),
-			spanGetOffsetC(data, 0), 
-			spanGetSizeC(data),
-			hmacOut32
-		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
-	}
-#endif
-
-/* Export hkdf expand if not already defined */
-#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXPAND
-
-	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_mbed_sha256_hkdf_expand
-
-	_IMPLSTB cstatus_t _mbed_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
-	{		
-		_ssize_guard_int(prk.size);
-		_ssize_guard_int(info.size);
-		_ssize_guard_int(okm.size);
-
-		return mbedtls_hkdf_expand(
-			_mbed_sha256_alg(),
-			spanGetOffsetC(prk, 0), 
-			spanGetSizeC(prk),
-			spanGetOffsetC(info, 0),
-			spanGetSizeC(info),
-			spanGetOffset(okm, 0),
-			spanGetSize(okm)
-		) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
-	}
-
-#endif
-
 /* Export fixed-time compare if not already defined */
 #ifndef _IMPL_CRYPTO_FIXED_TIME_COMPARE
 
@@ -190,3 +111,148 @@ _IMPLSTB const mbedtls_md_info_t* _mbed_sha256_alg(void)
 		return (uint32_t)mbedtls_ct_memcmp(a, b, size);
 	}
 #endif
+
+/*
+* Export the ncCrypto digest interface function overrides for mbedtls
+*/
+#ifndef _DIGSET_STREAM_INTERFACE
+
+	#define _DIGSET_STREAM_INTERFACE "mbedtls"
+
+	void ncCryptoDigestClose(ncc_digest_t* stream)
+	{
+		DEBUG_ASSERT(stream);
+		if (stream)
+		{
+			mbedtls_md_free(&stream->ctx);
+
+			/* clear out the digest */
+			ncCryptoSecureZero(stream, sizeof(ncc_digest_t));
+		}
+	}
+
+	cstatus_t ncCryptoDigestCreate(ncc_digest_t* stream, uint32_t flags)
+	{		
+		const mbedtls_md_info_t* mdInfo;
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		/*
+		* Generic bit flags sit on the lowest 8 bits, next is the
+		* digest type value. The mask will clear all bits except
+		* the digest nibble
+		*/
+		switch (flags & NC_CRYPTO_DIGEST_TYPE_MASK)
+		{
+		case NC_CRYPTO_DIGEST_TYPE_SHA256:
+			mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+			break;
+
+		default:
+			return CSTATUS_FAIL;
+		}
+
+		/* literally just calls memset() */
+		mbedtls_md_init(&stream->ctx);
+
+		/* 
+		* Setup the context. flags & hmac == 0 no hmac, != 0 enables hmac
+		*/
+		if (mbedtls_md_setup(&stream->ctx, mdInfo, (flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)) == 0)
+		{
+			stream->flags = (flags | NC_CRYPTO_DIGEST_FLAGS_READY);
+			return CSTATUS_OK;
+		}
+
+		/* Supposed to call close anytime after setup is called */
+		ncCryptoDigestClose(stream);
+		return CSTATUS_FAIL;
+	}
+
+	cstatus_t ncCryptoDigestInit(ncc_digest_t* stream, cspan_t hmacKey)
+	{
+		int result;		
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		_ssize_guard_int(spanGetSizeC(hmacKey))
+
+		/* use hmac if stream is set hmac flags */
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			result = mbedtls_md_hmac_starts(
+				&stream->ctx,
+				spanGetOffsetC(hmacKey, 0),
+				(size_t)spanGetSizeC(hmacKey)
+			);
+		}
+		/* otherwise normal digest initialization */
+		else
+		{
+			result = mbedtls_md_starts(&stream->ctx);
+		}
+	
+		return result == 0 ? CSTATUS_OK : CSTATUS_FAIL;
+	}
+
+	cstatus_t ncCryptoDigestUpdate(ncc_digest_t* stream, cspan_t source)
+	{
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return 0;
+		}
+
+		_ssize_guard_int(spanGetSizeC(source))
+
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			return mbedtls_md_hmac_update(
+				&stream->ctx,
+				spanGetOffsetC(source, 0),
+				spanGetSizeC(source)
+			) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
+		}
+		else
+		{
+			return mbedtls_md_update(
+				&stream->ctx,
+				spanGetOffsetC(source, 0),
+				spanGetSizeC(source)
+			) == 0 ? CSTATUS_OK : CSTATUS_FAIL;
+		}	
+	}
+
+	cstatus_t ncCryptoDigestFinish(ncc_digest_t* stream, span_t output)
+	{
+		int result;
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return 0;
+		}
+
+		_ssize_guard_int(spanGetSize(output))
+
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			result = mbedtls_md_hmac_finish(&stream->ctx, spanGetOffset(output, 0));
+		}
+		else
+		{
+			result = mbedtls_md_finish(&stream->ctx, spanGetOffset(output, 0));
+		}
+
+		return result == 0 ? CSTATUS_OK : CSTATUS_FAIL;
+	}
+
+#endif /* !_DIGSET_STREAM_INTERFACE */

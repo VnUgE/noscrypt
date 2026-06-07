@@ -20,8 +20,24 @@
 
 #include "debug.h"
 #include "span.h"
+
+/*
+* Since were on the producer side we can export our public api 
+* functions during debug builds to expose the internal functions testing purposes. 
+*/
+#if DEBUG
+	#ifdef _NC_IS_WINDOWS
+		#define _NCC_API __declspec(dllexport)
+	#else
+		#define _NCC_API __attribute__((visibility("default")))
+	#endif /*  _NC_IS_WINDOWS */
+#endif
+
 #include "nc-crypto.h"
-#include "hkdf.h"
+
+#ifndef HKDF_IN_BUF_SIZE
+	#define HKDF_IN_BUF_SIZE	0x80	
+#endif
 
 /*
 *  Functions are not forced inline, just suggested.
@@ -38,10 +54,6 @@
 *		_IMPL_SECURE_ZERO_MEMSET			secure memset 0 function
 *		_IMPL_CHACHA20_CRYPT				chacha20 cipher function
 *		_IMPL_CRYPTO_FIXED_TIME_COMPARE		fixed time compare function
-*		_IMPL_CRYPTO_SHA256_HMAC			sha256 hmac function
-*		_IMPL_CRYPTO_SHA256_DIGEST			standard sha256 digest function
-* 		_IMPL_CRYPTO_SHA256_HKDF_EXPAND		hkdf expand function
-* 		_IMPL_CRYPTO_SHA256_HKDF_EXTRACT	hkdf extract function
 *       _IMPL_AES256_CBC_CRYPT				performs an AES 256 CBC encryption/decryption
 * 
 * Macros are used to allow the preprocessor to select the correct implementation
@@ -131,29 +143,6 @@
 
 #endif
 
-#ifdef _IMPL_CRYPTO_SHA256_HMAC
-
-	/*
-	* If a library does not provide a HKDF extract function,
-	* we can just use the HMAC function as a fallback.
-	*
-	* This is a fallback because another library may provide
-	* a more optimized implementation.
-	*/
-
-	#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXTRACT 
-
-		#define _IMPL_CRYPTO_SHA256_HKDF_EXTRACT		_fallbackHkdfExtract
-
-		_IMPLSTB cstatus_t _fallbackHkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
-		{
-			return _IMPL_CRYPTO_SHA256_HMAC(salt, ikm, prk);
-		}
-
-	#endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXTRACT */
-	
-#endif /* _IMPL_CRYPTO_SHA256_HMAC */
-
 /* Fallback for fixed time comparison for all platforms */
 #ifndef _IMPL_CRYPTO_FIXED_TIME_COMPARE
 
@@ -208,6 +197,97 @@
 
 #endif /* !_IMPL_CRYPTO_FIXED_TIME_COMPARE */
 
+static cstatus_t _computeDigest(cspan_t key, cspan_t data, sha256_t out32, int hmac)
+{
+	cstatus_t     status;
+	uint32_t      streamFlags;
+	ncc_digest_t  stream;
+	span_t        output;
+
+	/* Debug arg validate */	
+	DEBUG_ASSERT2(!spanIsNullC(data), "Expected data to be non-null");
+	DEBUG_ASSERT2(out32, "Expected hmacOut32 to be non-null");
+
+	/*
+	* sizeof(sha256_t) will always be equal to SHA256_DIGEST_SIZE,
+	* so so long as the correct type is set, the digest output will always be
+	* correct
+	*/
+	spanInit(&output, out32, sizeof(sha256_t));
+
+	streamFlags = NC_CRYPTO_DIGEST_TYPE_SHA256;
+
+	/* if hmac key is defined, set the hmac flag on create */
+	if (spanGetSizeC(key) > 0 || hmac) 
+	{
+		streamFlags |= NC_CRYPTO_DIGEST_FLAGS_HMAC;
+	}	
+
+	status = ncCryptoDigestCreate(&stream, streamFlags);
+	if (status != CSTATUS_OK)
+	{
+		goto Exit;
+	}
+
+	status = ncCryptoDigestInit(&stream, key);
+	if (status != CSTATUS_OK)
+	{
+		goto Exit;
+	}
+
+	status = ncCryptoDigestUpdate(&stream, data);
+	if (status != CSTATUS_OK)
+	{
+		goto Exit;
+	}
+	
+	status = ncCryptoDigestFinish(&stream, output);
+
+Exit:
+	/* Safe to always clean up a stack stream object */
+	ncCryptoDigestClose(&stream);
+	return status;
+}
+
+_NCC_API void ncCryptoSecureZero(void* ptr, uint32_t size)
+{
+	DEBUG_ASSERT2(ptr != NULL, "Expected ptr to be non-null")
+
+#ifndef _IMPL_SECURE_ZERO_MEMSET
+	#error "No secure memset implementation defined"
+#endif /* _IMPL_SECURE_ZERO_MEMSET */
+
+	_IMPL_SECURE_ZERO_MEMSET(ptr, size);
+}
+
+_NCC_API uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size)
+{
+	DEBUG_ASSERT2(a != NULL, "Expected a to be non-null")
+	DEBUG_ASSERT2(b != NULL, "Expected b to be non-null")
+
+#ifndef _IMPL_CRYPTO_FIXED_TIME_COMPARE
+	#error "No fixed time compare implementation defined"
+#endif /* !_IMPL_CRYPTO_FIXED_TIME_COMPARE */
+
+	return _IMPL_CRYPTO_FIXED_TIME_COMPARE(a, b, size);
+}
+
+_NCC_API cstatus_t ncCryptoChacha20(cspan_t key, cspan_t nonce, cspan_t input, span_t output)
+{
+	DEBUG_ASSERT2(spanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
+	DEBUG_ASSERT2(spanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
+
+#ifndef _IMPL_CHACHA20_CRYPT
+	#error "No chacha20 implementation defined"
+#endif /* !_IMPL_CHACHA20_CRYPT */
+
+	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output);
+}
+
+
+#ifndef _DIGSET_STREAM_INTERFACE
+	#error "No crypto digest stream interface was defined at compile time. Cannot continue."
+#endif
 
 /*
 * Internal function implementations that perform
@@ -220,114 +300,8 @@
 * function has been used correctly.
 */
 
-void ncCryptoSecureZero(void* ptr, uint32_t size)
-{
-	DEBUG_ASSERT2(ptr != NULL, "Expected ptr to be non-null")
 
-#ifndef _IMPL_SECURE_ZERO_MEMSET
-	#error "No secure memset implementation defined"
-#endif /* _IMPL_SECURE_ZERO_MEMSET */
-
-	_IMPL_SECURE_ZERO_MEMSET(ptr, size);
-}
-
-uint32_t ncCryptoFixedTimeComp(const uint8_t* a, const uint8_t* b, uint32_t size)
-{
-	DEBUG_ASSERT2(a != NULL, "Expected a to be non-null")
-	DEBUG_ASSERT2(b != NULL, "Expected b to be non-null")
-
-#ifndef _IMPL_CRYPTO_FIXED_TIME_COMPARE
-	#error "No fixed time compare implementation defined"
-#endif /* !_IMPL_CRYPTO_FIXED_TIME_COMPARE */
-
-	return _IMPL_CRYPTO_FIXED_TIME_COMPARE(a, b, size);
-}
-
-cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
-{
-	/* Debug arg validate */
-	DEBUG_ASSERT2(!spanIsNullC(data),	"Expected data to be non-null")
-	DEBUG_ASSERT2(digestOut32 != NULL,	"Expected digestOut32 to be non-null")
-
-#ifndef _IMPL_CRYPTO_SHA256_DIGEST
-	#error "No SHA256 implementation defined"
-#endif /* !_IMPL_CRYPTO_SHA256_DIGEST */
-
-	return _IMPL_CRYPTO_SHA256_DIGEST(data, digestOut32);
-}
-
-cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
-{
-	/* Debug arg validate */
-	DEBUG_ASSERT2(!spanIsNullC(key),	"Expected key to be non-null")
-	DEBUG_ASSERT2(!spanIsNullC(data),	"Expected data to be non-null")
-	DEBUG_ASSERT2(hmacOut32 != NULL,	"Expected hmacOut32 to be non-null")
-
-#ifndef _IMPL_CRYPTO_SHA256_HMAC
-	#error "No SHA256 HMAC implementation defined"
-#endif /* !_IMPL_CRYPTO_SHA256_HMAC */
-
-	return _IMPL_CRYPTO_SHA256_HMAC(key, data, hmacOut32);
-}
-
-cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
-{
-	/* Debug arg validate */
-	DEBUG_ASSERT2(!spanIsNullC(prk),	"Expected prk to be non-null")
-	DEBUG_ASSERT2(!spanIsNullC(info),	"Expected info to be non-null")
-	DEBUG_ASSERT2(!spanIsNull(okm),		"Expected okm to be non-null")
-
-	/*
-	* RFC 5869: 2.3
-	* "length of output keying material in octets (<= 255 * HashLen)"
-	* 
-	* important as the counter is 1 byte, so it cannot overflow
-	*/
-
-	if(okm.size > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
-	{
-		return CSTATUS_FAIL;
-	}
-
-#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXPAND
-	#error "No SHA256 HKDF expand implementation defined"
-#endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXPAND */
-	
-	return _IMPL_CRYPTO_SHA256_HKDF_EXPAND(prk, info, okm);
-}
-
-cstatus_t ncCryptoSha256HkdfExtract(cspan_t salt, cspan_t ikm, sha256_t prk)
-{
-	/* Debug arg validate */
-	DEBUG_ASSERT2(!spanIsNullC(salt),	"Expected salt to be non-null")
-	DEBUG_ASSERT2(!spanIsNullC(ikm),	"Expected ikm to be non-null")
-	DEBUG_ASSERT2(prk != NULL,			"Expected prk to be non-null")
-
-#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXTRACT
-	#error "No SHA256 HKDF extract implementation defined"
-#endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXTRACT */
-	
-	return _IMPL_CRYPTO_SHA256_HKDF_EXTRACT(salt, ikm, prk);
-}
-
-cstatus_t ncCryptoChacha20(
-	cspan_t key,
-	cspan_t nonce,
-	cspan_t input,
-	span_t output
-)
-{
-	DEBUG_ASSERT2(spanGetSizeC(key) == NC_CRYPTO_CHACHA_KEY_SIZE,		"ChaCha key size is not valid");
-	DEBUG_ASSERT2(spanGetSizeC(nonce) == NC_CRYPTO_CHACHA_NONCE_SIZE,	"ChaCha nonce size is not valid");
-
-#ifndef _IMPL_CHACHA20_CRYPT
-	#error "No chacha20 implementation defined"
-#endif /* !_IMPL_CHACHA20_CRYPT */
-
-	return _IMPL_CHACHA20_CRYPT(key, nonce, input, output);
-}
-
-cstatus_t ncCryptoAes256CBCUpdate(
+_NCC_API cstatus_t ncCryptoAes256CBCUpdate(
 	cspan_t key,
 	cspan_t iv,
 	cspan_t input,
@@ -343,4 +317,160 @@ cstatus_t ncCryptoAes256CBCUpdate(
 #endif /* !_IMPL_AES256_CBC_CRYPT */
 
 	return _IMPL_AES256_CBC_CRYPT(key, iv, input, output, flags);
+}
+
+_NCC_API uint32_t ncCryptoDigestGetOutputSize(const ncc_digest_t* stream)
+{
+	DEBUG_ASSERT(stream);
+
+	if (!stream)
+	{
+		return 0;
+	}
+
+	switch (stream->flags & NC_CRYPTO_DIGEST_TYPE_MASK)
+	{
+	case NC_CRYPTO_DIGEST_TYPE_SHA256:
+		return SHA256_DIGEST_SIZE;
+	default:
+		return 0;
+	}
+}
+
+_NCC_API cstatus_t ncCryptoHmacSha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
+{
+	return _computeDigest(key, data, hmacOut32, 1);
+}
+
+_NCC_API cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
+{
+	cspan_t key;
+
+	/* Debug arg validate */
+	DEBUG_ASSERT2(!spanIsNullC(data), "Expected data to be non-null");
+	DEBUG_ASSERT2(digestOut32 != NULL, "Expected digestOut32 to be non-null");
+
+	spanInitC(&key, NULL, 0);
+
+	return _computeDigest(key, data, digestOut32, 0);
+}
+
+/*
+* The following functions implements the HKDF expand function using an existing
+* HMAC function.
+*
+* This follows the guidance from RFC 5869: https://tools.ietf.org/html/rfc5869
+*/
+
+#ifndef HKDF_MIN
+	#define HKDF_MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+_NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
+{
+	cstatus_t		result;
+	uint32_t		flags;
+	ncc_digest_t	stream;
+	cspan_t			tData, counterSpan;
+	span_t			tOutput;
+	uint32_t		tLen, okmOffset;
+	uint8_t			counter, t[HKDF_IN_BUF_SIZE];
+
+	/* Debug arg validate */
+	DEBUG_ASSERT2(!spanIsNullC(prk), "Expected prk to be non-null");
+	DEBUG_ASSERT2(!spanIsNull(okm), "Expected okm to be non-null");
+
+	/*
+	* RFC 5869: 2.3
+	* "length of output keying material in octets (<= 255 * HashLen)"
+	*
+	* important as the counter is 1 byte, so it cannot overflow
+	*/
+	if (spanGetSize(okm) > (uint32_t)(0xFFu * SHA256_DIGEST_SIZE))
+	{
+		return CSTATUS_FAIL;
+	}
+
+	ncCryptoSecureZero(t, sizeof(t));
+
+	tLen = 0;
+	okmOffset = 0;
+	counter = 1;
+
+	spanInitC(&counterSpan, &counter, sizeof(uint8_t));
+	spanInit(&tOutput, t, SHA256_DIGEST_SIZE);
+
+	flags = NC_CRYPTO_DIGEST_TYPE_SHA256 
+		| NC_CRYPTO_DIGEST_FLAGS_HMAC 
+		| NC_CRYPTO_DIGEST_FLAGS_REUSE;
+
+	result = ncCryptoDigestCreate(&stream, flags);
+	if (result != CSTATUS_OK)
+	{
+		goto Close;
+	}
+
+	/* init guards against empty hmac key material */
+	
+	result = ncCryptoDigestInit(&stream, prk);
+	if (result != CSTATUS_OK)
+	{
+		goto Close;
+	}
+
+	result = CSTATUS_FAIL;
+
+	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */
+	while (okmOffset < spanGetSize(okm))
+	{
+		spanInitC(&tData, t, tLen);
+
+		if (!ncCryptoDigestUpdate(&stream, tData))
+		{
+			goto Close;
+		}
+
+		if (!ncCryptoDigestUpdate(&stream, info))
+		{
+			goto Close;
+		}
+
+		if (!ncCryptoDigestUpdate(&stream, counterSpan))
+		{
+			goto Close;
+		}
+
+		/*
+		* Write current hash state to t buffer. It is known
+		* that the t buffer must be at least the size of the
+		* underlying hash function output.
+		*/
+		if (!ncCryptoDigestFinish(&stream, tOutput))
+		{
+			goto Close;
+		}
+
+		/* tlen becomes the hash size or remaining okm size */
+		tLen = HKDF_MIN(spanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
+
+		DEBUG_ASSERT(tLen <= sizeof(t));
+
+		/* write the T buffer back to okm and advance okmOffset by tLen */
+		spanAppend(okm, &okmOffset, t, tLen);
+
+		/* increment counter */
+		counter++;
+
+		/* re-initialize the HMAC state for the next iteration */
+		if (!ncCryptoDigestInit(&stream, prk))
+		{
+			goto Close;
+		}
+	}
+
+	result = CSTATUS_OK;
+
+Close:
+	ncCryptoDigestClose(&stream);
+	return result;
 }

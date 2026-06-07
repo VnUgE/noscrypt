@@ -29,8 +29,12 @@
 * or larger size_t types to use openssl.
 */
 #if SIZE_MAX < UINT32_MAX
-	#error "Size of size_t is less than 32 bits"
+	#error "Openssl backend requires at least 32bit system word sizes"
 #endif
+
+#define OSSL_SHA256 "SHA2-256"
+#define OSSL_HMAC "hmac"
+#define OSSL_CHACHA20 "ChaCha20"
 
 #include "openssl-helpers.c"
 
@@ -54,218 +58,6 @@
 	}
 
 #endif /* _IMPL_CRYPTO_FIXED_TIME_COMPARE */
-
-
-#ifndef _IMPL_CRYPTO_SHA256_DIGEST	
-
-	#define _IMPL_CRYPTO_SHA256_DIGEST			_ossl_sha256_digest	
-
-	_IMPLSTB cstatus_t _ossl_sha256_digest(cspan_t data, sha256_t digestOut32)
-	{
-		cstatus_t result;
-		span_t digestSpan;
-		struct ossl_evp_state evpState;		
-
-		DEBUG_ASSERT(digestOut32 != NULL);
-		DEBUG_ASSERT(!spanIsNullC(data));
-
-		result = CSTATUS_FAIL;
-
-		spanInit(&digestSpan, digestOut32, sizeof(sha256_t));
-
-		/*
-		* Allocate and initialize the context
-		*/
-		if (!_osslEvpInit(&evpState, EvpStateTypeDigest, OSSL_SHA256))
-		{
-			goto Cleanup;
-		}
-
-		if (!_osslEvpUpdate(&evpState, data))
-		{
-			goto Cleanup;
-		}
-
-		if (!_osslEvpFinal(&evpState, digestSpan))
-		{
-			goto Cleanup;
-		}
-
-		result = CSTATUS_OK;
-
-	Cleanup:
-
-		_osslEvpFree(&evpState);
-
-		return result;
-	}
-
-#endif
-
-#ifndef _IMPL_CRYPTO_SHA256_HMAC
-
-	/* Export function */
-	#define _IMPL_CRYPTO_SHA256_HMAC			_ossl_hmac_sha256	
-	
-	_IMPLSTB cstatus_t _ossl_hmac_sha256(cspan_t key, cspan_t data, sha256_t hmacOut32)
-	{
-		cstatus_t result;
-		span_t digestSpan;	
-		OSSL_PARAM params[2];
-		struct ossl_evp_state evpState;
-
-		result = CSTATUS_FAIL;
-
-		spanInit(&digestSpan, hmacOut32, sizeof(sha256_t));
-
-		/*
-		* Allocate and initialize the context
-		*/
-		if (!_osslEvpInit(&evpState, EvpStateTypeMac, OSSL_HMAC))
-		{
-			goto Cleanup;
-		}
-
-		/*
-		* To use HMAC the digest parameters must be set
-		* before the context can be initialized
-		*/
-
-		params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
-		params[1] = OSSL_PARAM_construct_end();
-
-		/*
-		* PRK Data must be assigned before the hmac 
-		* can be initialized
-		*/
-
-		_osslEvpSetPrk(&evpState, key);
-	
-		if (!_osslEvpMacInit(&evpState, params))
-		{
-			goto Cleanup;
-		}
-
-		if (!_osslEvpUpdate(&evpState, data))
-		{
-			goto Cleanup;
-		}
-
-		if (!_osslEvpFinal(&evpState, digestSpan))
-		{
-			goto Cleanup;
-		}
-		
-		result = CSTATUS_OK;
-
-	Cleanup:
-
-		_osslEvpFree(&evpState);
-
-		return result;
-	}
-
-#endif /* !_IMPL_CRYPTO_SHA256_HMAC */
-
-#ifndef _IMPL_CRYPTO_SHA256_HKDF_EXPAND
-
-	#define _IMPL_CRYPTO_SHA256_HKDF_EXPAND		_ossl_sha256_hkdf_expand
-
-	struct _hkdf_state {
-		OSSL_PARAM params[2];
-		struct ossl_evp_state evpState;
-	};
-
-	static cstatus_t _ossl_hkdf_update(void* ctx, cspan_t data)
-	{
-		const struct _hkdf_state* state;
-
-		DEBUG_ASSERT(ctx != NULL);
-
-		state = (const struct _hkdf_state*)ctx;
-
-		return _osslEvpUpdate(
-			&state->evpState, 
-			data
-		);
-	}
-
-	static cstatus_t _ossl_hkdf_finish(void* ctx, sha256_t hmacOut32)
-	{
-		span_t hmacSpan;
-		const struct _hkdf_state* state;
-
-		DEBUG_ASSERT(ctx != NULL);
-		DEBUG_ASSERT(hmacOut32 != NULL);
-
-		state = (const struct _hkdf_state*)ctx;
-		spanInit(&hmacSpan, hmacOut32, sizeof(sha256_t));
-
-		if (!_osslEvpFinal(&state->evpState, hmacSpan))
-		{
-			return CSTATUS_FAIL;
-		}
-
-		/* 
-		* Context must be re-initialized after finalize
-		* See lifecycle https://docs.openssl.org/3.0/man7/life_cycle-mac/#copyright
-		*/
-
-		return _osslEvpMacInit(&state->evpState, state->params);
-	}
-	
-
-	_IMPLSTB cstatus_t _ossl_sha256_hkdf_expand(cspan_t prk, cspan_t info, span_t okm)
-	{
-		cstatus_t result;
-		struct _hkdf_state state;
-		struct nc_hkdf_fn_cb_struct handler;		
-
-		result = CSTATUS_FAIL;
-
-		handler.update = _ossl_hkdf_update;
-		handler.finish = _ossl_hkdf_finish;
-		
-		/*
-		* PRK Must be set before any call to MacInit
-		*
-		* Params must also be set for sha256 digest for mac
-		*/
-		_osslEvpSetPrk(&state.evpState, prk);
-
-		/*
-		* Silly openssl stuff. Enable hmac with sha256 using the system default
-		* security provider. The one-shot flag must also be disabled (0) because
-		* we need to call update multiple times.
-		*/
-
-		state.params[0] = OSSL_PARAM_construct_utf8_string("digest", "sha256", 0);
-		state.params[1] = OSSL_PARAM_construct_end();
-
-		if (!_osslEvpInit(&state.evpState, EvpStateTypeMac, OSSL_HMAC))
-		{
-			goto Cleanup;
-		}
-
-		if (_osslEvpMacInit(&state.evpState, state.params) != CSTATUS_OK)
-		{
-			goto Cleanup;
-		}
-
-		/* Sanity check mac size */
-		DEBUG_ASSERT(EVP_MAC_CTX_get_mac_size(_osslEvpGetMacContext(&state.evpState)) == sizeof(sha256_t));
-
-		/* Pass to the library  */
-		result = hkdfExpandProcess(&handler, &state, info, okm);
-
-	Cleanup:
-
-		_osslEvpFree(&state.evpState);
-
-		return result;
-	}
-
-#endif /* !_IMPL_CRYPTO_SHA256_HKDF_EXPAND */
 
 #ifndef _IMPL_CHACHA20_CRYPT
 
@@ -359,3 +151,203 @@
 	}
 
 #endif
+
+#ifndef _DIGSET_STREAM_INTERFACE
+
+	#define _DIGSET_STREAM_INTERFACE "openssl"
+
+	void ncCryptoDigestClose(ncc_digest_t* stream)
+	{
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return;
+		}
+
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			if (stream->ctx._context) EVP_MAC_CTX_free(stream->ctx._context);
+			if (stream->ctx._providerHandle) EVP_MAC_free(stream->ctx._providerHandle);
+		}
+		else
+		{
+			if (stream->ctx._context) EVP_MD_CTX_free(stream->ctx._context);
+			if (stream->ctx._providerHandle) EVP_MD_free(stream->ctx._providerHandle);
+		}
+
+		ncCryptoSecureZero(stream, sizeof(ncc_digest_t));
+	}
+
+	cstatus_t ncCryptoDigestCreate(ncc_digest_t* stream, uint32_t flags)
+	{
+		const char* digestName;
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		switch (flags & NC_CRYPTO_DIGEST_TYPE_MASK)
+		{
+		case NC_CRYPTO_DIGEST_TYPE_SHA256:
+			digestName = OSSL_SHA256;
+			break;
+
+		default:
+			return CSTATUS_FAIL;
+		}
+
+		_IMPL_SECURE_ZERO_MEMSET(stream, sizeof(ncc_digest_t));
+
+		if ((flags & NC_CRYPTO_DIGEST_FLAGS_HMAC) > 0)
+		{
+			stream->ctx._providerHandle = EVP_MAC_fetch(NULL, OSSL_HMAC, NULL);
+			if (!stream->ctx._providerHandle)
+			{
+				goto Fail;
+			}
+
+			stream->ctx._context = EVP_MAC_CTX_new((EVP_MAC*)stream->ctx._providerHandle);
+			if (!stream->ctx._context)
+			{
+				goto Fail;
+			}
+		}
+		else
+		{
+			stream->ctx._providerHandle = EVP_MD_fetch(NULL, digestName, NULL);
+			if (!stream->ctx._providerHandle)
+			{
+				goto Fail;
+			}
+
+			stream->ctx._context = EVP_MD_CTX_new();
+			if (!stream->ctx._context)
+			{
+				goto Fail;
+			}
+		}
+
+		DEBUG_ASSERT(stream->ctx._providerHandle);
+		DEBUG_ASSERT(stream->ctx._context);
+
+		stream->flags = (flags | NC_CRYPTO_DIGEST_FLAGS_READY);
+
+		return CSTATUS_OK;
+
+	Fail:
+
+		ncCryptoDigestClose(stream);
+		return CSTATUS_FAIL;
+	}
+
+	cstatus_t ncCryptoDigestInit(ncc_digest_t* stream, cspan_t hmacKey)
+	{
+		OSSL_PARAM params[2];
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		if ((stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC) > 0)
+		{
+			params[0] = OSSL_PARAM_construct_utf8_string("digest", OSSL_SHA256, 0);
+			params[1] = OSSL_PARAM_construct_end();
+
+			if (!EVP_MAC_init(
+				(EVP_MAC_CTX*)stream->ctx._context,
+				spanGetOffsetC(hmacKey, 0),
+				spanGetSizeC(hmacKey),
+				params
+			))
+			{
+				return CSTATUS_FAIL;
+			}
+		}
+		else
+		{
+			if (!EVP_DigestInit_ex2(
+				(EVP_MD_CTX*)stream->ctx._context,
+				(EVP_MD*)stream->ctx._providerHandle,
+				NULL
+			))
+			{
+				return CSTATUS_FAIL;
+			}
+		}
+
+		return CSTATUS_OK;
+	}
+
+	cstatus_t ncCryptoDigestUpdate(ncc_digest_t* stream, cspan_t source)
+	{
+		int result;
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			result = EVP_MAC_update(
+				(EVP_MAC_CTX*)stream->ctx._context,
+				spanGetOffsetC(source, 0),
+				spanGetSizeC(source)
+			);
+		}
+		else
+		{
+			result = EVP_DigestUpdate(
+				(EVP_MD_CTX*)stream->ctx._context,
+				spanGetOffsetC(source, 0),
+				spanGetSizeC(source)
+			);
+		}
+
+		return (cstatus_t)(result != 0);
+	}
+	
+	cstatus_t ncCryptoDigestFinish(ncc_digest_t* stream, span_t output)
+	{
+		int result;
+		size_t macOutLen;
+		unsigned int digestOutLen;
+
+		DEBUG_ASSERT(stream);
+		if (!stream)
+		{
+			return CSTATUS_FAIL;
+		}
+
+		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
+		{
+			macOutLen = (size_t)spanGetSize(output);
+
+			result = EVP_MAC_final(
+				(EVP_MAC_CTX*)stream->ctx._context,
+				spanGetOffset(output, 0),
+				&macOutLen,
+				macOutLen
+			);
+		}
+		else
+		{
+			digestOutLen = (unsigned int)spanGetSize(output);
+
+			result = EVP_DigestFinal_ex(
+				(EVP_MD_CTX*)stream->ctx._context,
+				spanGetOffset(output, 0),
+				&digestOutLen
+			);
+		}
+
+		return (cstatus_t)(result != 0);
+	}
+	
+
+#endif /* !_DIGSET_STREAM_INTERFACE */
