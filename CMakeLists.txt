@@ -88,14 +88,12 @@ endif()
 
 set(NOSCRYPT_SRCS 
 	"src/noscrypt.c"	
-	"src/hkdf.c"
 	"src/nc-crypto.c"				#pulls in c impl files as needed
 )
 
 set(NOSCRYPT_HEADERS
 	"include/noscrypt.h"
 	"include/platform.h"
-	"src/hkdf.h"
 	"src/nc-crypto.h"
 	"src/debug.h"
 	"src/span.h"

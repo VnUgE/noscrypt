@@ -22,7 +22,6 @@
 
 #include "debug.h"
 #include "span.h"
-#include "hkdf.h"
 #include "nc-crypto.h"
 
 #include <secp256k1/include/secp256k1_ecdh.h>
