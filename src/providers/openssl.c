@@ -70,14 +70,11 @@
 		span_t output
 	)
 	{
-		cstatus_t result;
+		cstatus_t result = CSTATUS_FAIL;
 		struct ossl_evp_state state;
 		uint8_t chaChaNonce[NC_CRYPTO_CHACHA_NONCE_SIZE + 4];
 		cspan_t nonceSpan;
-		int bytesWritten;
-
-		result = CSTATUS_FAIL;
-		bytesWritten = 0;
+		int bytesWritten = 0;
 
 		spanInitC(&nonceSpan, chaChaNonce, sizeof(chaChaNonce));
 
@@ -261,7 +258,7 @@
 			_IMPL_SECURE_ZERO_MEMSET(params, sizeof(params));
 
 			params[0] = OSSL_PARAM_construct_utf8_string("digest", OSSL_SHA256, 0);
-			
+
 			/*
 			* NOTE: Openssl has an outstanding issue with handling null key pointers for emtpy keys.
 			* it returns false always. To work around this, HMAC rfcs require using zero keys, in that
@@ -272,13 +269,13 @@
 			*/			
 			
 			if (spanGetSizeC(hmacKey) > 0) 
-			{
+			{				 
 				keyPtr = spanGetOffsetC(hmacKey, 0);
 			}
 			else
-			{
+			{				
 				_IMPL_SECURE_ZERO_MEMSET(dummyKey, sizeof(dummyKey));
-
+				
 				keyPtr = dummyKey;
 			}
 
@@ -334,9 +331,7 @@
 	
 	cstatus_t ncCryptoDigestFinish(ncc_digest_t* stream, span_t output)
 	{
-		int result;
-		size_t macOutLen;
-		unsigned int digestOutLen;
+		int result = 0;		
 
 		DEBUG_ASSERT(stream);
 		if (!stream)
@@ -346,6 +341,7 @@
 
 		if (stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC)
 		{
+			size_t macOutLen;
 			macOutLen = (size_t)spanGetSize(output);
 
 			result = EVP_MAC_final(
@@ -357,6 +353,7 @@
 		}
 		else
 		{
+			unsigned int digestOutLen;
 			digestOutLen = (unsigned int)spanGetSize(output);
 
 			result = EVP_DigestFinal_ex(

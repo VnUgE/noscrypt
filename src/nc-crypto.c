@@ -173,18 +173,16 @@
 
 	static uint32_t _fallbackFixedTimeCompare(const uint8_t* a, const uint8_t* b, uint32_t size)
 	{
-		uint32_t i;
-		volatile uint32_t result;
-		volatile uint8_t O;
+		uint32_t i = 0;
+		volatile uint32_t result = 0;
+		volatile uint8_t O = 0;
 		volatile const uint8_t* A, * B;
 
-		result = 0;
-		O = 0;
 		A = (volatile const uint8_t*)a;
 		B = (volatile const uint8_t*)b;
 
 		/* Compare each byte */
-		for (i = 0; i < size; i++)
+		for (; i < size; i++)
 		{
 			/* Handle volatile read */
 			O |= (A[i] ^ B[i]);
@@ -199,8 +197,8 @@
 
 static cstatus_t _computeDigest(cspan_t key, cspan_t data, sha256_t out32, int hmac)
 {
-	cstatus_t     status;
-	uint32_t      streamFlags;
+	cstatus_t     status		= 0;
+	uint32_t      streamFlags	= 0;
 	ncc_digest_t  stream;
 	span_t        output;
 
@@ -369,12 +367,11 @@ _NCC_API cstatus_t ncCryptoDigestSha256(cspan_t data, sha256_t digestOut32)
 _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t okm)
 {
 	cstatus_t		result;
-	uint32_t		flags;
 	ncc_digest_t	stream;
 	cspan_t			tData, counterSpan;
 	span_t			tOutput;
-	uint32_t		tLen, okmOffset;
-	uint8_t			counter, t[HKDF_IN_BUF_SIZE];
+	uint32_t		flags = 0, tLen = 0, okmOffset = 0, hashSize = 0;
+	uint8_t			counter = 1, t[HKDF_IN_BUF_SIZE];
 
 	/* Debug arg validate */
 	DEBUG_ASSERT2(!spanIsNullC(prk), "Expected prk to be non-null");
@@ -391,14 +388,10 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 		return CSTATUS_FAIL;
 	}
 
-	ncCryptoSecureZero(t, sizeof(t));
-
-	tLen = 0;
-	okmOffset = 0;
-	counter = 1;
-
 	spanInitC(&counterSpan, &counter, sizeof(uint8_t));
-	spanInit(&tOutput, t, SHA256_DIGEST_SIZE);
+	spanInit(&tOutput, NULL, 0);
+
+	ncCryptoSecureZero(t, sizeof(t));
 
 	flags = NC_CRYPTO_DIGEST_TYPE_SHA256 
 		| NC_CRYPTO_DIGEST_FLAGS_HMAC 

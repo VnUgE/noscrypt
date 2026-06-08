@@ -105,11 +105,8 @@
 
 	cstatus_t ncCryptoDigestInit(ncc_digest_t* stream, cspan_t hmacKey)
 	{			
-		ULONG		createFlags;
-		NTSTATUS	result;
-
-		createFlags = 0;
-		result		= 0;
+		ULONG		createFlags = 0;
+		NTSTATUS	result = 0;
 
 		DEBUG_ASSERT(stream);
 		if (!stream)
@@ -178,7 +175,7 @@
 
 	cstatus_t ncCryptoDigestUpdate(ncc_digest_t* stream, cspan_t source)
 	{
-		NTSTATUS result;
+		NTSTATUS result = 0;
 
 		DEBUG_ASSERT(stream);
 		if (!stream)
@@ -200,7 +197,7 @@
 
 	cstatus_t ncCryptoDigestFinish(ncc_digest_t* stream, span_t output)
 	{
-		NTSTATUS result;
+		NTSTATUS result = 0;
 
 		DEBUG_ASSERT(stream);
 		if (!stream)

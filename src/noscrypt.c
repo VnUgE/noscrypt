@@ -327,7 +327,7 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	int encrypt
 )
 {
-	NCResult result;
+	NCResult result = E_OPERATION_FAILED;
 	cspan_t nonceSpan;
 	span_t keyDataSpan;
 	struct message_key messageKey;
@@ -337,8 +337,6 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	DEBUG_ASSERT2(ck != NULL, "Expected valid conversation key");
 	DEBUG_ASSERT2(args != NULL, "Expected valid encryption args");
 	DEBUG_ASSERT(args->version == NC_ENC_VERSION_NIP44);
-
-	result = NC_SUCCESS;
 
 	spanInitC(
 		&nonceSpan, 
@@ -355,7 +353,6 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	/* Message key will be derived on every encryption call */
 	if (_getMessageKey(ck, nonceSpan, &messageKey) != CSTATUS_OK)
 	{
-		result = E_OPERATION_FAILED;
 		goto Cleanup;
 	}
 
@@ -375,10 +372,9 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 		spanWrite(keyDataSpan, 0, cipherKeys->hmac_key, NC_HMAC_KEY_SIZE);		
 	}
 
-	/* CHACHA20 (the result will be 0 on success) */
-	if (_chachaEncipher(cipherKeys, args) != CSTATUS_OK)
+	if (_chachaEncipher(cipherKeys, args) == CSTATUS_OK)
 	{
-		result = E_OPERATION_FAILED;
+		result = NC_SUCCESS;
 	}
 
 Cleanup:
@@ -427,9 +423,8 @@ static NCResult _verifyMacEx(
 	const NCMacVerifyArgs* args
 )
 {
-	NCResult result;
+	NCResult result = E_OPERATION_FAILED;
 	cspan_t hmacKeySpan, payloadSpan, nonceSpan;
-	sha256_t hmacOut;
 	const struct nc_expand_keys* keys;
 	struct message_key messageKey;
  
@@ -450,7 +445,6 @@ static NCResult _verifyMacEx(
 
 	if (_getMessageKey(conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
 	{
-		result = E_OPERATION_FAILED;
 		goto Cleanup;
 	}
 
@@ -460,21 +454,30 @@ static NCResult _verifyMacEx(
 	/* Assign hmac key to span */
 	spanInitC(&hmacKeySpan, keys->hmac_key, NC_HMAC_KEY_SIZE);
 
+	{
 	/*
-	* Compute the hmac of the data using the computed hmac key
+		* Compute the hmac of the data using the computed hmac key. 
+		* 
+		* Update (6.8.2026): old behavior zeroed the hmacOut buffer before
+		* returning. It's no longer cleansed as the hmac digest output is not
+		* a secret value, it's just a comparison buffer. 
 	*/
+		sha256_t hmacOut;
+
+		
 	if (ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) != CSTATUS_OK)
 	{
-		result = E_OPERATION_FAILED;
 		goto Cleanup;
 	}
 
 	/* constant time compare the macs */
-	result = ncCryptoFixedTimeComp(hmacOut, args->mac32, NC_ENCRYPTION_MAC_SIZE) == 0 ? NC_SUCCESS : E_OPERATION_FAILED;
+		result = ncCryptoFixedTimeComp(hmacOut, args->mac32, NC_ENCRYPTION_MAC_SIZE) == 0 
+			? NC_SUCCESS 
+			: E_OPERATION_FAILED;
+	}
 
 Cleanup:
 	ZERO_FILL(&messageKey, sizeof(messageKey));
-	ZERO_FILL(hmacOut, sizeof(hmacOut));
 
 	return result;
 }
@@ -708,7 +711,7 @@ NC_EXPORT NCResult NC_CC NCSignData(
 	spanInitC(&dataSpan, data, dataSize);
 
 	/* Compute sha256 of the data before signing */
-	if(ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
+	if (ncCryptoDigestSha256(dataSpan, digest) != CSTATUS_OK)
 	{
 		return E_INVALID_ARG;
 	}
@@ -735,7 +738,7 @@ NC_EXPORT NCResult NC_CC NCVerifyDigest(
 	ZERO_FILL(&xonly, sizeof(xonly));
 
 	/* recover the x-only key from a compressed public key */
-	if(_convertToXonly(ctx, pk, &xonly) != 1)
+	if (_convertToXonly(ctx, pk, &xonly) != 1)
 	{
 		return E_INVALID_ARG;
 	}
@@ -896,8 +899,6 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 )
 {	
 	NCResult result;
-	struct shared_secret sharedSecret;
-	struct conversation_key conversationKey;	
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
@@ -916,6 +917,9 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	{		
 		case NC_ENC_VERSION_NIP44:
 		{
+			struct shared_secret sharedSecret;
+			struct conversation_key conversationKey;
+
 			/* Only need zero when nip44 is used */
 			ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
 			ZERO_FILL(&conversationKey, sizeof(conversationKey));
@@ -927,17 +931,22 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 			/* Compute the shared point */
 			if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 			{
-				goto Cleanup;
+				goto Nip44Cleanup;
 			}
 
 			/* Compute the conversation key from secret and public keys */
 			if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
 			{
-				goto Cleanup;
+				goto Nip44Cleanup;
 			}
 
 			/* update the cipher in encryption mode */
 			result = _nip44CipherUpdate(ctx, &conversationKey, args, 1);
+
+		Nip44Cleanup:
+			/* Clean up sensitive data */
+			ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+			ZERO_FILL(&conversationKey, sizeof(conversationKey));
 		}
 		break;
 		
@@ -950,11 +959,6 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 			result = E_VERSION_NOT_SUPPORTED;
 			break;
 	}	
-
-Cleanup:
-	/* Clean up sensitive data */
-	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
-	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	return result;
 }
@@ -998,8 +1002,6 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 )
 {
 	NCResult result;
-	struct shared_secret sharedSecret;
-	struct conversation_key conversationKey;
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
@@ -1018,6 +1020,9 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 	{
 	case NC_ENC_VERSION_NIP44:
 	{
+		struct shared_secret sharedSecret;
+		struct conversation_key conversationKey;
+
 		/* init structures */
 		ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
 		ZERO_FILL(&conversationKey, sizeof(conversationKey));
@@ -1026,15 +1031,20 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 
 		if ((result = _computeSharedSecret(ctx, sk, pk, &sharedSecret)) != NC_SUCCESS)
 		{
-			goto Cleanup;
+			goto Nip44Cleanup;
 		}
 
 		if ((result = _computeConversationKey(ctx, &sharedSecret, &conversationKey)) != NC_SUCCESS)
 		{
-			goto Cleanup;
+			goto Nip44Cleanup;
 		}
 
 		result = _nip44CipherUpdate(ctx, &conversationKey, args, 0);
+
+	Nip44Cleanup:
+		/* Clean up sensitive data */
+		ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
+		ZERO_FILL(&conversationKey, sizeof(conversationKey));
 	}
 	break;
 
@@ -1046,11 +1056,6 @@ NC_EXPORT NCResult NC_CC NCDecrypt(
 		result = E_VERSION_NOT_SUPPORTED;
 		break;
 	}
-
-Cleanup:
-	/* Clean up sensitive data */
-	ZERO_FILL(&sharedSecret, sizeof(sharedSecret));
-	ZERO_FILL(&conversationKey, sizeof(conversationKey));
 
 	return result;
 }
