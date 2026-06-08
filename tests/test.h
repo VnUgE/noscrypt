@@ -80,16 +80,13 @@ if(!(bool_expr))\
 
 #define strlen32(x) (uint32_t)strlen(x)
 
-#define RUN_TEST(result) \
-  PRINTL("RUNNING TEST: " #result); \
-  if (result != 0) \
-  { \
-	  return 1; \
-  } \
-  else \
-  { \
-      PRINTL("\nPASSED: " #result); \
-  } \
+#define RUN_TEST(result) PRINTL("RUNNING TEST: " #result)  \
+    if (result != 0) { return 1; }                         \
+    else { PRINTL("\nPASSED: " #result) }                  \
+
+#define TEST_GROUP(result) PRINTL("BEGINING GROUP: " #result)   \
+    if (result != 0) { return 1; }                              \
+    else { PRINTL("GROUP: "#result" COMPLETE")  }                \
 
 /*Pre-computed constants for argument errors */
 #define ARG_ERROR_POS_0 E_NULL_PTR

@@ -371,67 +371,65 @@ if(NC_BUILD_TESTS)
 
 	enable_testing()
 
-	#add test executable and link to shared library for more realistic usage
-	add_executable(nctest tests/test-base.c tests/test.c)
-	target_link_libraries(nctest ${_NC_PROJ_NAME})	
+	#add a test target with standard configuration for the project
+	function(add_nc_test TEST_NAME)
+		cmake_parse_arguments(ARG "" "" "SOURCES;INCLUDES;STATIC" ${ARGN})
 
-	add_executable(ncspanstest tests/test-base.c tests/spans-test.c)
-	target_link_libraries(ncspanstest ${_NC_PROJ_NAME})
+		add_executable(${TEST_NAME} ${ARG_SOURCES})
 
-	if(MSVC)
-		#link bcrypt to test application for Windows platforms
-		target_link_libraries(nctest "bcrypt.lib")
-		target_link_libraries(ncspanstest "bcrypt.lib")
-	endif()
-
-	#allow access to internal headers	
-	target_include_directories(nctest PRIVATE include PRIVATE src)
-
-	#allow access to internal headers
-	target_include_directories(ncspanstest PRIVATE include PRIVATE src)	
-
-	#enable c11 for testing and pass matching project definitions
-	target_compile_features(nctest PRIVATE c_std_11)
-	target_compile_definitions(nctest PRIVATE ${NC_PROJ_DEFINITIONS})	
-
-	target_compile_features(ncspanstest PRIVATE c_std_11)
-	target_compile_definitions(ncspanstest PRIVATE ${NC_PROJ_DEFINITIONS})
-
-	add_test(
-		NAME nctest 
-		COMMAND nctest
-		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
-	)
-
-	add_test(
-		NAME ncspanstest 
-		COMMAND ncspanstest
-		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
-	)
-	
-	if(NC_ENABLE_UTILS)
-
-		# Add util tests project and link with noscrypt library
-		add_executable(ncutiltest tests/test-base.c tests/noscryptutil-test.c)
-		target_link_libraries(ncutiltest ${_NC_PROJ_NAME})
-
-		if(MSVC)
-			#link bcrypt to test application for Windows platforms
-			target_link_libraries(ncutiltest "bcrypt.lib")
+		if(STATIC)
+			target_link_libraries(${TEST_NAME} ${_NC_PROJ_NAME}_satatic)
+		else()
+			target_link_libraries(${TEST_NAME} ${_NC_PROJ_NAME})
 		endif()
 
-		target_include_directories(ncutiltest PRIVATE include)
-		target_include_directories(ncutiltest PRIVATE src)	#allow access to internal headers
+	if(MSVC)
+			target_link_libraries(${TEST_NAME} "bcrypt.lib")
+	endif()
 
-		target_compile_features(ncutiltest PRIVATE c_std_11)
-		target_compile_definitions(ncutiltest PRIVATE ${NC_PROJ_DEFINITIONS})
+		# includes the following on the global path for all tests
+		# - src/*.h
+		# - include/*
+		# - test/*.h
+		# plus any additional INCLUDES paths
 
-		add_test(
-			NAME ncutiltest 
-			COMMAND ncutiltest
-			CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+		target_include_directories(${TEST_NAME} PRIVATE include PRIVATE src ${ARG_INCLUDES})
+
+		target_compile_features(${TEST_NAME} PRIVATE c_std_11)
+		target_compile_definitions(${TEST_NAME} PRIVATE ${NC_PROJ_DEFINITIONS})
+
+	add_test(
+			NAME ${TEST_NAME}
+			COMMAND ${TEST_NAME}
+		CONFIGURATIONS ${CMAKE_BUILD_TYPE}
+	)
+	endfunction()
+
+	# Always build the core base tests
+	add_nc_test(
+		nctest 
+		SOURCES tests/test-base.c tests/test.c
+	)
+	
+	# internal spans test
+	add_nc_test(
+		ncspanstest 
+		SOURCES tests/test-base.c tests/spans-test.c
+	)
+
+	# nc-crypto internal crypto interface unit tests 
+	add_nc_test(
+		nccryptotest 
+		SOURCES tests/test-base.c tests/nc-crypto/main.c tests/nc-crypto/stream.c tests/nc-crypto/vectors.c
+		INCLUDES tests vendor/mbedtls/include vendor/openssl
+	)
+
+	# if utils are enabled build the utils public api tests
+	if(NC_ENABLE_UTILS)
+		add_nc_test(
+			ncutiltest 
+			SOURCES tests/test-base.c tests/noscryptutil-test.c
 		)
-
 	endif()
 
 endif()
