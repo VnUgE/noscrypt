@@ -30,6 +30,10 @@
 #include <Windows.h>
 #include <bcrypt.h>
 
+#if SIZE_MAX < UINT32_MAX
+	#error "bcrypt backend requires at least 32bit system word sizes"
+#endif
+
 #ifndef _IMPL_SECURE_ZERO_MEMSET
 	/*
 	* On Windows, we can use SecureZeroMemory
