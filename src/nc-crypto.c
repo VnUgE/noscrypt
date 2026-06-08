@@ -410,7 +410,7 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 	spanInitC(&counterSpan, &counter, sizeof(uint8_t));
 	spanInit(&tOutput, NULL, 0);
 
-	ncCryptoSecureZero(t, sizeof(t));
+	ncCryptoSecureZero(t, sizeof(t));	
 
 	flags = NC_CRYPTO_DIGEST_TYPE_SHA256 
 		| NC_CRYPTO_DIGEST_FLAGS_HMAC 
@@ -422,7 +422,20 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 		goto Close;
 	}
 
-	/* init guards against empty hmac key material */
+	/*
+	* Prefer pulling the has size from the stream interface to more easily support
+	* different algorithms in the future. 
+	*/
+
+	hashSize = ncCryptoDigestGetOutputSize(&stream);	
+	DEBUG_ASSERT2(hashSize < sizeof(t), "hkdf: Hash size larger than output buffer")
+	if (hashSize == 0 && hashSize < sizeof(t))
+	{
+		goto Close;
+	}
+
+	/* Sets digest output buffer span to the output digest size */	
+	spanInit(&tOutput, t, hashSize);
 	
 	result = ncCryptoDigestInit(&stream, prk);
 	if (result != CSTATUS_OK)
@@ -430,6 +443,7 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 		goto Close;
 	}
 
+	/* reset result flag to failed until the loop completes successfully */
 	result = CSTATUS_FAIL;
 
 	/* Compute T(N) = HMAC(prk, T(n-1) | info | n) */

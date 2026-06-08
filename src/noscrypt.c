@@ -351,7 +351,7 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	
 	/* Message key will be derived on every encryption call */
 	if (_getMessageKey(ck, nonceSpan, &messageKey) != CSTATUS_OK)
-	{
+	{		
 		goto Cleanup;
 	}
 
@@ -374,7 +374,7 @@ static _nc_fn_inline NCResult _nip44CipherUpdate(
 	if (_chachaEncipher(cipherKeys, args) == CSTATUS_OK)
 	{
 		result = NC_SUCCESS;
-	}
+	}	
 
 Cleanup:
 	ZERO_FILL(&messageKey, sizeof(messageKey));
@@ -423,7 +423,7 @@ static NCResult _verifyMacEx(
 )
 {
 	NCResult result = E_OPERATION_FAILED;
-	cspan_t hmacKeySpan, payloadSpan, nonceSpan;
+	cspan_t hmacKeySpan, payloadSpan, nonceSpan;	
 	const struct nc_expand_keys* keys;
 	struct message_key messageKey;
  
@@ -443,7 +443,7 @@ static NCResult _verifyMacEx(
 	*/
 
 	if (_getMessageKey(conversationKey, nonceSpan, &messageKey) != CSTATUS_OK)
-	{
+	{	
 		goto Cleanup;
 	}
 
@@ -454,22 +454,22 @@ static NCResult _verifyMacEx(
 	spanInitC(&hmacKeySpan, keys->hmac_key, NC_HMAC_KEY_SIZE);
 
 	{
-	/*
+		/*
 		* Compute the hmac of the data using the computed hmac key. 
 		* 
 		* Update (6.8.2026): old behavior zeroed the hmacOut buffer before
 		* returning. It's no longer cleansed as the hmac digest output is not
 		* a secret value, it's just a comparison buffer. 
-	*/
+		*/
 		sha256_t hmacOut;
 
 		
-	if (ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) != CSTATUS_OK)
-	{
-		goto Cleanup;
-	}
+		if (ncCryptoHmacSha256(hmacKeySpan, payloadSpan, hmacOut) != CSTATUS_OK)
+		{			
+			goto Cleanup;
+		}
 
-	/* constant time compare the macs */
+		/* constant time compare the macs */
 		result = ncCryptoFixedTimeComp(hmacOut, args->mac32, NC_ENCRYPTION_MAC_SIZE) == 0 
 			? NC_SUCCESS 
 			: E_OPERATION_FAILED;
@@ -897,7 +897,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	NCEncryptionArgs* args
 )
 {	
-	NCResult result;
+	NCResult result;	
 
 	CHECK_NULL_ARG(ctx, 0)
 	CHECK_CONTEXT_STATE(ctx, 0)
@@ -913,7 +913,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 	result = E_OPERATION_FAILED;
 
 	switch(args->version)
-	{		
+	{
 		case NC_ENC_VERSION_NIP44:
 		{
 			struct shared_secret sharedSecret;
@@ -957,7 +957,7 @@ NC_EXPORT NCResult NC_CC NCEncrypt(
 		default:
 			result = E_VERSION_NOT_SUPPORTED;
 			break;
-	}	
+	}
 
 	return result;
 }
