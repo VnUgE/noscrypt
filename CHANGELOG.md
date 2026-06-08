@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+- Adds a new internal digest stream interface and unifies all crypto backends 
+- Refactors the internal hkdf object into the crypto interface object
+- Adds extensive internal unit and vector tests for digests
+- Improves automatic variable safety and memory efficiency (should still comply with ANSI standards)
+- Requires 32bit word size on Windows based systems. 
+- Improves runtime buffer size guards for smaller platforms
+
+_32bit+ Windows requirement shouldn't be a breaking change but a warning if you were somehow building on 16bit Windows._
+
 ## [0.1.14] - 05-29-26
 
 The public API and ABI are unmodified, this is a non-breaking change release.  
