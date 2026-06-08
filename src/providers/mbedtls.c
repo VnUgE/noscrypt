@@ -41,23 +41,6 @@
 	#include <mbedtls/constant_time.h>
 #endif
 
-/*
-* Guard against size_t overflow for platforms with
-* integer sizes less than 32 bits.
-*/
-#if SIZE_MAX < UINT32_MAX
-	#define _ssize_guard_int(x) if(__isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
-
-	_IMPLSTB int __isLargerThanPlatformIntSize(uint32_t x)
-	{
-		return x > SIZE_MAX;
-	}
-
-#else
-	#define _ssize_guard_int(x)
-	#define __isLargerThanPlatformIntSize(x) 0
-#endif
-
 #ifndef _IMPL_CHACHA20_CRYPT
 	
 	/* Export chacha20 computation */
@@ -70,13 +53,13 @@
 		span_t output
 	)
 	{
-		_ssize_guard_int(input.size);
-
 		/* Ensure output buffer is large enough to store input data */
 		if (spanGetSize(output) < spanGetSizeC(input))
 		{
 			return CSTATUS_FAIL;
 		}
+
+		_ssize_guard_int(spanGetSizeC(input));
 
 		/* Counter always starts at 0 */
 		return mbedtls_chacha20_crypt(
@@ -103,7 +86,7 @@
 		* guard platform int overflow, and forcibly return
 		* 1 to indicate failure
 		*/
-		if (__isLargerThanPlatformIntSize(size))
+		if (_isLargerThanPlatformIntSize(size))
 		{
 			return 1;
 		}
@@ -175,7 +158,7 @@
 
 	cstatus_t ncCryptoDigestInit(ncc_digest_t* stream, cspan_t hmacKey)
 	{
-		int result;		
+		int result;
 
 		DEBUG_ASSERT(stream);
 		if (!stream)

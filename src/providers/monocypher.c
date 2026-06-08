@@ -58,12 +58,7 @@
 		 * Guard conversion from 32bit int to size_t in case
 		 * the platform integer size is too small
 		 */
-#if SIZE_MAX < UINT32_MAX
-		if (spanGetSizeC(input) > SIZE_MAX)
-		{
-			return CSTATUS_FAIL;
-		}
-#endif
+		_ssize_guard_int(spanGetSizeC(input));
 
 		/*
 		* Function returns the next counter value which is not

@@ -66,6 +66,25 @@
 #define UNREFPARAM(x) (void)(x)
 
 /*
+* Guard against size_t overflow for platforms with
+* integer sizes less than 32 bits.
+*/
+#if SIZE_MAX < UINT32_MAX
+	#define _ssize_guard_int(x) if(_isLargerThanPlatformIntSize(x)) return CSTATUS_FAIL;
+
+	_IMPLSTB int _isLargerThanPlatformIntSize(uint32_t x)
+	{
+		return x > SIZE_MAX;
+	}
+
+#pragma "WARNING: Platform word size smaller than 32bit. Some operations are now overflow guarded"
+
+#else
+	#define _ssize_guard_int(x)
+	#define _isLargerThanPlatformIntSize(x) 0
+#endif
+
+/*
 * Prioritize embedded builds with mbedtls
 */
 #ifdef MBEDTLS_CRYPTO_LIB
