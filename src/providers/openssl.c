@@ -244,8 +244,6 @@
 
 	cstatus_t ncCryptoDigestInit(ncc_digest_t* stream, cspan_t hmacKey)
 	{
-		OSSL_PARAM params[2];
-
 		DEBUG_ASSERT(stream);
 		if (!stream)
 		{
@@ -254,15 +252,37 @@
 
 		if ((stream->flags & NC_CRYPTO_DIGEST_FLAGS_HMAC) > 0)
 		{
-			params[0] = OSSL_PARAM_construct_utf8_string("digest", OSSL_SHA256, 0);
-			params[1] = OSSL_PARAM_construct_end();
+			/* must remain in scope until Init() returns */
+			OSSL_PARAM params[2];
+			uint8_t dummyKey[4];
+			const uint8_t* keyPtr;
 
-			if (!EVP_MAC_init(
-				(EVP_MAC_CTX*)stream->ctx._context,
-				spanGetOffsetC(hmacKey, 0),
-				spanGetSizeC(hmacKey),
-				params
-			))
+			/* sets all entries to empty() */
+			_IMPL_SECURE_ZERO_MEMSET(params, sizeof(params));
+
+			params[0] = OSSL_PARAM_construct_utf8_string("digest", OSSL_SHA256, 0);
+			
+			/*
+			* NOTE: Openssl has an outstanding issue with handling null key pointers for emtpy keys.
+			* it returns false always. To work around this, HMAC rfcs require using zero keys, in that
+			* the zero-key of any size does not change the output in any way. Keys are guaranteed to be
+			* padded to their correct size by the RFC so we just pass an arbitrary value **zeroed** key
+			* 
+			* https://github.com/openssl/openssl/issues/31068
+			*/			
+			
+			if (spanGetSizeC(hmacKey) > 0) 
+			{
+				keyPtr = spanGetOffsetC(hmacKey, 0);
+			}
+			else
+			{
+				_IMPL_SECURE_ZERO_MEMSET(dummyKey, sizeof(dummyKey));
+
+				keyPtr = dummyKey;
+			}
+
+			if (!EVP_MAC_init((EVP_MAC_CTX*)stream->ctx._context, keyPtr, spanGetSizeC(hmacKey), params))
 			{
 				return CSTATUS_FAIL;
 			}
