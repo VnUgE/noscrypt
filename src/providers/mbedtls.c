@@ -116,7 +116,7 @@
 
 	cstatus_t ncCryptoDigestCreate(ncc_digest_t* stream, uint32_t flags)
 	{		
-		const mbedtls_md_info_t* mdInfo;
+		const mbedtls_md_info_t* mdInfo = NULL;
 
 		DEBUG_ASSERT(stream);
 		if (!stream)
@@ -141,6 +141,8 @@
 
 		/* literally just calls memset() */
 		mbedtls_md_init(&stream->ctx);
+
+		DEBUG_ASSERT(!mdInfo);
 
 		/* 
 		* Setup the context. flags & hmac == 0 no hmac, != 0 enables hmac
