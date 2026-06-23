@@ -589,7 +589,7 @@ NC_EXPORT NCResult NC_CC NCVerifyMacEx(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCComputeMac(
+NC_EXPORT NCResult NC_CC NCComputeMac(
 	const NCContext* ctx,
 	const uint8_t hmacKey[NC_HMAC_KEY_SIZE],
 	const uint8_t* payload,
@@ -607,7 +607,7 @@ NC_EXPORT NCResult NCComputeMac(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCEncryptionSetProperty(
+NC_EXPORT NCResult NC_CC NCEncryptionSetProperty(
 	NCEncryptionArgs* args, 
 	uint32_t property,
 	uint32_t value
@@ -624,7 +624,7 @@ NC_EXPORT NCResult NCEncryptionSetProperty(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCEncryptionSetPropertyEx(
+NC_EXPORT NCResult NC_CC NCEncryptionSetPropertyEx(
 	NCEncryptionArgs* args,
 	uint32_t property,
 	uint8_t* value,
@@ -641,7 +641,7 @@ NC_EXPORT NCResult NCEncryptionSetPropertyEx(
 * @return NC_SUCCESS if the operation was successful, otherwise an error code. Use NCParseErrorCode to
 * the error code and positional argument that caused the error.
 */
-NC_EXPORT NCResult NCEncryptionSetData(
+NC_EXPORT NCResult NC_CC NCEncryptionSetData(
 	NCEncryptionArgs* args,
 	const uint8_t* input,
 	uint8_t* output,
@@ -653,7 +653,7 @@ NC_EXPORT NCResult NCEncryptionSetData(
 * @param version The encryption version to get the nonce size for
 * @return The size of the nonce in bytes, or 0 if the version is not supported
 */
-NC_EXPORT uint32_t NCEncryptionGetIvSize(uint32_t version);
+NC_EXPORT uint32_t NC_CC NCEncryptionGetIvSize(uint32_t version);
 
 #ifdef __cplusplus
 }

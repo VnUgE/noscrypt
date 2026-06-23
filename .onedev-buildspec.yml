@@ -119,18 +119,17 @@ jobs:
   - type: CommandStep
     name: ubuntu x64 tests
     runInContainer: true
-    image: mcr.microsoft.com/dotnet/sdk:8.0.421-noble-amd64@@sha256:1d44c5bac8bfc92acb27b53ec081cbed39f3739ecdcdb8a46b1e49cd7690c483
+    image: docker.io/ubuntu:24.04@@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
     interpreter:
       type: DefaultInterpreter
       commands: |
-        cd @project_name@
-
-        export DOTNET_ROOT=$(pwd)/.dotnet
-        export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
-        export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-        bash ci/scripts/linux-setup-amd64.sh install
-
-        vnbuild test -i @project_name@
+        cd @project_name@/ci
+        
+        apt update; apt install curl -y
+        chmod +x ./mise
+        ./mise settings experimental=true
+        ./mise bootstrap --yes
+        ./mise test
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -158,18 +157,16 @@ jobs:
   - type: CommandStep
     name: fedora-44 x64 tests
     runInContainer: true
-    image: docker.io/fedora:44@@sha256:498c452f32a739b61f0ef215bce9924ebc4866cbe44710f58157d77723b7a6d2
+    image: docker.io/fedora:44@@sha256:6c75d5bf57cb0fa5aa4b92c6a83c86c791644496d9ac230de7711f5b8ec3b898
     interpreter:
       type: DefaultInterpreter
       commands: |
-        cd @project_name@
+        cd @project_name@/ci
 
-        export DOTNET_ROOT=$(pwd)/.dotnet
-        export PATH="$PATH:${DOTNET_ROOT}:$HOME/.dotnet/tools"
-        export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-        bash ci/scripts/linux-setup-amd64.sh install
-
-        vnbuild test -i @project_name@
+        chmod +x ./mise
+        ./mise settings experimental=true
+        ./mise bootstrap --yes
+        ./mise test
     useTTY: true
     condition: SUCCESSFUL
     optional: false
