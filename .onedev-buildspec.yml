@@ -126,6 +126,7 @@ jobs:
         cd @project_name@/ci
         
         apt update; apt install curl -y
+        chmod +x ./mise
         ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test
@@ -161,7 +162,8 @@ jobs:
       type: DefaultInterpreter
       commands: |
         cd @project_name@/ci
-        
+
+        chmod +x ./mise
         ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test
