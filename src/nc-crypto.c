@@ -435,14 +435,8 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 	}
 
 	/* Sets digest output buffer span to the output digest size */	
-	spanInit(&tOutput, t, hashSize);
+	spanInit(&tOutput, t, hashSize);	
 	
-	result = ncCryptoDigestInit(&stream, prk);
-	if (result != CSTATUS_OK)
-	{
-		goto Close;
-	}
-
 	/* reset result flag to failed until the loop completes successfully */
 	result = CSTATUS_FAIL;
 
@@ -450,6 +444,12 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 	while (okmOffset < spanGetSize(okm))
 	{
 		spanInitC(&tData, t, tLen);
+
+		/* first time init, or re-init */
+		if (!ncCryptoDigestInit(&stream, prk))
+		{
+			goto Close;
+		}
 
 		if (!ncCryptoDigestUpdate(&stream, tData))
 		{
@@ -477,7 +477,7 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 		}
 
 		/* tlen becomes the hash size or remaining okm size */
-		tLen = HKDF_MIN(spanGetSize(okm) - okmOffset, SHA256_DIGEST_SIZE);
+		tLen = HKDF_MIN(spanGetSize(okm) - okmOffset, hashSize);
 
 		DEBUG_ASSERT(tLen <= sizeof(t));
 
@@ -485,13 +485,7 @@ _NCC_API cstatus_t ncCryptoSha256HkdfExpand(cspan_t prk, cspan_t info, span_t ok
 		spanAppend(okm, &okmOffset, t, tLen);
 
 		/* increment counter */
-		counter++;
-
-		/* re-initialize the HMAC state for the next iteration */
-		if (!ncCryptoDigestInit(&stream, prk))
-		{
-			goto Close;
-		}
+		counter++;		
 	}
 
 	result = CSTATUS_OK;
