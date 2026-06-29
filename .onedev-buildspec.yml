@@ -37,6 +37,10 @@ jobs:
       type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
+
+        cd @project_name@/ci
+        mise trust mise.toml
+        mise install
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -46,7 +50,8 @@ jobs:
     interpreter:
       type: DefaultInterpreter
       commands: |
-        vnbuild test -i @project_name@
+        cd @project_name@/ci
+        mise test --verbose
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -69,6 +74,10 @@ jobs:
       type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
+
+        cd @project_name@/ci
+        mise trust mise.toml
+        mise install
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -78,7 +87,8 @@ jobs:
     interpreter:
       type: DefaultInterpreter
       commands: |
-        vnbuild build --verbose --no-delay
+        cd @project_name@/ci
+        mise ci-vnbuild build --verbose --no-delay --include @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -88,7 +98,8 @@ jobs:
     interpreter:
       type: DefaultInterpreter
       commands: |
-        vnbuild publish
+        cd @project_name@/ci
+        mise ci-vnbuild publish --include @project_name@ --verbose
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -124,12 +135,12 @@ jobs:
       type: DefaultInterpreter
       commands: |
         cd @project_name@/ci
-        
+
         apt update; apt install curl -y
         chmod +x ./mise
         ./mise settings experimental=true
         ./mise bootstrap --yes
-        ./mise test
+        ./mise test --verbose
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -166,7 +177,7 @@ jobs:
         chmod +x ./mise
         ./mise settings experimental=true
         ./mise bootstrap --yes
-        ./mise test
+        ./mise test --verbose
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -189,6 +200,10 @@ jobs:
       type: DefaultInterpreter
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
+        
+        cd @project_name@/ci
+        mise trust mise.toml
+        mise install
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -198,7 +213,8 @@ jobs:
     interpreter:
       type: DefaultInterpreter
       commands: |
-        vnbuild build --verbose --no-delay
+        cd @project_name@/ci
+        mise ci-vnbuild build --no-delay --include @project_name@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -208,7 +224,8 @@ jobs:
     interpreter:
       type: DefaultInterpreter
       commands: |
-        vnbuild publish --ftp "@secret:ftp_server_address@" --sign
+        cd @project_name@/ci
+        mise ci-vnbuild publish --ftp "@secret:ftp_server_address@" --sign --include @project_name@
     envVars:
     - name: FTP_USERNAME
       value: '@secret:ftp_username@'
