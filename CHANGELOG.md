@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
 
 ### Changed
 - Adds a new internal digest stream interface and unifies all crypto backends 
@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improves runtime buffer size guards for smaller platforms
 
 _32bit+ Windows requirement shouldn't be a breaking change but a warning if you were somehow building on 16bit Windows._
+
+## [0.1.15] - 06-23-26
+
+### Fixed
+- Fixed missing `NC_CC` calling convention macro definition for some functions in `noscrypt.h`. This only affects imports referencing the header. The ABI in (noscrypt.c) is unchanged. 
+
+### Changed
+- ci: exchanged Linux setup script for mise-en-place dependency management during Linux CI tests
+- Updated `Microsoft.NET.Test.Sdk` test dependency from 18.5.1 to 18.7.0
 
 ## [0.1.14] - 05-29-26
 
@@ -238,7 +247,8 @@ This is a breaking change for any code that directly mutates the `NCEncryptionAr
 - NCContext structure definition.
 - Internal headers from the public include directory.
 
-[unreleased]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.14&id2=v0.1.13
+[unreleased]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.15&id2=v0.1.14
+[0.1.15]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.15&id2=v0.1.14
 [0.1.14]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.14&id2=v0.1.13
 [0.1.13]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.13&id2=v0.1.12
 [0.1.12]: https://git.vaughnnugent.com/cgit/vnuge/noscrypt.git/diff/?id=v0.1.12&id2=v0.1.11
