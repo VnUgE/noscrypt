@@ -37,3 +37,7 @@ DOTNET_CLI_TELEMETRY_OPTOUT = "1"
 [tasks.test]
 dir = '../'
 run = 'vnbuild test --include noscrypt'
+
+[tasks.ci-vnbuild]
+dir = '../'
+run = 'vnbuild'
