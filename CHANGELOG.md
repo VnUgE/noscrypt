@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changes
+- Fedora CI tests only against openssl v3 lts branch. Fedora 45 defaults to openssl v4 channel resulting in possible issues for openssl4 users. Known issues - dotnet and tools fail to install with openssl4 when using mise.
+
 ### Updated
 - Updated `vnlib` dotnet to `v0.2.0`
 - Verified `openssl` headers for `v3.6.5`
