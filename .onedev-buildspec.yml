@@ -1,4 +1,4 @@
-version: 43
+version: 56
 jobs:
 - name: Git mirror push
   steps:
@@ -23,8 +23,10 @@ jobs:
   - type: BranchUpdateTrigger
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 3600
 
 - name: Windows Testing
@@ -34,13 +36,15 @@ jobs:
     name: checkout
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
 
         cd @project_name@/ci
         mise trust mise.toml
         mise install
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -48,10 +52,12 @@ jobs:
     name: run unit tests
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         cd @project_name@/ci
         mise test --verbose
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -60,8 +66,10 @@ jobs:
     branches: -master
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 14400
 
 - name: Staging build
@@ -71,13 +79,15 @@ jobs:
     name: checkout
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
 
         cd @project_name@/ci
         mise trust mise.toml
         mise install
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -85,10 +95,12 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild build --verbose --no-delay --include @project_name@
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -96,10 +108,12 @@ jobs:
     name: VNBuild mock publish
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild publish --include @project_name@ --verbose
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -111,8 +125,10 @@ jobs:
   - jobName: Windows Testing
     requireSuccessful: true
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 14400
 
 - name: Ubuntu Tests
@@ -132,15 +148,17 @@ jobs:
     runInContainer: true
     image: docker.io/ubuntu:24.04@@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
 
-        apt update; apt install curl -y
+        apt update; apt install -y curl ca-certificates
         chmod +x ./mise
         ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test --verbose
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -149,8 +167,10 @@ jobs:
     branches: -master
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 14400
 
 - name: Fedora Tests
@@ -170,7 +190,8 @@ jobs:
     runInContainer: true
     image: docker.io/fedora:44@@sha256:6c75d5bf57cb0fa5aa4b92c6a83c86c791644496d9ac230de7711f5b8ec3b898
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
 
@@ -178,6 +199,7 @@ jobs:
         ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test --verbose
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -186,8 +208,10 @@ jobs:
     branches: -master
     userMatch: anyone
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 14400
 
 - name: Publish branch
@@ -197,13 +221,15 @@ jobs:
     name: checkout
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
-        
+
         cd @project_name@/ci
         mise trust mise.toml
         mise install
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -211,10 +237,12 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild build --no-delay --include @project_name@
+    runAs: 0:0
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -222,10 +250,12 @@ jobs:
     name: VNBuild publish
     runInContainer: false
     interpreter:
-      type: DefaultInterpreter
+      type: PosixInterpreter
+      shell: sh
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild publish --ftp "@secret:ftp_server_address@" --sign --include @project_name@
+    runAs: 0:0
     envVars:
     - name: FTP_USERNAME
       value: '@secret:ftp_username@'
@@ -235,6 +265,8 @@ jobs:
     condition: SUCCESSFUL
     optional: false
   retryCondition: never
-  maxRetries: 3
+  maxAttempts: 4
   retryDelay: 30
+  includeUpstreamWhenRebuild: false
+  includeDownstreamWhenRebuild: false
   timeout: 14400
