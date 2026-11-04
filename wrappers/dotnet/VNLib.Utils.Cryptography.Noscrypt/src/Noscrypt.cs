@@ -20,6 +20,7 @@ using System.Runtime.InteropServices;
 using VNLib.Utils.Memory;
 using VNLib.Utils.Native;
 using VNLib.Utils.Extensions;
+using VNLib.Utils.Resources;
 
 using VNLib.Utils.Cryptography.Noscrypt.Random;
 using VNLib.Utils.Cryptography.Noscrypt.@internal;
@@ -33,9 +34,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
     /// The ultimate wrapper for the noscrypt native library that provides
     /// access to the low-level functions and utilities provided by the library.
     /// </summary>
-    /// <param name="Library">An existing noscrypt library handle</param>
-    /// <param name="OwnsHandle">A value that indicates if the instance owns the library handle</param>
-    public unsafe sealed class Noscrypt(SafeLibraryHandle Library, bool OwnsHandle) : VnDisposeable
+    public unsafe sealed class Noscrypt : VnDisposeable
     {
         public const string NoscryptDefaultLibraryName = "noscrypt";
         public const string NoscryptDllPathEnvName = "NOSCRYPT_DLL_PATH";
@@ -91,7 +90,45 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         [Obsolete("Use NC_PUB_KEY_SIZE instead.")]
         public const int NC_PUBKEY_SIZE = NC_PUB_KEY_SIZE;
 
-        private readonly FunctionTable _functions = FunctionTable.BuildFunctionTable(Library);
+        private readonly Owned<SafeLibraryHandle> _library;
+        private readonly FunctionTable _functions;
+
+        /// <summary>
+        /// Creates a new <see cref="Noscrypt"/> library api around the safe library
+        /// handle. Optionally takes ownership following semantics of the <see cref="Owned{T}"/>
+        /// wrapper.
+        /// </summary>
+        /// <param name="Library">The existing library handle, wrapped in an <see cref="Owned{T}"/> structure controlling ownerhsip</param>
+        /// <remarks>
+        /// This constructor attempts to atomically increment the library ref counter and load the public 
+        /// function symbols. 
+        /// </remarks>
+        /// <exception cref="ArgumentException">If the ref counter increment fails</exception>
+        public Noscrypt(Owned<SafeLibraryHandle> Library)
+        {
+            _library = Library;
+
+            // Increment the library reference counter
+            bool incSuccess = false;
+            Library.Value.DangerousAddRef(ref incSuccess);
+            if (!incSuccess)
+            {
+                throw new ArgumentException("Failed to increment the library reference counter");
+            }
+
+            try
+            {
+                _functions = FunctionTable.BuildFunctionTable(Library);
+            }
+            catch
+            {
+                // Failed to create function table, return ref count
+                Library.Value.DangerousRelease();
+                throw;
+            }
+
+            Trace.WriteLine($"Initialized noscrypt library api wrapper 0x{GetHashCode():x}");
+        }
 
         /// <summary>
         /// Gets a reference to the loaded function table for 
@@ -102,15 +139,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             get
             {
                 Check();
-                Library.ThrowIfClosed();
                 return ref _functions;
             }
         }
-
-        /// <summary>
-        /// Gets a value that determines if the library has been released
-        /// </summary>
-        internal bool IsClosed => Library.IsClosed || Library.IsInvalid;
 
         /// <summary>
         /// Initialize a new NCContext for use. This may be done once at app startup
@@ -282,11 +313,13 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         ///<inheritdoc/>
         protected override void Free()
         {
-            if (OwnsHandle)
-            {
-                Library.Dispose();
-                Trace.WriteLine($"Disposed noscrypt library 0x{Library.DangerousGetHandle():x}");
-            }
+            // Always decrement ref counter! 
+            _library.Value.DangerousRelease();
+
+            // Wrapper will handle lifetime on dispose
+            _library.Dispose();
+
+            Trace.WriteLine($"Disposed noscrypt api wrapper 0x{GetHashCode():x}");
         }
 
         /// <summary>
@@ -305,7 +338,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             Trace.WriteLine($"Loaded noscrypt library 0x{handle.DangerousGetHandle():x} from {path}");
 
             //Create the wrapper
-            return new Noscrypt(handle, true);
+            return new Noscrypt(new(handle, ownsValue: true));
         }
 
         /// <summary>

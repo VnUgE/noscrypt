@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2025 Vaughn Nugent
+// Copyright (C) 2026 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -53,14 +53,19 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         ///<inheritdoc/>
         protected override bool ReleaseHandle()
         {
-            if (!Library.IsClosed)
+            try
             {
-                //destroy the context
                 Library.Functions.NCDestroyContext.Invoke(handle);
                 Trace.WriteLine($"Destroyed noscrypt context 0x{handle:x}");
             }
+            catch (ObjectDisposedException)
+            {
+                // swallow ODE from disposed library wrapper, it should still be safe
+                // to free the handle. The Library.Functions may throw ode if it's disposed before
+                // this context is released.
+            }
 
-            //Free the handle
+            // Free the handle (should clear ref and set to 0)
             return Heap.Free(ref handle);
         }
     }
