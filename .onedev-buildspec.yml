@@ -79,8 +79,8 @@ jobs:
     name: checkout
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
 
@@ -95,8 +95,8 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild build --verbose --no-delay --include @project_name@
@@ -108,8 +108,8 @@ jobs:
     name: VNBuild mock publish
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild publish --include @project_name@ --verbose
@@ -219,8 +219,8 @@ jobs:
     name: checkout
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         git clone @server_url@/@project_path@ --branch @branch@ @project_name@
 
@@ -235,8 +235,8 @@ jobs:
     name: VNBuild build
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild build --no-delay --include @project_name@
@@ -248,8 +248,8 @@ jobs:
     name: VNBuild publish
     runInContainer: false
     interpreter:
-      type: PosixInterpreter
-      shell: sh
+      type: PowerShellInterpreter
+      powershell: powershell.exe
       commands: |
         cd @project_name@/ci
         mise ci-vnbuild publish --ftp "@secret:ftp_server_address@" --sign --include @project_name@
