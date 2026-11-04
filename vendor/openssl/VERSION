@@ -1,3 +1,3 @@
-v3.6.2
-commit: fe686e15d84334b284f883118ed92f64b409b3aa
-aaf51a1fe064384f811daeaeb4ec4dce7340ec8bd893027eee676af31e83a04f openssl/openssl-3.6.2.tar.gz 
+v3.6.5
+commit: c8bd5a57108599ac650bbae77fcabe3109dab2e8
+a2157c2830efdec3788939b00c9b0638306d3f0bbb76dc4832ee503bb397df98 openssl/openssl-3.6.5.tar.gz

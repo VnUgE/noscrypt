@@ -166,7 +166,7 @@ static int secp256k1_fe_is_odd(const secp256k1_fe *a);
 /** Determine whether two field elements are equal.
  *
  * On input, a and b must be valid field elements with magnitudes not exceeding
- * 1 and 31, respectively.
+ * 1 and 30, respectively.
  * Returns a = b (mod p).
  */
 static int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b);
@@ -233,7 +233,7 @@ static void secp256k1_fe_add_int(secp256k1_fe *r, int a);
 #define secp256k1_fe_mul_int(r, a) ASSERT_INT_CONST_AND_DO(a, secp256k1_fe_mul_int_unchecked(r, a))
 
 /** Like secp256k1_fe_mul_int but a is not checked to be an integer constant expression.
- * 
+ *
  * Should not be called directly outside of tests.
  */
 static void secp256k1_fe_mul_int_unchecked(secp256k1_fe *r, int a);
