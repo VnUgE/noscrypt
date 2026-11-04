@@ -14,7 +14,7 @@ experimental = true
 "dnf:gcc-c++" = "latest"
 "dnf:libicu" = "latest"
 "dnf:make" = "latest"
-"dnf:openssl-devel" = "latest"
+"dnf:openssl3-devel" = "latest"
 "dnf:valgrind" = "latest"
 
 [tools]

@@ -187,7 +187,7 @@ jobs:
   - type: CommandStep
     name: fedora-44 x64 tests
     runInContainer: true
-    image: docker.io/fedora:44@@sha256:a7d72ba2745b100a3351087472e5ee7b2450af7cf331e7673007e3817612839c
+    image: docker.io/fedora:45@@sha256:a7d72ba2745b100a3351087472e5ee7b2450af7cf331e7673007e3817612839c
     interpreter:
       type: PosixInterpreter
       shell: sh
