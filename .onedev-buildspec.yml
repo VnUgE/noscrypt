@@ -146,7 +146,7 @@ jobs:
   - type: CommandStep
     name: ubuntu x64 tests
     runInContainer: true
-    image: docker.io/ubuntu:24.04@@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
+    image: docker.io/ubuntu:26.04@@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c
     interpreter:
       type: PosixInterpreter
       shell: sh
@@ -187,7 +187,7 @@ jobs:
   - type: CommandStep
     name: fedora-44 x64 tests
     runInContainer: true
-    image: docker.io/fedora:44@@sha256:6c75d5bf57cb0fa5aa4b92c6a83c86c791644496d9ac230de7711f5b8ec3b898
+    image: docker.io/fedora:44@@sha256:a7d72ba2745b100a3351087472e5ee7b2450af7cf331e7673007e3817612839c
     interpreter:
       type: PosixInterpreter
       shell: sh
