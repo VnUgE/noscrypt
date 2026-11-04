@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Updated
+- Updated `vnlib` dotnet to `v0.2.0`
+- Verified `openssl` headers for `v3.6.5`
+- Updated `monocypher` to `v4.0.3`
+- Updated `libsecp256k1` to `v0.8.0` and disabled new silent payments module
+- Updated dotnet test packages
+- Updated mise deps: task v0.54.0, cmake v4.4.5, vnbuild v1.3.0-alpha.21, mise installer target 2026.11.0
+
 ## [0.1.15] - 06-23-26
 
 ### Fixed
