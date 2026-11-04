@@ -1,11 +1,15 @@
 min_version = "2024.9.5"
 
+[settings]
+experimental = true
+
 # OS-level build dependencies installed via apt (Debian/Ubuntu) or dnf (Fedora/RHEL)
 [bootstrap.packages]
 "apt:build-essential" = "latest"
 "apt:libssl-dev" = "latest"
 "apt:valgrind" = "latest"
 "apt:libicu-dev" = "latest"
+"apt:wget" = "latest"
 "dnf:gcc" = "latest"
 "dnf:gcc-c++" = "latest"
 "dnf:libicu" = "latest"
@@ -21,7 +25,7 @@ task = "3.54"
 
 [tools."http:vnbuild"]
 version = "1.3.0-alpha.21"
-#postinstall = "chmod +x $MISE_TOOL_INSTALL_PATH/vnbuild"
+postinstall = "chmod +x $MISE_TOOL_INSTALL_PATH/vnbuild"
 
 [tools."http:vnbuild".platforms]
 windows-x64 = { url = "https://www.vaughnnugent.com/public/resources/software/builds/vnbuild/4893ab2fee867f8120403689bf6b3f484c66b995/vnbuild/win-x64.tgz", checksum = "sha256:306383A1DD3896821390F3E3853454D090D7FBD3FA0E76BD4FFF9AEA990161B3" }

@@ -155,7 +155,6 @@ jobs:
 
         apt update; apt install -y curl ca-certificates
         chmod +x ./mise
-        ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test --verbose
     runAs: 0:0
@@ -196,7 +195,6 @@ jobs:
         cd @project_name@/ci
 
         chmod +x ./mise
-        ./mise settings experimental=true
         ./mise bootstrap --yes
         ./mise test --verbose
     runAs: 0:0
