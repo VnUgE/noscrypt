@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 
 /** Unless explicitly stated all pointer arguments must not be NULL.
  *
@@ -100,15 +101,6 @@ typedef int (*secp256k1_nonce_function)(
     unsigned int attempt
 );
 
-# if !defined(SECP256K1_GNUC_PREREQ)
-#  if defined(__GNUC__)&&defined(__GNUC_MINOR__)
-#   define SECP256K1_GNUC_PREREQ(_maj,_min) \
- ((__GNUC__<<16)+__GNUC_MINOR__>=((_maj)<<16)+(_min))
-#  else
-#   define SECP256K1_GNUC_PREREQ(_maj,_min) 0
-#  endif
-# endif
-
 /*  When this header is used at build-time the SECP256K1_BUILD define needs to be set
  *  to correctly setup export attributes and nullness checks.  This is normally done
  *  by secp256k1.c but to guard against this header being included before secp256k1.c
@@ -177,12 +169,12 @@ typedef int (*secp256k1_nonce_function)(
 /* Warning attributes
  * NONNULL is not used if SECP256K1_BUILD is set to avoid the compiler optimizing out
  * some paranoid null checks. */
-# if defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
+# if defined(__GNUC__)
 #  define SECP256K1_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
 # else
 #  define SECP256K1_WARN_UNUSED_RESULT
 # endif
-# if !defined(SECP256K1_BUILD) && defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
+# if !defined(SECP256K1_BUILD) && defined(__GNUC__)
 #  define SECP256K1_ARG_NONNULL(_x)  __attribute__ ((__nonnull__(_x)))
 # else
 #  define SECP256K1_ARG_NONNULL(_x)
@@ -243,10 +235,6 @@ typedef int (*secp256k1_nonce_function)(
  *  It is highly recommended to call secp256k1_selftest before using this context.
  */
 SECP256K1_API const secp256k1_context * const secp256k1_context_static;
-
-/** Deprecated alias for secp256k1_context_static. */
-SECP256K1_API const secp256k1_context * const secp256k1_context_no_precomp
-SECP256K1_DEPRECATED("Use secp256k1_context_static instead");
 
 /** Perform basic self tests (to be used in conjunction with secp256k1_context_static)
  *
@@ -349,7 +337,7 @@ SECP256K1_API void secp256k1_context_destroy(
  *  writes the message to stderr and calls abort. This default callback can be
  *  replaced at link time if the preprocessor macro
  *  USE_EXTERNAL_DEFAULT_CALLBACKS is defined, which is the case if the build
- *  has been configured with --enable-external-default-callbacks (GNU Autotools) or 
+ *  has been configured with --enable-external-default-callbacks (GNU Autotools) or
  *  -DSECP256K1_USE_EXTERNAL_DEFAULT_CALLBACKS=ON (CMake). Then the
  *  following two symbols must be provided to link against:
  *   - void secp256k1_default_illegal_callback_fn(const char *message, void *data);
@@ -402,6 +390,61 @@ SECP256K1_API void secp256k1_context_set_error_callback(
     secp256k1_context *ctx,
     void (*fun)(const char *message, void *data),
     const void *data
+) SECP256K1_ARG_NONNULL(1);
+
+/** A pointer to a function implementing SHA256's internal compression function.
+ *
+ * This function processes one or more contiguous 64-byte message blocks and
+ * updates the internal SHA256 state accordingly. The function is not responsible
+ * for counting consumed blocks or bytes, nor for performing padding.
+ *
+ * In/Out:  state:     pointer to eight 32-bit words representing the current internal state;
+ *                     the state is updated in place.
+ * In:      blocks64:  pointer to concatenation of n_blocks blocks, of 64 bytes each.
+ *                     no alignment guarantees are made for this pointer.
+ *          n_blocks:  number of contiguous 64-byte blocks to process.
+ */
+typedef void (*secp256k1_sha256_compression_function)(
+    uint32_t *state,
+    const unsigned char *blocks64,
+    size_t n_blocks
+);
+
+/**
+ * Set a callback function to override the internal SHA256 compression function.
+ *
+ * This installs a callback to replace the built-in block-compression
+ * step used by the library's internal SHA256 implementation.
+ * The provided callback must exactly implement the effect of n_blocks
+ * repeated applications of the SHA256 compression function.
+ *
+ * This API exists to support environments that wish to route the
+ * SHA256 compression step through a hardware-accelerated or otherwise
+ * specialized implementation. It is NOT meant for replacing SHA256
+ * with a different hash function.
+ *
+ * Since auxiliary functions exposed by the library via a function
+ * pointer such as secp256k1_nonce_function_default do not take a
+ * context object, they will not use the callback when called directly
+ * from user code. (But they will use the callback when called from
+ * other library functions that do take a context object, e.g., when
+ * noncefp==NULL or noncefp==secp256k1_nonce_function_default is passed
+ * as an argument to secp256k1_ecdsa_sign.)
+ *
+ * Note: The provided function is tested against a set of known SHA256
+ * digests; invokes the context's illegal callback on any mismatch
+ * (which aborts by default), in order to catch basic misbehavior early.
+ * It takes well under 2.5 ms on a desktop machine.
+ * This is NOT a substitute for having proper test coverage of the
+ * supplied function outside this library.
+ *
+ * Args:    ctx:             pointer to a context object.
+ * In:      fn_compression:  pointer to a function implementing the compression function;
+ *                           passing NULL restores the default implementation.
+ */
+SECP256K1_API void secp256k1_context_set_sha256_compression(
+        secp256k1_context *ctx,
+        secp256k1_sha256_compression_function fn_compression
 ) SECP256K1_ARG_NONNULL(1);
 
 /** Parse a variable-length public key into the pubkey object.
@@ -646,7 +689,7 @@ SECP256K1_API const secp256k1_nonce_function secp256k1_nonce_function_default;
  *  Returns: 1: signature created
  *           0: the nonce generation function failed, or the secret key was invalid.
  *  Args:    ctx:       pointer to a context object (not secp256k1_context_static).
- *  Out:     sig:       pointer to an array where the signature will be placed.
+ *  Out:     sig:       pointer to a signature object.
  *  In:      msghash32: the 32-byte message hash being signed.
  *           seckey:    pointer to a 32-byte secret key.
  *           noncefp:   pointer to a nonce generation function. If NULL,
