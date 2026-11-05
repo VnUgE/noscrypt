@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2025 Vaughn Nugent
+// Copyright (C) 2026 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -52,10 +52,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         }
 
         /// <summary>
-        /// Gets a span of bytes from the current public key
-        /// structure
+        /// Gets a span of bytes over the public key structure pointing to the same 
+        /// memory.
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="key">A reference to a <see cref="NCPublicKey"/> structure </param>
         /// <returns>The public key data as a data span, or an empty span if a null reference is passed</returns>
         public static Span<byte> AsSpan(ref NCPublicKey key)
         {
@@ -72,8 +72,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         }
 
         /// <summary>
-        /// Gets a span of bytes from the current secret key 
-        /// structure
+        /// Gets a span of bytes over the secret key structure pointing to the same 
+        /// memory.
         /// </summary>
         /// <param name="key">A readonly reference to the key structure</param>
         /// <returns>The secret key data span, or an empty span if a null reference is passed</returns>
@@ -82,8 +82,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             => AsSpan(ref Unsafe.AsRef(in key));
 
         /// <summary>
-        /// Gets a span of bytes from the current public key
-        /// structure
+        /// Gets a span of bytes over the public key structure pointing to the same 
+        /// memory.
         /// </summary>
         /// <param name="key">A readonly reference to the key structure</param>
         /// <returns>The public key data as a data span, or an empty span if a null reference is passed</returns>
@@ -120,7 +120,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// the new structure reference will point to the same memory as the span.
         /// </summary>
         /// <param name="span">The secret key data span</param>
-        /// <returns>A readonly refernce to the secret key structure</returns>
+        /// <returns>A readonly reference to the secret key structure</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref readonly NCSecretKey AsSecretKey(ReadOnlySpan<byte> span) 
@@ -187,7 +187,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// Validates a secret key is in a valid format. 
         /// </summary>
         /// <param name="secretKey">A readonly reference to key structure to validate</param>
-        /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
+        /// <returns>True if the key is considered valid against the secp256k1 curve</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public static unsafe bool ValidateSecretKey(NCContext context, ref readonly NCSecretKey secretKey)
@@ -212,7 +212,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         /// <param name="context">The noscrypt library context object</param>
         /// <param name="secretKey">A readonly buffer to the secret structure. Must be at least <see cref="NCSecretKey.Size"/></param>
-        /// <returns>True if the key is consiered valid against the secp256k1 curve</returns>
+        /// <returns>True if the key is considered valid against the secp256k1 curve</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public static bool ValidateSecretKey(NCContext context, ReadOnlySpan<byte> secretKey) 

@@ -23,9 +23,10 @@ using VNLib.Utils.Memory;
 namespace VNLib.Utils.Cryptography.Noscrypt
 {
     /// <summary>
-    /// The noscrypt library context
+    /// Noscrypt library context state object. Wraps the nccontext state memory
+    /// and managed it's lifecycle.
     /// <para>
-    /// This context is considered completely thread-safe for all noscrypt 
+    /// This context is considered thread-safe for all noscrypt 
     /// library operations except those that explicitly state otherwise.
     /// </para>
     /// </summary>
@@ -65,7 +66,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
                 // this context is released.
             }
 
-            // Free the handle (should clear ref and set to 0)
+            // Free the handle (should clear ref and set handle to 0)
             return Heap.Free(ref handle);
         }
     }

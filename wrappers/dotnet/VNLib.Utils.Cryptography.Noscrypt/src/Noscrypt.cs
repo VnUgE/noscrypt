@@ -191,16 +191,16 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// and is thread-safe for the rest of the application lifetime.
         /// </summary>
         /// <param name="heap"></param>
-        /// <param name="enropy32">The 32byte random seed/nonce for the noscrypt context</param>
+        /// <param name="entropy32">The 32byte random seed/nonce for the noscrypt context</param>
         /// <returns>The initialized context</returns>
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public NCContext AllocContext(ReadOnlySpan<byte> enropy32, IUnmanagedHeap? heap = null)
+        public NCContext AllocContext(ReadOnlySpan<byte> entropy32, IUnmanagedHeap? heap = null)
         {
             return AllocContext(
-                ref MemoryMarshal.GetReference(enropy32),
-                enropy32.Length,
+                ref MemoryMarshal.GetReference(entropy32),
+                entropy32.Length,
                 heap
             );
         }
@@ -209,9 +209,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// Initialize a new NCContext for use. This may be done once at app startup
         /// and is thread-safe for the rest of the application lifetime.
         /// </summary>
-        /// <param name="heap"></param>
-        /// <param name="enropy32">The 32byte random seed/nonce for the noscrypt context</param>
-        /// <returns>The initialized context</returns>
+        /// <param name="heap">The heap used to allocate the context state and temporary entropy buffer from</param>
+        /// <param name="random">The entropy source used to secure the context state object</param>
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
