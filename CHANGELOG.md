@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 - Fedora CI tests only against openssl v3 lts branch. Fedora 45 defaults to openssl v4 channel resulting in possible issues for openssl4 users. Known issues - dotnet and tools fail to install with openssl4 when using mise.
+- Update and improve some .NET wrapper functions with vnlib upgrades 
+- Correct the spelling of `Noscrypt.ReinitalizeContext` to `Noscrypt.ReinitializeContext` marking old members as obsolete to maintain compatibility. 
+
+### Fixed
+- Fixed some documentation and typos on the .NET wrapper public API functions
+- .NET wrapper now correctly uses library handle ref counters 
 
 ### Updated
 - Updated `vnlib` dotnet to `v0.2.0`
