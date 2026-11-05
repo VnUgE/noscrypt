@@ -1,4 +1,4 @@
-﻿// Copyright (C) 2025 Vaughn Nugent
+// Copyright (C) 2026 Vaughn Nugent
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,7 @@ using System;
 using System.Runtime.InteropServices;
 
 using VNLib.Utils.Native;
-using VNLib.Utils.Extensions;
+using VNLib.Utils.Resources;
 
 namespace VNLib.Utils.Cryptography.Noscrypt.Random
 {
@@ -25,7 +25,15 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Random
     /// <summary>
     /// A wrapper class for an unmanaged random source that conforms to the <see cref="IRandomSource"/> interface
     /// </summary>
-    public class UnmanagedRandomSource : VnDisposeable, IRandomSource
+    /// <remarks>
+    /// Creates the unmanaged random source from the given library by loading
+    /// the function symbol and holding a reference to the library. The library
+    /// handle count is incremented on success.
+    /// </remarks>
+    /// <param name="lib">The library handle to wrap</param>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="EntryPointNotFoundException"></exception>
+    public class UnmanagedRandomSource(Owned<SafeLibraryHandle> library) : VnDisposeable, IRandomSource
     {
         /// <summary>
         /// The explicit name of the unmanaged random function to get random bytes
@@ -34,9 +42,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Random
 
         unsafe delegate void UnmanagedRandomSourceDelegate(byte* buffer, int size);
 
-        private readonly bool OwnsHandle;
-        private readonly SafeLibraryHandle _library;
-        private readonly UnmanagedRandomSourceDelegate _getRandomBytes;
+        private readonly Owned<SafeLibraryHandle> _library = library;
+        private readonly SafeMethodHandle<UnmanagedRandomSourceDelegate> _getRandomBytes 
+            = library.Value.GetFunction<UnmanagedRandomSourceDelegate>(RngFunctionName);
 
         /// <summary>
         /// Loads the unmanaged random source from the given library 
@@ -68,36 +76,25 @@ namespace VNLib.Utils.Cryptography.Noscrypt.Random
         /// <exception cref="ObjectDisposedException"></exception>
         /// <exception cref="EntryPointNotFoundException"></exception>
         public UnmanagedRandomSource(SafeLibraryHandle lib, bool ownsHandle)
-        {
-            lib.ThrowIfClosed();
-
-            _library = lib;
-
-            //get the method delegate
-            _getRandomBytes = lib.DangerousGetFunction<UnmanagedRandomSourceDelegate>(RngFunctionName);
-
-            OwnsHandle = ownsHandle;
-        }
+            : this(new(lib, ownsHandle))
+        { }
 
         ///<inheritdoc/>
         public unsafe void GetRandomBytes(Span<byte> buffer)
         {
-            _library.ThrowIfClosed();
-
-            //Fix buffer and call unmanaged method
+            // Fix buffer and call unmanaged method
             fixed (byte* ptr = &MemoryMarshal.GetReference(buffer))
             {
-                _getRandomBytes(ptr, buffer.Length);
+                _getRandomBytes.Method!.Invoke(ptr, buffer.Length);
             }
         }
 
         ///<inheritdoc/>
         protected override void Free()
         {
-            if (OwnsHandle)
-            {
-                _library.Dispose();
-            }
+            // Dispose safe method handle releasing library count
+            _getRandomBytes.Dispose();
+            _library.Dispose();
         }
     }
 }
