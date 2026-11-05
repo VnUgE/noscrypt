@@ -374,7 +374,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             string libPath = Environment.GetEnvironmentVariable(NoscryptDllPathEnvName) 
                 ?? NoscryptDefaultLibraryName;
 
-            Trace.WriteLine("Loading library {0}", libPath);
+            Trace.WriteLine($"Loading library {libPath}");
 
             libPath = libPath.Replace("\"", "");
 
