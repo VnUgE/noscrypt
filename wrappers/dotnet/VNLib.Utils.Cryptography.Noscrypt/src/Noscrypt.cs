@@ -357,10 +357,10 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <exception cref="DllNotFoundException"></exception>
         public static Noscrypt LoadDefaultLibrary()
         {
-            string? libPath = Environment.GetEnvironmentVariable(NoscryptDllPathEnvName);
-            libPath ??= NoscryptDefaultLibraryName;
+            string libPath = Environment.GetEnvironmentVariable(NoscryptDllPathEnvName) 
+                ?? NoscryptDefaultLibraryName;
 
-            Console.WriteLine("Loading library {0}", libPath);
+            Trace.WriteLine("Loading library {0}", libPath);
 
             libPath = libPath.Replace("\"", "");
 
