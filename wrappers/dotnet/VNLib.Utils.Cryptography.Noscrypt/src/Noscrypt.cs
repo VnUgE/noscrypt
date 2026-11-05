@@ -147,10 +147,12 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// Initialize a new NCContext for use. This may be done once at app startup
         /// and is thread-safe for the rest of the application lifetime.
         /// </summary>
-        /// <param name="heap"></param>
+        /// <param name="heap">An optional <see cref="IUnmanagedHeap"/> to allocate the context from. If null,
+        /// <see cref="MemoryUtil.Shared"/> heap is used.
+        /// </param>
         /// <param name="entropy32">Initialization entropy buffer</param>
         /// <param name="size">The size of the buffer (must be 32 bytes)</param>
-        /// <returns>The inialized context</returns>
+        /// <returns>The initialized context</returns>
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
@@ -173,7 +175,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
                 NCUtil.CheckResult<FunctionTable.NCInitContextDelegate>(result, raiseOnFailure: true);
 
-                Trace.WriteLine($"Initialzied noscrypt context 0x{ctx:x}");
+                Trace.WriteLine($"Initialized noscrypt context 0x{ctx:x}");
 
                 return new NCContext(ctx, heap, this);
             }
@@ -190,7 +192,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         /// <param name="heap"></param>
         /// <param name="enropy32">The 32byte random seed/nonce for the noscrypt context</param>
-        /// <returns>The inialized context</returns>
+        /// <returns>The initialized context</returns>
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
@@ -209,7 +211,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </summary>
         /// <param name="heap"></param>
         /// <param name="enropy32">The 32byte random seed/nonce for the noscrypt context</param>
-        /// <returns>The inialized context</returns>
+        /// <returns>The initialized context</returns>
         /// <exception cref="OutOfMemoryException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
