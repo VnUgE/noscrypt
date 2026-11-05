@@ -234,8 +234,8 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// with other functions that rely on the context.
         /// </remarks>
         /// <param name="entropy">The randomness buffer used to randomize the context</param>
-        /// <param name="size">The random data buffer size (must be equal to <see cref="NC_CTX_ENTROPY_SIZE"/>)</param>
-        public unsafe void ReinitalizeContext(NCContext context, ref readonly byte entropy, int size)
+        /// <param name="size">The random data buffer size (must be equal to <see cref="NC_CTX_ENTROPY_SIZE"/>)</param>       
+        public unsafe void ReinitializeContext(NCContext context, ref readonly byte entropy, int size)
         {
             ArgumentNullException.ThrowIfNull(context);
 
@@ -252,7 +252,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
                 
                 NCUtil.CheckResult<FunctionTable.NCReInitContextDelegate>(result, raiseOnFailure: true);
             }
-        }
+        }        
 
         /// <summary>
         /// Reinitializes the context with the specified entropy
@@ -263,9 +263,9 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </remarks>
         /// <param name="context">The context to reinitialize</param>
         /// <param name="entropy">The randomness buffer used to randomize the context</param>
-        public void ReinitalizeContext(NCContext context, ReadOnlySpan<byte> entropy)
+        public void ReinitializeContext(NCContext context, ReadOnlySpan<byte> entropy)
         {
-            ReinitalizeContext(
+            ReinitializeContext(
                 context, 
                 in MemoryMarshal.GetReference(entropy), 
                 entropy.Length
@@ -281,7 +281,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// </remarks>
         /// <param name="context">The context to reinitialize</param>
         /// <param name="random">The random source to use to generate the new context entropy</param>
-        public void ReinitalizeContext(NCContext context, IRandomSource random)
+        public void ReinitializeContext(NCContext context, IRandomSource random)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(random);
@@ -291,7 +291,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
             random.GetRandomBytes(entropy);
 
-            ReinitalizeContext(
+            ReinitializeContext(
                 context,
                 in MemoryMarshal.GetReference(entropy),
                 entropy.Length
@@ -301,6 +301,21 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             MemoryUtil.InitializeBlock(entropy);
         }
 
+        /// <inheritdoc cref="ReinitializeContext(NCContext, ref readonly byte, int)"/>
+        [Obsolete("Prefer correct spelling ReinitializeContext")]
+        public unsafe void ReinitalizeContext(NCContext context, ref readonly byte entropy, int size)
+            => ReinitializeContext(context, in entropy, size);
+
+        /// <inheritdoc cref="ReinitializeContext(NCContext, ReadOnlySpan{byte})"/>
+        [Obsolete("Prefer correct spelling ReinitializeContext")]
+        public void ReinitalizeContext(NCContext context, ReadOnlySpan<byte> entropy)
+            => ReinitializeContext(context, entropy);
+
+        /// <inheritdoc cref="ReinitializeContext(NCContext, IRandomSource)"/>
+        [Obsolete("Prefer correct spelling ReinitializeContext")]
+        public void ReinitalizeContext(NCContext context, IRandomSource random)
+            => ReinitializeContext(context, random);
+
         /// <summary>
         /// Gets the size of the context structure in bytes defined by the 
         /// library
@@ -308,7 +323,7 @@ namespace VNLib.Utils.Cryptography.Noscrypt
         /// <returns>The size of the noscrypt context structure in bytes</returns>
         private uint GetContextSize() => Functions.NCGetContextStructSize.Invoke();
 
-        ///<inheritdoc/>
+        /// <inheritdoc/>
         protected override void Free()
         {
             // Always decrement ref counter! 
@@ -365,5 +380,5 @@ namespace VNLib.Utils.Cryptography.Noscrypt
 
             return LoadLibrary(libPath);
         }
-    }  
+    }
 }
