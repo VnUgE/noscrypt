@@ -288,21 +288,18 @@ namespace VNLib.Utils.Cryptography.Noscrypt
             ArgumentNullException.ThrowIfNull(random);
 
             // Allocate a buffer for the entropy from the context's heap
-            using UnsafeMemoryHandle<byte> entropy = context.Heap.UnsafeAlloc<byte>(NC_CTX_ENTROPY_SIZE, zero: true);
+            Span<byte> entropy = stackalloc byte[NC_CTX_ENTROPY_SIZE];
 
-            random.GetRandomBytes(entropy.Span);
+            random.GetRandomBytes(entropy);
 
             ReinitalizeContext(
                 context,
-                in entropy.GetReference(),
-                entropy.IntLength
+                in MemoryMarshal.GetReference(entropy),
+                entropy.Length
             );
 
             // Clear the buffer
-            MemoryUtil.InitializeBlock(
-                ref entropy.GetReference(),
-                entropy.IntLength
-            );
+            MemoryUtil.InitializeBlock(entropy);
         }
 
         /// <summary>
